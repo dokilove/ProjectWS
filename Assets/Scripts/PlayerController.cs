@@ -6,17 +6,31 @@ using System.Collections; // Required for Coroutines
 [RequireComponent(typeof(Rigidbody))]
 public class PlayerController : MonoBehaviour
 {
+    [Header("Movement")]
     [SerializeField] private float moveSpeed = 5f;
-    [SerializeField] private float evadeForce = 10f;
     [SerializeField] private float rotationSpeed = 15f;
     [SerializeField] private ManualFollowCamera followCamera; // Assign your Main Camera with ManualFollowCamera script here
 
-    // Dodge specific variables
+    [Header("Evade")]
+    [SerializeField] private float evadeForce = 10f;
     [SerializeField] private float dodgeDuration = 0.5f; // How long the dodge lasts
     [SerializeField] private int dodgingPlayerLayer; // Assign the 'DodgingPlayer' layer ID in the Inspector
     [SerializeField] private float pushRadius = 2f; // Radius to detect enemies for pushing
     [SerializeField] private float pushForce = 0.05f; // Total distance to push enemies
     [SerializeField] private float pushSmoothTime = 0.2f; // How long the push effect lasts
+
+    [Header("Attacks - Auto Fire & Targeting")]
+    [SerializeField] private Transform turretTransform; // 회전할 포탑 Transform
+    [SerializeField] private float turretRotationSpeed = 10f; // 포탑 회전 속도
+    [SerializeField] private GameObject projectilePrefab; // 발사체 프리팹
+    [SerializeField] private Transform firePoint; // 발사 위치
+    [SerializeField] private float fireRate = 2f; // 초당 발사 횟수
+    [SerializeField] private float detectionRadius = 15f; // 적 탐지 반경
+    [SerializeField] private LayerMask enemyLayer; // 적 레이어
+
+    private float nextFireTime = 0f;
+    private System.Collections.Generic.List<GameObject> projectilePool = new System.Collections.Generic.List<GameObject>();
+    private int poolSize = 20;
 
     private Rigidbody rb;
     private InputSystem_Actions playerActions;
@@ -28,6 +42,17 @@ public class PlayerController : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         playerActions = new InputSystem_Actions();
         originalLayer = gameObject.layer; // Store the original layer
+    }
+
+    private void Start()
+    {
+        for (int i = 0; i < poolSize; i++)
+        {
+            if (projectilePrefab == null) continue;
+            GameObject proj = Instantiate(projectilePrefab);
+            proj.SetActive(false);
+            projectilePool.Add(proj);
+        }
     }
 
     private void OnEnable()
@@ -45,17 +70,24 @@ public class PlayerController : MonoBehaviour
     private void Update()
     {
         moveInput = playerActions.Player.Move.ReadValue<Vector2>();
+
+        // 타겟 탐지 및 포탑 회전
+        Transform target = FindNearestEnemy();
+        RotateTurret(target);
+
+        // 자동 발사
+        if (target != null && Time.time >= nextFireTime)
+        {
+            nextFireTime = Time.time + 1f / fireRate;
+            Fire();
+        }
     }
 
     private void FixedUpdate()
     {
-        // Create a 3D movement vector from the 2D input.
         Vector3 moveVector = new Vector3(moveInput.x, 0f, moveInput.y);
-
-        // Apply movement
         rb.linearVelocity = moveVector * moveSpeed;
 
-        // Apply rotation
         if (moveVector != Vector3.zero)
         {
             Quaternion targetRotation = Quaternion.LookRotation(moveVector);
@@ -63,46 +95,97 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    private void OnEvade(InputAction.CallbackContext context)
+    private Transform FindNearestEnemy()
     {
-        // Prevent dodging if already dodging
-        if (gameObject.layer == dodgingPlayerLayer) return;
+        Collider[] enemies = Physics.OverlapSphere(transform.position, detectionRadius, enemyLayer);
+        Transform nearestEnemy = null;
+        float minDistance = Mathf.Infinity;
 
-        Vector3 evadeDirection;
-        if (moveInput.sqrMagnitude > 0.1f)
+        foreach (Collider enemy in enemies)
         {
-            evadeDirection = new Vector3(moveInput.x, 0, moveInput.y).normalized;
+            float distance = Vector3.Distance(transform.position, enemy.transform.position);
+            if (distance < minDistance)
+            {
+                minDistance = distance;
+                nearestEnemy = enemy.transform;
+            }
+        }
+        return nearestEnemy;
+    }
+
+    private void RotateTurret(Transform target)
+    {
+        if (turretTransform == null) return;
+
+        Quaternion targetRotation;
+        if (target != null)
+        {
+            // 타겟이 있으면 타겟 방향으로
+            Vector3 direction = target.position - turretTransform.position;
+            direction.y = 0; // 포탑이 위아래로 기울지 않도록
+            targetRotation = Quaternion.LookRotation(direction);
         }
         else
         {
-            evadeDirection = -transform.forward;
+            // 타겟이 없으면 플레이어의 정면 방향으로
+            targetRotation = transform.rotation;
         }
+
+        // 부드럽게 회전
+        turretTransform.rotation = Quaternion.Slerp(turretTransform.rotation, targetRotation, turretRotationSpeed * Time.deltaTime);
+    }
+
+    private void Fire()
+    {
+        GameObject projectile = GetPooledProjectile();
+        if (projectile != null)
+        {
+            projectile.transform.position = firePoint.position;
+            projectile.transform.rotation = firePoint.rotation; // 포탑의 방향을 그대로 따름
+
+            projectile.SetActive(true);
+            projectile.GetComponent<Projectile>().Initialize(turretTransform.forward); // 포탑의 정면으로 발사
+        }
+    }
+
+    private GameObject GetPooledProjectile()
+    {
+        for (int i = 0; i < projectilePool.Count; i++)
+        {
+            if (!projectilePool[i].activeInHierarchy)
+            {
+                return projectilePool[i];
+            }
+        }
+        return null;
+    }
+
+    private void OnEvade(InputAction.CallbackContext context)
+    {
+        if (gameObject.layer == dodgingPlayerLayer) return;
+
+        Vector3 evadeDirection = (moveInput.sqrMagnitude > 0.1f) 
+            ? new Vector3(moveInput.x, 0, moveInput.y).normalized 
+            : -transform.forward;
+            
         rb.AddForce(evadeDirection * evadeForce, ForceMode.Impulse);
-
-        // Change player layer to ignore collisions
         gameObject.layer = dodgingPlayerLayer;
-        Invoke("ResetPlayerLayer", dodgeDuration); // Reset layer after dodge duration
+        Invoke(nameof(ResetPlayerLayer), dodgeDuration);
 
-        // Push nearby enemies
         Collider[] hitColliders = Physics.OverlapSphere(transform.position, pushRadius);
         foreach (var hitCollider in hitColliders)
         {
             if (hitCollider.CompareTag("Enemy"))
             {
-                NavMeshAgent enemyAgent = hitCollider.GetComponent<NavMeshAgent>();
-                if (enemyAgent != null) // Ensure it's a NavMeshAgent enemy
+                if (hitCollider.TryGetComponent<NavMeshAgent>(out var enemyAgent))
                 {
                     Vector3 pushDir = (hitCollider.transform.position - transform.position).normalized;
-                    pushDir.y = 0; // Flatten the push direction to XZ plane
-                    pushDir.Normalize(); // Re-normalize after flattening
-
-                    // Start coroutine to smoothly push the enemy
-                    StartCoroutine(SmoothPushEnemy(enemyAgent, pushDir * pushForce, pushSmoothTime));
+                    pushDir.y = 0;
+                    StartCoroutine(SmoothPushEnemy(enemyAgent, pushDir.normalized * pushForce, pushSmoothTime));
                 }
             }
         }
 
-        // Trigger camera damping
         if (followCamera != null)
         {
             followCamera.TriggerEvadeDamping();
@@ -111,30 +194,35 @@ public class PlayerController : MonoBehaviour
 
     private IEnumerator SmoothPushEnemy(NavMeshAgent agentToPush, Vector3 pushVector, float duration)
     {
+        // 안전 코드: Agent가 유효하고 NavMesh 위에 있을 때만 실행
+        if (agentToPush == null || !agentToPush.isActiveAndEnabled || !agentToPush.isOnNavMesh)
+        {
+            yield break; // 코루틴 중단
+        }
+
         Vector3 startPosition = agentToPush.transform.position;
-        // The target position is just for calculating the total displacement
         Vector3 targetPosition = startPosition + pushVector;
         float elapsedTime = 0f;
-
-        // Stop the agent from actively seeking a path during the push
         agentToPush.isStopped = true;
 
         while (elapsedTime < duration)
         {
-            // Calculate the desired displacement for this frame
+            // 안전 코드: 루프 중에도 Agent가 비활성화되면 중단
+            if (!agentToPush.isActiveAndEnabled)
+            {
+                yield break;
+            }
             Vector3 currentTargetPosition = Vector3.Lerp(startPosition, targetPosition, elapsedTime / duration);
-            Vector3 displacement = currentTargetPosition - agentToPush.transform.position;
-
-            // Use NavMeshAgent.Move() to apply the displacement, respecting NavMesh and obstacles
-            agentToPush.Move(displacement);
-
+            agentToPush.Move(currentTargetPosition - agentToPush.transform.position);
             elapsedTime += Time.deltaTime;
-            yield return null; // Wait for the next frame
+            yield return null;
         }
 
-        // Ensure it reaches the target position as much as possible within NavMesh constraints
-        // And re-enable its pathfinding
-        agentToPush.isStopped = false;
+        // isStopped를 다시 false로 설정하기 전에도 유효한지 최종 확인
+        if (agentToPush.isActiveAndEnabled)
+        {
+            agentToPush.isStopped = false;
+        }
     }
 
     private void ResetPlayerLayer()
