@@ -2,14 +2,15 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.AI; // Required for NavMeshAgent
 using System.Collections; // Required for Coroutines
+using System.Collections.Generic; // Required for List
 
 [RequireComponent(typeof(Rigidbody))]
-public class PlayerController : MonoBehaviour
+public class UnitController : MonoBehaviour
 {
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 5f;
     [SerializeField] private float rotationSpeed = 15f;
-    [SerializeField] private ManualFollowCamera followCamera; // Assign your Main Camera with ManualFollowCamera script here
+    // Removed followCamera reference as it will be managed by the main PlayerController
 
     [Header("Evade")]
     [SerializeField] private float evadeForce = 10f;
@@ -29,18 +30,20 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private LayerMask enemyLayer; // 적 레이어
 
     private float nextFireTime = 0f;
-    private System.Collections.Generic.List<GameObject> projectilePool = new System.Collections.Generic.List<GameObject>();
+    private List<GameObject> projectilePool = new List<GameObject>();
     private int poolSize = 20;
 
     private Rigidbody rb;
-    private InputSystem_Actions playerActions;
+    private InputSystem_Actions playerActions; // Will use player's input actions
     private Vector2 moveInput;
     private int originalLayer; // To store the player's original layer
+
+    public bool IsControlledByPlayer { get; private set; } = false; // New field to indicate if this Unit is currently controlled
 
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
-        playerActions = new InputSystem_Actions();
+        playerActions = new InputSystem_Actions(); // Initialize here, but enable/disable externally
         originalLayer = gameObject.layer; // Store the original layer
     }
 
@@ -55,20 +58,43 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    private void OnEnable()
+    // Enable/Disable methods for external control
+    public void EnableControl()
     {
-        playerActions.Player.Enable();
+        IsControlledByPlayer = true;
+        this.enabled = true; // Enable this script
+        rb.isKinematic = false; // Ensure physics are active
+        // Set constraints for player control: allow movement and Y-axis rotation
+        rb.constraints = RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+        gameObject.SetActive(true); // Ensure GameObject is active
+        playerActions.Player.Enable(); // Enable Player action map
         playerActions.Player.Evade.performed += OnEvade;
+        playerActions.Player.Interact.performed += OnInteract;
     }
 
-    private void OnDisable()
+    public void DisableControl()
     {
-        playerActions.Player.Disable();
-        playerActions.Player.Evade.performed -= OnEvade;
+        IsControlledByPlayer = false;
+        this.enabled = false; // Disable this script
+        rb.isKinematic = true; // Disable physics
+        rb.constraints = RigidbodyConstraints.FreezeAll; // Freeze everything when not controlled
+        gameObject.SetActive(false); // Disable GameObject
+
+        // Only disable and unsubscribe if playerActions has been initialized
+        if (playerActions != null)
+        {
+            playerActions.Player.Disable(); // Disable Player action map
+            playerActions.Player.Evade.performed -= OnEvade;
+            playerActions.Player.Interact.performed -= OnInteract;
+        }
+        rb.linearVelocity = Vector3.zero; // Stop movement
+        moveInput = Vector2.zero; // Reset input
     }
 
     private void Update()
     {
+        if (!IsControlledByPlayer) return; // Only process input if controlled
+
         moveInput = playerActions.Player.Move.ReadValue<Vector2>();
 
         // 타겟 탐지 및 포탑 회전
@@ -85,6 +111,10 @@ public class PlayerController : MonoBehaviour
 
     private void FixedUpdate()
     {
+        if (!IsControlledByPlayer) return; // Only process physics if controlled
+
+        rb.angularVelocity = Vector3.zero; // Prevent unwanted rotation from collisions
+
         Vector3 moveVector = new Vector3(moveInput.x, 0f, moveInput.y);
         rb.linearVelocity = moveVector * moveSpeed;
 
@@ -137,6 +167,7 @@ public class PlayerController : MonoBehaviour
 
     private void Fire()
     {
+        Debug.Log("Unit Fire action triggered!"); // NEW LINE
         GameObject projectile = GetPooledProjectile();
         if (projectile != null)
         {
@@ -162,6 +193,7 @@ public class PlayerController : MonoBehaviour
 
     private void OnEvade(InputAction.CallbackContext context)
     {
+        Debug.Log("Unit Evade button pressed!"); // NEW LINE
         if (gameObject.layer == dodgingPlayerLayer) return;
 
         Vector3 evadeDirection = (moveInput.sqrMagnitude > 0.1f) 
@@ -185,11 +217,13 @@ public class PlayerController : MonoBehaviour
                 }
             }
         }
+    }
 
-        if (followCamera != null)
-        {
-            followCamera.TriggerEvadeDamping();
-        }
+    // OnInteract and OnExitVehicle will be handled by the main PlayerController
+    private void OnInteract(InputAction.CallbackContext context)
+    {
+        Debug.Log("Unit Interact button pressed!"); // NEW LINE
+        // This will be handled by the PlayerPawnManager
     }
 
     private IEnumerator SmoothPushEnemy(NavMeshAgent agentToPush, Vector3 pushVector, float duration)

@@ -1,62 +1,63 @@
 using UnityEngine;
-using System.Collections; // Add this line
+using System.Collections; // Required for Coroutines
 
 public class ManualFollowCamera : MonoBehaviour
 {
     [SerializeField] private Transform target; // 플레이어 Transform
-    [SerializeField] private float defaultDamping = 10f; // 평상시 카메라 추적 부드러움 (빠르게 반응)
-    [SerializeField] private float evadeDamping = 1f; // 회피 시 카메라 추적 부드러움 (느리게 반응)
-    [SerializeField] private float evadeDampingDuration = 0.5f; // 회피 댐핑 지속 시간
     [SerializeField] private Vector3 offset = new Vector3(0f, 10f, -10f); // 플레이어로부터의 상대적 위치
+    [SerializeField] private float smoothSpeed = 0.125f; // 카메라 추적 부드러움
+    [SerializeField] private float evadeDampingDuration = 0.5f; // 회피 댐핑 지속 시간
+    [SerializeField] private float evadeDampingFactor = 0.5f; // 회피 시 카메라 추적 부드러움 (느리게 반응)
 
-    private float currentDamping; // 현재 적용되는 댐핑 값
-    private Coroutine evadeDampingCoroutine;
+    private float currentDampingFactor = 1f; // 현재 적용되는 댐핑 값 (1f = normal, evadeDampingFactor = evade)
+    private float evadeDampingTimer = 0f; // 회피 댐핑 타이머
 
     void Start()
     {
-        currentDamping = defaultDamping;
+        // Ensure target is set, if not, try to find the player
+        if (target == null)
+        {
+            GameObject player = GameObject.FindGameObjectWithTag("Player"); // Assuming player has "Player" tag
+            if (player != null)
+            {
+                target = player.transform;
+            }
+            else
+            {
+                Debug.LogWarning("ManualFollowCamera: No target assigned and no GameObject with 'Player' tag found.");
+            }
+        }
     }
 
     void LateUpdate()
     {
-        if (target == null)
-        {
-            Debug.LogWarning("Camera target is not assigned.");
-            return;
-        }
+        if (target == null) return;
 
-        // 원하는 카메라 위치 계산
         Vector3 desiredPosition = target.position + offset;
+        Vector3 smoothedPosition = Vector3.Lerp(transform.position, desiredPosition, smoothSpeed * currentDampingFactor);
+        transform.position = smoothedPosition;
 
-        // 현재 카메라 위치에서 원하는 위치로 부드럽게 이동
-        transform.position = Vector3.Lerp(transform.position, desiredPosition, currentDamping * Time.deltaTime);
-
-        // 플레이어를 바라보도록 회전 (선택 사항)
-        // transform.LookAt(target.position);
+        // Update damping factor
+        if (evadeDampingTimer > 0)
+        {
+            evadeDampingTimer -= Time.deltaTime;
+            currentDampingFactor = Mathf.Lerp(evadeDampingFactor, 1f, (evadeDampingDuration - evadeDampingTimer) / evadeDampingDuration);
+        }
+        else
+        {
+            currentDampingFactor = 1f;
+        }
     }
 
     public void TriggerEvadeDamping()
     {
-        if (evadeDampingCoroutine != null)
-        {
-            StopCoroutine(evadeDampingCoroutine);
-        }
-        evadeDampingCoroutine = StartCoroutine(EvadeDampingTransition());
+        evadeDampingTimer = evadeDampingDuration;
+        currentDampingFactor = evadeDampingFactor;
     }
 
-    private IEnumerator EvadeDampingTransition()
+    // New method to set the camera target
+    public void SetTarget(Transform newTarget)
     {
-        float timer = 0f;
-        float startDamp = evadeDamping; // 회피 시작 시 댐핑 값 (느리게 반응)
-        float endDamp = defaultDamping; // 회피 종료 시 댐핑 값 (빠르게 반응)
-
-        while (timer < evadeDampingDuration)
-        {
-            currentDamping = Mathf.Lerp(startDamp, endDamp, timer / evadeDampingDuration);
-            timer += Time.deltaTime;
-            yield return null;
-        }
-        currentDamping = endDamp; // 정확히 기본 댐핑 값으로 설정
-        evadeDampingCoroutine = null;
+        target = newTarget;
     }
 }
