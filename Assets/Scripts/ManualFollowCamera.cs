@@ -1,23 +1,76 @@
 using UnityEngine;
-using System.Collections; // Required for Coroutines
+using UnityEngine.InputSystem;
 
 public class ManualFollowCamera : MonoBehaviour
 {
-    [SerializeField] private Transform target; // 플레이어 Transform
-    [SerializeField] private Vector3 offset = new Vector3(0f, 10f, -10f); // 플레이어로부터의 상대적 위치
-    [SerializeField] private float smoothSpeed = 0.125f; // 카메라 추적 부드러움
-    [SerializeField] private float evadeDampingDuration = 0.5f; // 회피 댐핑 지속 시간
-    [SerializeField] private float evadeDampingFactor = 0.5f; // 회피 시 카메라 추적 부드러움 (느리게 반응)
+    [Header("Target")]
+    [SerializeField] private Transform target;
 
-    private float currentDampingFactor = 1f; // 현재 적용되는 댐핑 값 (1f = normal, evadeDampingFactor = evade)
-    private float evadeDampingTimer = 0f; // 회피 댐핑 타이머
+    [Header("Orbit Settings")]
+    [SerializeField] private float distance = 14f;
+    [SerializeField] private float yawSpeed = 120f;
+    [SerializeField] private float pitchSpeed = 120f;
+    [SerializeField] private Vector2 pitchLimits = new Vector2(-30f, 80f);
+    [SerializeField] private Vector2 yawLimits = new Vector2(-90f, 90f); // Yaw (horizontal) rotation limits
+
+    [Header("Smoothing")]
+    [SerializeField] private float positionSmoothSpeed = 0.125f;
+
+    private InputSystem_Actions inputActions;
+    private Vector2 cameraInput;
+
+    // Current camera angles
+    private float yaw = 0f;
+    private float pitch = 0f;
+
+    // Stored initial camera angles for reset
+    private float initialYaw = 0f;
+    private float initialPitch = 0f;
+
+    void Awake()
+    {
+        inputActions = new InputSystem_Actions();
+        inputActions.Camera.CameraMove.performed += OnCameraMove;
+        inputActions.Camera.CameraMove.canceled += OnCameraMove;
+        inputActions.Camera.CameraReset.performed += OnCameraReset;
+    }
+
+    private void OnCameraMove(InputAction.CallbackContext context)
+    {
+        cameraInput = context.ReadValue<Vector2>();
+    }
+
+    private void OnCameraReset(InputAction.CallbackContext context)
+    {
+        // Instantly snap to the initial state
+        yaw = initialYaw;
+        pitch = initialPitch;
+        cameraInput = Vector2.zero;
+
+        // Calculate final rotation and position
+        Quaternion finalRotation = Quaternion.Euler(pitch, yaw, 0);
+        Vector3 finalPosition = target.position - (finalRotation * Vector3.forward * distance);
+
+        // Apply instantly, bypassing any smoothing
+        transform.position = finalPosition;
+        transform.rotation = finalRotation;
+    }
+
+    void OnEnable()
+    {
+        inputActions.Camera.Enable();
+    }
+
+    void OnDisable()
+    {
+        inputActions.Camera.Disable();
+    }
 
     void Start()
     {
-        // Ensure target is set, if not, try to find the player
         if (target == null)
         {
-            GameObject player = GameObject.FindGameObjectWithTag("Player"); // Assuming player has "Player" tag
+            GameObject player = GameObject.FindGameObjectWithTag("Player");
             if (player != null)
             {
                 target = player.transform;
@@ -25,37 +78,49 @@ public class ManualFollowCamera : MonoBehaviour
             else
             {
                 Debug.LogWarning("ManualFollowCamera: No target assigned and no GameObject with 'Player' tag found.");
+                return;
             }
         }
+
+        Vector3 angles = transform.rotation.eulerAngles;
+        yaw = angles.y;
+        pitch = angles.x;
+
+        initialYaw = yaw;
+        initialPitch = pitch;
     }
 
     void LateUpdate()
     {
         if (target == null) return;
 
-        Vector3 desiredPosition = target.position + offset;
-        Vector3 smoothedPosition = Vector3.Lerp(transform.position, desiredPosition, smoothSpeed * currentDampingFactor);
-        transform.position = smoothedPosition;
+        // Manual rotation is now the only logic here
+        HandleManualRotation();
 
-        // Update damping factor
-        if (evadeDampingTimer > 0)
+        Quaternion desiredRotation = Quaternion.Euler(pitch, yaw, 0);
+        Vector3 desiredPosition = target.position - (desiredRotation * Vector3.forward * distance);
+
+        // If there is active camera rotation input, snap the position for responsiveness.
+        // Otherwise, smooth the position to follow the target.
+        if (cameraInput.sqrMagnitude > 0.01f)
         {
-            evadeDampingTimer -= Time.deltaTime;
-            currentDampingFactor = Mathf.Lerp(evadeDampingFactor, 1f, (evadeDampingDuration - evadeDampingTimer) / evadeDampingDuration);
+            transform.position = desiredPosition; // Snap instantly
         }
         else
         {
-            currentDampingFactor = 1f;
+            transform.position = Vector3.Lerp(transform.position, desiredPosition, positionSmoothSpeed); // Smooth follow
         }
+
+        transform.rotation = desiredRotation;
     }
 
-    public void TriggerEvadeDamping()
+    private void HandleManualRotation()
     {
-        evadeDampingTimer = evadeDampingDuration;
-        currentDampingFactor = evadeDampingFactor;
+        yaw += cameraInput.x * yawSpeed * Time.deltaTime;
+        pitch -= cameraInput.y * pitchSpeed * Time.deltaTime;
+        pitch = Mathf.Clamp(pitch, pitchLimits.x, pitchLimits.y);
     }
 
-    // New method to set the camera target
     public void SetTarget(Transform newTarget)
     {
         target = newTarget;

@@ -55,7 +55,31 @@ public class VehicleController : MonoBehaviour
 
         rb.angularVelocity = Vector3.zero; // Prevent unwanted rotation from collisions
 
-        Vector3 moveVector = new Vector3(moveInput.x, 0f, moveInput.y);
+        Vector3 moveForward;
+        Vector3 moveRight;
+
+        // Check if camera is looking nearly straight up or down
+        if (Mathf.Abs(Vector3.Dot(Camera.main.transform.forward, Vector3.up)) > 0.99f)
+        {
+            // Gimbal lock case: Use world axes for movement
+            moveForward = Vector3.forward;
+            moveRight = Vector3.right;
+        }
+        else
+        {
+            // Standard case: Use camera-relative axes
+            moveForward = Camera.main.transform.forward;
+            moveRight = Camera.main.transform.right;
+
+            moveForward.y = 0;
+            moveRight.y = 0;
+            moveForward.Normalize();
+            moveRight.Normalize();
+        }
+
+        // Calculate movement direction
+        Vector3 moveVector = (moveForward * moveInput.y + moveRight * moveInput.x);
+
         rb.linearVelocity = moveVector * moveSpeed;
 
         if (moveVector != Vector3.zero)

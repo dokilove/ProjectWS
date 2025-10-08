@@ -115,7 +115,31 @@ public class UnitController : MonoBehaviour
 
         rb.angularVelocity = Vector3.zero; // Prevent unwanted rotation from collisions
 
-        Vector3 moveVector = new Vector3(moveInput.x, 0f, moveInput.y);
+        Vector3 moveForward;
+        Vector3 moveRight;
+
+        // Check if camera is looking nearly straight up or down
+        if (Mathf.Abs(Vector3.Dot(Camera.main.transform.forward, Vector3.up)) > 0.99f)
+        {
+            // Gimbal lock case: Use world axes for movement
+            moveForward = Vector3.forward;
+            moveRight = Vector3.right;
+        }
+        else
+        {
+            // Standard case: Use camera-relative axes
+            moveForward = Camera.main.transform.forward;
+            moveRight = Camera.main.transform.right;
+
+            moveForward.y = 0;
+            moveRight.y = 0;
+            moveForward.Normalize();
+            moveRight.Normalize();
+        }
+
+        // Calculate movement direction
+        Vector3 moveVector = (moveForward * moveInput.y + moveRight * moveInput.x);
+
         rb.linearVelocity = moveVector * moveSpeed;
 
         if (moveVector != Vector3.zero)
@@ -196,10 +220,25 @@ public class UnitController : MonoBehaviour
         Debug.Log("Unit Evade button pressed!"); // NEW LINE
         if (gameObject.layer == dodgingPlayerLayer) return;
 
-        Vector3 evadeDirection = (moveInput.sqrMagnitude > 0.1f) 
-            ? new Vector3(moveInput.x, 0, moveInput.y).normalized 
-            : -transform.forward;
-            
+        Vector3 evadeDirection;
+        if (moveInput.sqrMagnitude > 0.1f)
+        {
+            // Re-calculate camera-relative direction to ensure dodge is correct
+            Transform camTransform = Camera.main.transform;
+            Vector3 camForward = camTransform.forward;
+            Vector3 camRight = camTransform.right;
+            camForward.y = 0;
+            camRight.y = 0;
+            camForward.Normalize();
+            camRight.Normalize();
+            evadeDirection = (camForward * moveInput.y + camRight * moveInput.x).normalized;
+        }
+        else
+        {
+            // If standing still, dodge backwards relative to character's orientation
+            evadeDirection = -transform.forward;
+        }
+
         rb.AddForce(evadeDirection * evadeForce, ForceMode.Impulse);
         gameObject.layer = dodgingPlayerLayer;
         Invoke(nameof(ResetPlayerLayer), dodgeDuration);
