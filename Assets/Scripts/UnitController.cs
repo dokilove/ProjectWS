@@ -3,143 +3,250 @@ using UnityEngine.InputSystem;
 using UnityEngine.AI; // Required for NavMeshAgent
 using System.Collections; // Required for Coroutines
 using System.Collections.Generic; // Required for List
+using System.Linq; // Required for OrderBy
 
 [RequireComponent(typeof(Rigidbody))]
+[RequireComponent(typeof(LineRenderer))] // Ensure LineRenderer is attached
 public class UnitController : MonoBehaviour
 {
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 5f;
     [SerializeField] private float rotationSpeed = 15f;
-    // Removed followCamera reference as it will be managed by the main PlayerController
 
     [Header("Evade")]
     [SerializeField] private float evadeForce = 10f;
-    [SerializeField] private float dodgeDuration = 0.5f; // How long the dodge lasts
-    [SerializeField] private int dodgingPlayerLayer; // Assign the 'DodgingPlayer' layer ID in the Inspector
-    [SerializeField] private float pushRadius = 2f; // Radius to detect enemies for pushing
-    [SerializeField] private float pushForce = 0.05f; // Total distance to push enemies
-    [SerializeField] private float pushSmoothTime = 0.2f; // How long the push effect lasts
+    [SerializeField] private float dodgeDuration = 0.5f;
+    [SerializeField] private int dodgingPlayerLayer;
+    [SerializeField] private float pushRadius = 2f;
+    [SerializeField] private float pushForce = 0.05f;
+    [SerializeField] private float pushSmoothTime = 0.2f;
 
     [Header("Attacks - Auto Fire & Targeting")]
-    [SerializeField] private Transform turretTransform; // 회전할 포탑 Transform
-    [SerializeField] private float turretRotationSpeed = 10f; // 포탑 회전 속도
-    [SerializeField] private GameObject projectilePrefab; // 발사체 프리팹
-    [SerializeField] private Transform firePoint; // 발사 위치
-    [SerializeField] private float fireRate = 2f; // 초당 발사 횟수
-    [SerializeField] private float detectionRadius = 15f; // 적 탐지 반경
-    [SerializeField] private LayerMask enemyLayer; // 적 레이어
+    [SerializeField] private Transform turretTransform;
+    [SerializeField] private float turretRotationSpeed = 10f;
+    [SerializeField] private Transform firePoint;
+    [SerializeField] private float detectionRadius = 15f;
+    [SerializeField] private LayerMask enemyLayer;
+    [SerializeField] private WeaponData weaponData;
+    [SerializeField] private float targetSwitchRate = 4f; // Switches per second for hold
 
     private float nextFireTime = 0f;
     private List<GameObject> projectilePool = new List<GameObject>();
     private int poolSize = 20;
 
     private Rigidbody rb;
-    private InputSystem_Actions playerActions; // Will use player's input actions
+    private InputSystem_Actions playerActions;
     private Vector2 moveInput;
-    private int originalLayer; // To store the player's original layer
+    private int originalLayer;
+    private LineRenderer lineRenderer;
+    
+    // --- Targeting Fields ---
+    private Transform currentTarget;
+    private List<Transform> potentialTargets = new List<Transform>();
+    private int targetIndex = -1;
+    private float nextSwitchTime = 0f; // Cooldown for target switching
+    
+    private bool isFireHeld = false;
 
-    public bool IsControlledByPlayer { get; private set; } = false; // New field to indicate if this Unit is currently controlled
+    public bool IsControlledByPlayer { get; private set; } = false;
 
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
-        playerActions = new InputSystem_Actions(); // Initialize here, but enable/disable externally
-        originalLayer = gameObject.layer; // Store the original layer
+        playerActions = new InputSystem_Actions();
+        originalLayer = gameObject.layer;
+
+        lineRenderer = GetComponent<LineRenderer>();
+        lineRenderer.positionCount = 2;
+        lineRenderer.startWidth = 0.05f;
+        lineRenderer.endWidth = 0.05f;
+        lineRenderer.material = new Material(Shader.Find("Legacy Shaders/Particles/Alpha Blended Premultiply"));
+        lineRenderer.startColor = Color.red;
+        lineRenderer.endColor = Color.red;
+        lineRenderer.enabled = false;
     }
 
     private void Start()
     {
+        if (weaponData == null || weaponData.projectilePrefab == null)
+        {
+            Debug.LogError("WeaponData or ProjectilePrefab is not assigned in the inspector!", this);
+            return;
+        }
+
         for (int i = 0; i < poolSize; i++)
         {
-            if (projectilePrefab == null) continue;
-            GameObject proj = Instantiate(projectilePrefab);
+            GameObject proj = Instantiate(weaponData.projectilePrefab);
             proj.SetActive(false);
             projectilePool.Add(proj);
         }
     }
 
-    // Enable/Disable methods for external control
     public void EnableControl()
     {
         IsControlledByPlayer = true;
-        this.enabled = true; // Enable this script
-        rb.isKinematic = false; // Ensure physics are active
-        // Set constraints for player control: allow movement and Y-axis rotation
+        this.enabled = true;
+        rb.isKinematic = false;
         rb.constraints = RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
-        gameObject.SetActive(true); // Ensure GameObject is active
-        playerActions.Player.Enable(); // Enable Player action map
+        gameObject.SetActive(true);
+        playerActions.Player.Enable();
         playerActions.Player.Evade.performed += OnEvade;
         playerActions.Player.Interact.performed += OnInteract;
+        
+        playerActions.Player.Fire.performed += OnFire;
+        playerActions.Player.Fire_Hold.started += OnFireHoldStarted;
+        playerActions.Player.Fire_Hold.canceled += OnFireHoldCanceled;
+        // No longer subscribing to SwitchTarget event
     }
 
     public void DisableControl()
     {
         IsControlledByPlayer = false;
-        this.enabled = false; // Disable this script
-        rb.isKinematic = true; // Disable physics
-        rb.constraints = RigidbodyConstraints.FreezeAll; // Freeze everything when not controlled
-        gameObject.SetActive(false); // Disable GameObject
+        this.enabled = false;
+        rb.isKinematic = true;
+        rb.constraints = RigidbodyConstraints.FreezeAll;
+        gameObject.SetActive(false);
 
-        // Only disable and unsubscribe if playerActions has been initialized
         if (playerActions != null)
         {
-            playerActions.Player.Disable(); // Disable Player action map
+            playerActions.Player.Disable();
             playerActions.Player.Evade.performed -= OnEvade;
             playerActions.Player.Interact.performed -= OnInteract;
+
+            playerActions.Player.Fire.performed -= OnFire;
+            playerActions.Player.Fire_Hold.started -= OnFireHoldStarted;
+            playerActions.Player.Fire_Hold.canceled -= OnFireHoldCanceled;
+            // No longer unsubscribing from SwitchTarget event
         }
-        rb.linearVelocity = Vector3.zero; // Stop movement
-        moveInput = Vector2.zero; // Reset input
+        rb.linearVelocity = Vector3.zero;
+        moveInput = Vector2.zero;
     }
 
     private void Update()
     {
-        if (!IsControlledByPlayer) return; // Only process input if controlled
+        if (!IsControlledByPlayer) return;
 
         moveInput = playerActions.Player.Move.ReadValue<Vector2>();
 
-        // 타겟 탐지 및 포탑 회전
-        Transform target = FindNearestEnemy();
-        RotateTurret(target);
+        UpdateTargets();
+        HandleTargetSwitching(); // New method for polling
 
-        // 자동 발사
-        if (target != null && Time.time >= nextFireTime)
+        RotateTurret(currentTarget);
+
+        if (currentTarget != null)
         {
-            nextFireTime = Time.time + 1f / fireRate;
-            Fire();
+            lineRenderer.enabled = true;
+            lineRenderer.SetPosition(0, firePoint.position);
+            lineRenderer.SetPosition(1, currentTarget.position);
         }
+        else
+        {
+            lineRenderer.enabled = false;
+        }
+
+        if (isFireHeld && currentTarget != null && Time.time >= nextFireTime)
+        {
+            if (weaponData != null)
+            {
+                nextFireTime = Time.time + 1f / weaponData.fireRate;
+                Fire();
+            }
+        }
+    }
+
+    private void HandleTargetSwitching()
+    {
+        float switchValue = playerActions.Player.SwitchTarget.ReadValue<float>();
+        if (Mathf.Abs(switchValue) > 0.1f) // Input detected
+        {
+            if (potentialTargets.Count <= 1 || Time.time < nextSwitchTime) return;
+
+            nextSwitchTime = Time.time + 1f / targetSwitchRate;
+
+            if (switchValue > 0) // Cycle right
+            {
+                targetIndex++;
+                if (targetIndex >= potentialTargets.Count) targetIndex = 0;
+            }
+            else // Cycle left
+            {
+                targetIndex--;
+                if (targetIndex < 0) targetIndex = potentialTargets.Count - 1;
+            }
+            currentTarget = potentialTargets[targetIndex];
+        }
+    }
+
+    private void UpdateTargets()
+    {
+        potentialTargets = Physics.OverlapSphere(transform.position, detectionRadius, enemyLayer)
+                                .Select(col => col.transform)
+                                .OrderBy(t => Vector3.SignedAngle(transform.forward, t.position - transform.position, Vector3.up))
+                                .ToList();
+
+        if (potentialTargets.Count == 0)
+        {
+            targetIndex = -1;
+            currentTarget = null;
+            return;
+        }
+
+        if (targetIndex != -1)
+        {
+            int oldTargetNewIndex = potentialTargets.IndexOf(currentTarget);
+            if (oldTargetNewIndex == -1)
+            {
+                targetIndex = -1; // Mark for re-targeting
+                currentTarget = null;
+            }
+            else
+            {
+                targetIndex = oldTargetNewIndex;
+            }
+        }
+
+        if (targetIndex == -1)
+        {
+            float minAngle = float.MaxValue;
+            for (int i = 0; i < potentialTargets.Count; i++)
+            {
+                float angle = Vector3.Angle(transform.forward, potentialTargets[i].position - transform.position);
+                if (angle < minAngle)
+                {
+                    minAngle = angle;
+                    targetIndex = i;
+                }
+            }
+        }
+        
+        currentTarget = potentialTargets[targetIndex];
     }
 
     private void FixedUpdate()
     {
-        if (!IsControlledByPlayer) return; // Only process physics if controlled
+        if (!IsControlledByPlayer) return;
 
-        rb.angularVelocity = Vector3.zero; // Prevent unwanted rotation from collisions
+        rb.angularVelocity = Vector3.zero;
 
         Vector3 moveForward;
         Vector3 moveRight;
 
-        // Check if camera is looking nearly straight up or down
         if (Mathf.Abs(Vector3.Dot(Camera.main.transform.forward, Vector3.up)) > 0.99f)
         {
-            // Gimbal lock case: Use world axes for movement
             moveForward = Vector3.forward;
             moveRight = Vector3.right;
         }
         else
         {
-            // Standard case: Use camera-relative axes
             moveForward = Camera.main.transform.forward;
             moveRight = Camera.main.transform.right;
-
             moveForward.y = 0;
             moveRight.y = 0;
             moveForward.Normalize();
             moveRight.Normalize();
         }
 
-        // Calculate movement direction
         Vector3 moveVector = (moveForward * moveInput.y + moveRight * moveInput.x);
-
         rb.linearVelocity = moveVector * moveSpeed;
 
         if (moveVector != Vector3.zero)
@@ -149,22 +256,26 @@ public class UnitController : MonoBehaviour
         }
     }
 
-    private Transform FindNearestEnemy()
+    private void OnFire(InputAction.CallbackContext context)
     {
-        Collider[] enemies = Physics.OverlapSphere(transform.position, detectionRadius, enemyLayer);
-        Transform nearestEnemy = null;
-        float minDistance = Mathf.Infinity;
-
-        foreach (Collider enemy in enemies)
+        if (currentTarget != null && Time.time >= nextFireTime)
         {
-            float distance = Vector3.Distance(transform.position, enemy.transform.position);
-            if (distance < minDistance)
+            if (weaponData != null)
             {
-                minDistance = distance;
-                nearestEnemy = enemy.transform;
+                nextFireTime = Time.time + 1f / weaponData.fireRate;
+                Fire();
             }
         }
-        return nearestEnemy;
+    }
+
+    private void OnFireHoldStarted(InputAction.CallbackContext context)
+    {
+        isFireHeld = true;
+    }
+
+    private void OnFireHoldCanceled(InputAction.CallbackContext context)
+    {
+        isFireHeld = false;
     }
 
     private void RotateTurret(Transform target)
@@ -174,37 +285,37 @@ public class UnitController : MonoBehaviour
         Quaternion targetRotation;
         if (target != null)
         {
-            // 타겟이 있으면 타겟 방향으로
             Vector3 direction = target.position - turretTransform.position;
-            direction.y = 0; // 포탑이 위아래로 기울지 않도록
+            direction.y = 0;
             targetRotation = Quaternion.LookRotation(direction);
         }
         else
         {
-            // 타겟이 없으면 플레이어의 정면 방향으로
             targetRotation = transform.rotation;
         }
-
-        // 부드럽게 회전
         turretTransform.rotation = Quaternion.Slerp(turretTransform.rotation, targetRotation, turretRotationSpeed * Time.deltaTime);
     }
 
     private void Fire()
     {
-        Debug.Log("Unit Fire action triggered!"); // NEW LINE
+        if (currentTarget == null) return;
+
+        Debug.Log("Unit Fire action triggered!");
         GameObject projectile = GetPooledProjectile();
         if (projectile != null)
         {
+            Vector3 directionToTarget = (currentTarget.position - firePoint.position).normalized;
             projectile.transform.position = firePoint.position;
-            projectile.transform.rotation = firePoint.rotation; // 포탑의 방향을 그대로 따름
-
+            projectile.transform.rotation = Quaternion.LookRotation(directionToTarget);
             projectile.SetActive(true);
-            projectile.GetComponent<Projectile>().Initialize(turretTransform.forward); // 포탑의 정면으로 발사
+            projectile.GetComponent<Projectile>().Initialize(projectile.transform.forward);
         }
     }
 
     private GameObject GetPooledProjectile()
     {
+        if (projectilePool.Count == 0) return null;
+
         for (int i = 0; i < projectilePool.Count; i++)
         {
             if (!projectilePool[i].activeInHierarchy)
@@ -217,13 +328,11 @@ public class UnitController : MonoBehaviour
 
     private void OnEvade(InputAction.CallbackContext context)
     {
-        Debug.Log("Unit Evade button pressed!"); // NEW LINE
         if (gameObject.layer == dodgingPlayerLayer) return;
 
         Vector3 evadeDirection;
         if (moveInput.sqrMagnitude > 0.1f)
         {
-            // Re-calculate camera-relative direction to ensure dodge is correct
             Transform camTransform = Camera.main.transform;
             Vector3 camForward = camTransform.forward;
             Vector3 camRight = camTransform.right;
@@ -235,7 +344,6 @@ public class UnitController : MonoBehaviour
         }
         else
         {
-            // If standing still, dodge backwards relative to character's orientation
             evadeDirection = -transform.forward;
         }
 
@@ -258,19 +366,16 @@ public class UnitController : MonoBehaviour
         }
     }
 
-    // OnInteract and OnExitVehicle will be handled by the main PlayerController
     private void OnInteract(InputAction.CallbackContext context)
     {
-        Debug.Log("Unit Interact button pressed!"); // NEW LINE
-        // This will be handled by the PlayerPawnManager
+        Debug.Log("Unit Interact button pressed!");
     }
 
     private IEnumerator SmoothPushEnemy(NavMeshAgent agentToPush, Vector3 pushVector, float duration)
     {
-        // 안전 코드: Agent가 유효하고 NavMesh 위에 있을 때만 실행
         if (agentToPush == null || !agentToPush.isActiveAndEnabled || !agentToPush.isOnNavMesh)
         {
-            yield break; // 코루틴 중단
+            yield break;
         }
 
         Vector3 startPosition = agentToPush.transform.position;
@@ -280,7 +385,6 @@ public class UnitController : MonoBehaviour
 
         while (elapsedTime < duration)
         {
-            // 안전 코드: 루프 중에도 Agent가 비활성화되면 중단
             if (!agentToPush.isActiveAndEnabled)
             {
                 yield break;
@@ -291,7 +395,6 @@ public class UnitController : MonoBehaviour
             yield return null;
         }
 
-        // isStopped를 다시 false로 설정하기 전에도 유효한지 최종 확인
         if (agentToPush.isActiveAndEnabled)
         {
             agentToPush.isStopped = false;
