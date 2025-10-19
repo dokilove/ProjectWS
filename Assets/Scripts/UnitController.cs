@@ -1,12 +1,12 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.AI; // Required for NavMeshAgent
-using System.Collections; // Required for Coroutines
-using System.Collections.Generic; // Required for List
-using System.Linq; // Required for OrderBy
+using UnityEngine.AI;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 
 [RequireComponent(typeof(Rigidbody))]
-[RequireComponent(typeof(LineRenderer))] // Ensure LineRenderer is attached
+[RequireComponent(typeof(LineRenderer))]
 public class UnitController : MonoBehaviour
 {
     [Header("Movement")]
@@ -25,10 +25,12 @@ public class UnitController : MonoBehaviour
     [SerializeField] private Transform turretTransform;
     [SerializeField] private float turretRotationSpeed = 10f;
     [SerializeField] private Transform firePoint;
-    [SerializeField] private float detectionRadius = 15f;
+    [SerializeField] private float lockOnRadius = 15f;
     [SerializeField] private LayerMask enemyLayer;
     [SerializeField] private WeaponData weaponData;
-    [SerializeField] private float targetSwitchRate = 4f; // Switches per second for hold
+    [SerializeField] private Color defaultTargetColor = Color.red;
+    [SerializeField] private Color lockOnTargetColor = Color.yellow;
+    [SerializeField] private LineRenderer lockOnRadiusVisualizer;
 
     private float nextFireTime = 0f;
     private List<GameObject> projectilePool = new List<GameObject>();
@@ -39,13 +41,13 @@ public class UnitController : MonoBehaviour
     private Vector2 moveInput;
     private int originalLayer;
     private LineRenderer lineRenderer;
-    
+
     // --- Targeting Fields ---
     private Transform currentTarget;
     private List<Transform> potentialTargets = new List<Transform>();
-    private int targetIndex = -1;
-    private float nextSwitchTime = 0f; // Cooldown for target switching
-    
+    private bool isTargetLockOn = false; // New state for manual lock-on
+    private float lastSwitchValue = 0f; // To detect button press from axis value
+
     private bool isFireHeld = false;
 
     public bool IsControlledByPlayer { get; private set; } = false;
@@ -61,8 +63,8 @@ public class UnitController : MonoBehaviour
         lineRenderer.startWidth = 0.05f;
         lineRenderer.endWidth = 0.05f;
         lineRenderer.material = new Material(Shader.Find("Legacy Shaders/Particles/Alpha Blended Premultiply"));
-        lineRenderer.startColor = Color.red;
-        lineRenderer.endColor = Color.red;
+        lineRenderer.startColor = defaultTargetColor;
+        lineRenderer.endColor = defaultTargetColor;
         lineRenderer.enabled = false;
     }
 
@@ -80,6 +82,8 @@ public class UnitController : MonoBehaviour
             proj.SetActive(false);
             projectilePool.Add(proj);
         }
+
+        UpdateRadiusVisualizer();
     }
 
     public void EnableControl()
@@ -92,11 +96,10 @@ public class UnitController : MonoBehaviour
         playerActions.Player.Enable();
         playerActions.Player.Evade.performed += OnEvade;
         playerActions.Player.Interact.performed += OnInteract;
-        
+
         playerActions.Player.Fire.performed += OnFire;
         playerActions.Player.Fire_Hold.started += OnFireHoldStarted;
         playerActions.Player.Fire_Hold.canceled += OnFireHoldCanceled;
-        // No longer subscribing to SwitchTarget event
     }
 
     public void DisableControl()
@@ -116,7 +119,6 @@ public class UnitController : MonoBehaviour
             playerActions.Player.Fire.performed -= OnFire;
             playerActions.Player.Fire_Hold.started -= OnFireHoldStarted;
             playerActions.Player.Fire_Hold.canceled -= OnFireHoldCanceled;
-            // No longer unsubscribing from SwitchTarget event
         }
         rb.linearVelocity = Vector3.zero;
         moveInput = Vector2.zero;
@@ -128,8 +130,8 @@ public class UnitController : MonoBehaviour
 
         moveInput = playerActions.Player.Move.ReadValue<Vector2>();
 
-        UpdateTargets();
-        HandleTargetSwitching(); // New method for polling
+        UpdateAndSelectTarget();
+        HandleTargetSwitching();
 
         RotateTurret(currentTarget);
 
@@ -138,6 +140,11 @@ public class UnitController : MonoBehaviour
             lineRenderer.enabled = true;
             lineRenderer.SetPosition(0, firePoint.position);
             lineRenderer.SetPosition(1, currentTarget.position);
+
+            // Set color based on lock-on state
+            Color lineColor = isTargetLockOn ? lockOnTargetColor : defaultTargetColor;
+            lineRenderer.startColor = lineColor;
+            lineRenderer.endColor = lineColor;
         }
         else
         {
@@ -157,69 +164,131 @@ public class UnitController : MonoBehaviour
     private void HandleTargetSwitching()
     {
         float switchValue = playerActions.Player.SwitchTarget.ReadValue<float>();
-        if (Mathf.Abs(switchValue) > 0.1f) // Input detected
+
+        // Detect a "press" by checking for a transition from near-zero to a significant value
+        if (Mathf.Abs(lastSwitchValue) < 0.1f && Mathf.Abs(switchValue) >= 0.1f)
         {
-            if (potentialTargets.Count <= 1 || Time.time < nextSwitchTime) return;
-
-            nextSwitchTime = Time.time + 1f / targetSwitchRate;
-
-            if (switchValue > 0) // Cycle right
+            if (potentialTargets.Count > 1)
             {
-                targetIndex++;
-                if (targetIndex >= potentialTargets.Count) targetIndex = 0;
+                isTargetLockOn = true; // Enter lock-on mode on first switch
+                int direction = switchValue > 0 ? 1 : -1;
+                SwitchTarget(direction);
             }
-            else // Cycle left
-            {
-                targetIndex--;
-                if (targetIndex < 0) targetIndex = potentialTargets.Count - 1;
-            }
-            currentTarget = potentialTargets[targetIndex];
         }
+
+        lastSwitchValue = switchValue;
     }
 
-    private void UpdateTargets()
+    private void SwitchTarget(int direction) // 1 for clockwise, -1 for counter-clockwise
     {
-        potentialTargets = Physics.OverlapSphere(transform.position, detectionRadius, enemyLayer)
+        if (potentialTargets.Count <= 1 || currentTarget == null) return;
+
+        Vector3 referenceVec = currentTarget.position - transform.position;
+        referenceVec.y = 0;
+
+        var candidatesInDirection = new List<Transform>();
+
+        // Find all candidates in the desired angular direction
+        foreach (var candidate in potentialTargets)
+        {
+            if (candidate == currentTarget) continue;
+
+            Vector3 candidateVec = candidate.position - transform.position;
+            candidateVec.y = 0;
+
+            float angle = Vector3.SignedAngle(referenceVec, candidateVec, Vector3.up);
+
+            if (Mathf.Sign(angle) == direction)
+            {
+                candidatesInDirection.Add(candidate);
+            }
+        }
+
+        // If there are any candidates, find the one closest by distance
+        if (candidatesInDirection.Count > 0)
+        {
+            Transform bestCandidate = null;
+            float minDistance = float.MaxValue;
+            foreach (var candidate in candidatesInDirection)
+            {
+                float distance = Vector3.Distance(transform.position, candidate.position);
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                    bestCandidate = candidate;
+                }
+            }
+            currentTarget = bestCandidate;
+        }
+        // If no candidates are in the desired direction, do nothing.
+    }
+
+    private void UpdateAndSelectTarget()
+    {
+        // Step 1: Find all potential targets
+        potentialTargets = Physics.OverlapSphere(transform.position, lockOnRadius, enemyLayer)
                                 .Select(col => col.transform)
-                                .OrderBy(t => Vector3.SignedAngle(transform.forward, t.position - transform.position, Vector3.up))
                                 .ToList();
 
         if (potentialTargets.Count == 0)
         {
-            targetIndex = -1;
             currentTarget = null;
+            isTargetLockOn = false;
             return;
         }
 
-        if (targetIndex != -1)
+        // Step 2: Handle targeting mode
+        if (isTargetLockOn)
         {
-            int oldTargetNewIndex = potentialTargets.IndexOf(currentTarget);
-            if (oldTargetNewIndex == -1)
+            // Check if the locked target is still valid
+            if (!potentialTargets.Contains(currentTarget))
             {
-                targetIndex = -1; // Mark for re-targeting
-                currentTarget = null;
+                // Locked target is gone, revert to auto mode
+                isTargetLockOn = false;
+                // Fall-through to auto mode logic below
             }
             else
             {
-                targetIndex = oldTargetNewIndex;
+                // Target is still valid, do nothing and keep it.
+                return;
             }
         }
 
-        if (targetIndex == -1)
+        // Automatic mode (or if lock-on was just lost)
+        // Find the closest one and set it as the current target.
+        Transform closestTarget = null;
+        float minDistance = float.MaxValue;
+        foreach (var target in potentialTargets)
         {
-            float minAngle = float.MaxValue;
-            for (int i = 0; i < potentialTargets.Count; i++)
+            float distance = Vector3.Distance(transform.position, target.position);
+            if (distance < minDistance)
             {
-                float angle = Vector3.Angle(transform.forward, potentialTargets[i].position - transform.position);
-                if (angle < minAngle)
-                {
-                    minAngle = angle;
-                    targetIndex = i;
-                }
+                minDistance = distance;
+                closestTarget = target;
             }
         }
-        
-        currentTarget = potentialTargets[targetIndex];
+        currentTarget = closestTarget;
+    }
+
+    private void UpdateRadiusVisualizer()
+    {
+        if (lockOnRadiusVisualizer == null) return;
+
+        int segments = 50;
+        lockOnRadiusVisualizer.positionCount = segments + 1;
+        lockOnRadiusVisualizer.useWorldSpace = false; // Draw relative to the player
+        lockOnRadiusVisualizer.loop = true;
+
+        float angle = 0f;
+        for (int i = 0; i < (segments + 1); i++)
+        {
+            float x = Mathf.Sin(Mathf.Deg2Rad * angle) * lockOnRadius;
+            float z = Mathf.Cos(Mathf.Deg2Rad * angle) * lockOnRadius;
+
+            lockOnRadiusVisualizer.SetPosition(i, new Vector3(x, 0, z));
+
+            angle += (360f / segments);
+        }
     }
 
     private void FixedUpdate()
@@ -328,6 +397,8 @@ public class UnitController : MonoBehaviour
 
     private void OnEvade(InputAction.CallbackContext context)
     {
+        isTargetLockOn = false; // Disable lock-on when evading
+
         if (gameObject.layer == dodgingPlayerLayer) return;
 
         Vector3 evadeDirection;
