@@ -3,11 +3,16 @@ using UnityEngine.AI; // Required for NavMeshAgent
 
 public class EnemyAI : MonoBehaviour
 {
+    [SerializeField] private EnemyData enemyData;
     private NavMeshAgent agent;
 
     void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
+        if (enemyData != null)
+        {
+            agent.speed = enemyData.moveSpeed;
+        }
     }
 
     void Update()

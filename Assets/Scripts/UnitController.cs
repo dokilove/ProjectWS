@@ -168,11 +168,23 @@ public class UnitController : MonoBehaviour
         // Detect a "press" by checking for a transition from near-zero to a significant value
         if (Mathf.Abs(lastSwitchValue) < 0.1f && Mathf.Abs(switchValue) >= 0.1f)
         {
-            if (potentialTargets.Count > 1)
+            if (potentialTargets.Count > 0) // Make sure there's at least one target
             {
-                isTargetLockOn = true; // Enter lock-on mode on first switch
-                int direction = switchValue > 0 ? 1 : -1;
-                SwitchTarget(direction);
+                if (!isTargetLockOn)
+                {
+                    // FIRST press: Just enable lock-on.
+                    // The currentTarget is already the closest one thanks to UpdateAndSelectTarget().
+                    isTargetLockOn = true;
+                }
+                else
+                {
+                    // SUBSEQUENT presses: Switch the target.
+                    if (potentialTargets.Count > 1)
+                    {
+                        int direction = switchValue > 0 ? 1 : -1;
+                        SwitchTarget(direction);
+                    }
+                }
             }
         }
 
@@ -397,8 +409,6 @@ public class UnitController : MonoBehaviour
 
     private void OnEvade(InputAction.CallbackContext context)
     {
-        isTargetLockOn = false; // Disable lock-on when evading
-
         if (gameObject.layer == dodgingPlayerLayer) return;
 
         Vector3 evadeDirection;

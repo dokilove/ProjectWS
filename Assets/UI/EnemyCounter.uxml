@@ -1,0 +1,6 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:VisualElement style="flex-direction: row; align-items: center; justify-content: flex-start; margin-top: 10px; margin-left: 10px;">
+        <ui:Label text="Enemies:" name="enemy-label" style="color: white; -unity-font-style: bold;"/>
+        <ui:Label text="0" name="enemy-count" style="color: white; margin-left: 5px;"/>
+    </ui:VisualElement>
+</ui:UXML>

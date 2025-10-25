@@ -67,7 +67,7 @@ MeshRenderer:
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
-  - {fileID: 2100000, guid: d8181dc4ccd9b9a46ab24f6b27fdd9eb, type: 2}
+  - {fileID: 2100000, guid: 5ecbffd5c5866394e961e45c66be5ff1, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -106,7 +106,7 @@ GameObject:
   - component: {fileID: 3168357488814527919}
   - component: {fileID: 3667952314491578738}
   m_Layer: 10
-  m_Name: Enemy
+  m_Name: BigEnemy
   m_TagString: Enemy
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -122,7 +122,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 2, y: 1, z: 2}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 8748610038704352405}
@@ -161,7 +161,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: d8181dc4ccd9b9a46ab24f6b27fdd9eb, type: 2}
+  - {fileID: 2100000, guid: 5ecbffd5c5866394e961e45c66be5ff1, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -239,7 +239,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7f987777e73e05b45a681fca25633fd2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyAI
-  enemyData: {fileID: 11400000, guid: baac7701bbea29d4b835d93edd013659, type: 2}
+  enemyData: {fileID: 11400000, guid: dd17089916dd18946aa7de39fcd0bbff, type: 2}
 --- !u!114 &3667952314491578738
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -252,4 +252,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 95c3b224b6848a84ea38755f42310993, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyHealth
-  enemyData: {fileID: 11400000, guid: baac7701bbea29d4b835d93edd013659, type: 2}
+  enemyData: {fileID: 11400000, guid: dd17089916dd18946aa7de39fcd0bbff, type: 2}
