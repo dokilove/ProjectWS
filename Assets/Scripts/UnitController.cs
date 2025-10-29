@@ -24,6 +24,7 @@ public class UnitController : MonoBehaviour
     [Header("Attacks - Auto Fire & Targeting")]
     [SerializeField] private Transform turretTransform;
     [SerializeField] private float turretRotationSpeed = 10f;
+    [SerializeField, Tooltip("How much closer a new target must be to switch automatically.")] private float targetStickiness = 2f;
     [SerializeField] private Transform firePoint;
     [SerializeField] private float lockOnRadius = 15f;
     [SerializeField] private LayerMask enemyLayer;
@@ -267,7 +268,7 @@ public class UnitController : MonoBehaviour
         }
 
         // Automatic mode (or if lock-on was just lost)
-        // Find the closest one and set it as the current target.
+        // Find the closest one.
         Transform closestTarget = null;
         float minDistance = float.MaxValue;
         foreach (var target in potentialTargets)
@@ -279,7 +280,23 @@ public class UnitController : MonoBehaviour
                 closestTarget = target;
             }
         }
-        currentTarget = closestTarget;
+
+        // If we have a current target, and it's still valid...
+        if (currentTarget != null && potentialTargets.Contains(currentTarget))
+        {
+            float currentTargetDistance = Vector3.Distance(transform.position, currentTarget.position);
+            // Switch only if the new closest target is significantly closer (by 'targetStickiness' amount).
+            if (minDistance < currentTargetDistance - targetStickiness)
+            {
+                currentTarget = closestTarget;
+            }
+            // Otherwise, do nothing and stick with the current target.
+        }
+        else
+        {
+            // If we don't have a target or the old one is invalid, just switch to the closest.
+            currentTarget = closestTarget;
+        }
     }
 
     private void UpdateRadiusVisualizer()
