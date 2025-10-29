@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 
 [RequireComponent(typeof(Rigidbody))]
-[RequireComponent(typeof(LineRenderer))]
 public class UnitController : MonoBehaviour
 {
     [Header("Movement")]
@@ -26,12 +25,17 @@ public class UnitController : MonoBehaviour
     [SerializeField] private float turretRotationSpeed = 10f;
     [SerializeField, Tooltip("How much closer a new target must be to switch automatically.")] private float targetStickiness = 2f;
     [SerializeField] private Transform firePoint;
-    [SerializeField] private float lockOnRadius = 15f;
+    
     [SerializeField] private LayerMask enemyLayer;
     [SerializeField] private WeaponData weaponData;
     [SerializeField] private Color defaultTargetColor = Color.red;
     [SerializeField] private Color lockOnTargetColor = Color.yellow;
-    [SerializeField] private LineRenderer lockOnRadiusVisualizer;
+
+    [Header("Visuals")]
+    [SerializeField] private LineRenderer radiusVisualizer;
+    
+    [SerializeField] private LineRenderer targetLineRenderer; // For the line to the target
+    [SerializeField] private FieldOfViewMesh attackRangeVisualizer;
 
     private float nextFireTime = 0f;
     private List<GameObject> projectilePool = new List<GameObject>();
@@ -41,7 +45,6 @@ public class UnitController : MonoBehaviour
     private InputSystem_Actions playerActions;
     private Vector2 moveInput;
     private int originalLayer;
-    private LineRenderer lineRenderer;
 
     // --- Targeting Fields ---
     private Transform currentTarget;
@@ -53,38 +56,70 @@ public class UnitController : MonoBehaviour
 
     public bool IsControlledByPlayer { get; private set; } = false;
 
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        if (Application.isPlaying) return;
+        UnityEditor.EditorApplication.delayCall += () =>
+        {
+            if (this != null) // Check if the object has not been destroyed
+            {
+                UpdateRadiusVisualizer();
+                if (attackRangeVisualizer != null)
+                {
+                    attackRangeVisualizer.GenerateMesh(weaponData.attackAngle, weaponData.lockOnRadius);
+                }
+            }
+        };
+    }
+#endif
+
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
         playerActions = new InputSystem_Actions();
         originalLayer = gameObject.layer;
 
-        lineRenderer = GetComponent<LineRenderer>();
-        lineRenderer.positionCount = 2;
-        lineRenderer.startWidth = 0.05f;
-        lineRenderer.endWidth = 0.05f;
-        lineRenderer.material = new Material(Shader.Find("Legacy Shaders/Particles/Alpha Blended Premultiply"));
-        lineRenderer.startColor = defaultTargetColor;
-        lineRenderer.endColor = defaultTargetColor;
-        lineRenderer.enabled = false;
+        // Initialize LineRenderers if they exist
+        if (radiusVisualizer != null)
+        {
+            radiusVisualizer.startWidth = 0.1f;
+            radiusVisualizer.endWidth = 0.1f;
+            radiusVisualizer.enabled = true;
+        }
+        
+        if (targetLineRenderer != null)
+        {
+            targetLineRenderer.material = new Material(Shader.Find("Legacy Shaders/Particles/Alpha Blended Premultiply"));
+            targetLineRenderer.startWidth = 0.05f;
+            targetLineRenderer.endWidth = 0.05f;
+            targetLineRenderer.positionCount = 2;
+            targetLineRenderer.enabled = false;
+        }
+
+        
     }
 
     private void Start()
     {
-        if (weaponData == null || weaponData.projectilePrefab == null)
+        if (weaponData == null || weaponData.projectileData == null || weaponData.projectileData.projectilePrefab == null)
         {
-            Debug.LogError("WeaponData or ProjectilePrefab is not assigned in the inspector!", this);
+            Debug.LogError("WeaponData, ProjectileData, or ProjectilePrefab is not assigned in the inspector!", this);
             return;
         }
 
         for (int i = 0; i < poolSize; i++)
         {
-            GameObject proj = Instantiate(weaponData.projectilePrefab);
+            GameObject proj = Instantiate(weaponData.projectileData.projectilePrefab);
             proj.SetActive(false);
             projectilePool.Add(proj);
         }
 
         UpdateRadiusVisualizer();
+        if (attackRangeVisualizer != null)
+        {
+            attackRangeVisualizer.GenerateMesh(weaponData.attackAngle, weaponData.lockOnRadius);
+        }
     }
 
     public void EnableControl()
@@ -136,30 +171,70 @@ public class UnitController : MonoBehaviour
 
         RotateTurret(currentTarget);
 
-        if (currentTarget != null)
-        {
-            lineRenderer.enabled = true;
-            lineRenderer.SetPosition(0, firePoint.position);
-            lineRenderer.SetPosition(1, currentTarget.position);
+        
 
-            // Set color based on lock-on state
-            Color lineColor = isTargetLockOn ? lockOnTargetColor : defaultTargetColor;
-            lineRenderer.startColor = lineColor;
-            lineRenderer.endColor = lineColor;
-        }
-        else
+        // Update filled cone visualizer
+        if (attackRangeVisualizer != null)
         {
-            lineRenderer.enabled = false;
-        }
+            bool shouldShow = currentTarget != null;
+            attackRangeVisualizer.SetActive(shouldShow);
 
-        if (isFireHeld && currentTarget != null && Time.time >= nextFireTime)
-        {
-            if (weaponData != null)
+            if (shouldShow)
             {
-                nextFireTime = Time.time + 1f / weaponData.fireRate;
-                Fire();
+                attackRangeVisualizer.transform.position = firePoint.position;
+                attackRangeVisualizer.transform.rotation = turretTransform.rotation;
             }
         }
+
+        // Update target line visualizer
+        if (targetLineRenderer != null)
+        {
+            if (currentTarget != null)
+            {
+                targetLineRenderer.enabled = true;
+                Color lineColor = isTargetLockOn ? lockOnTargetColor : defaultTargetColor;
+                targetLineRenderer.startColor = lineColor;
+                targetLineRenderer.endColor = lineColor;
+                targetLineRenderer.SetPosition(0, firePoint.position);
+                targetLineRenderer.SetPosition(1, currentTarget.position);
+            }
+            else
+            {
+                targetLineRenderer.enabled = false;
+            }
+        }
+
+        if (isFireHeld && CanFire())
+        {
+            nextFireTime = Time.time + 1f / weaponData.fireRate;
+            Fire();
+        }
+    }
+
+    private bool CanFire()
+    {
+        if (currentTarget == null || Time.time < nextFireTime || weaponData == null)
+        {
+            return false;
+        }
+
+        // Check distance
+        float distanceToTarget = Vector3.Distance(transform.position, currentTarget.position);
+        if (distanceToTarget > weaponData.lockOnRadius)
+        {
+            return false;
+        }
+
+        // Check angle
+        Vector3 directionToTarget = (currentTarget.position - turretTransform.position).normalized;
+        float angleToTarget = Vector3.Angle(turretTransform.forward, directionToTarget);
+
+        if (angleToTarget > weaponData.attackAngle / 2)
+        {
+            return false;
+        }
+
+        return true;
     }
 
     private void HandleTargetSwitching()
@@ -238,10 +313,23 @@ public class UnitController : MonoBehaviour
 
     private void UpdateAndSelectTarget()
     {
-        // Step 1: Find all potential targets
-        potentialTargets = Physics.OverlapSphere(transform.position, lockOnRadius, enemyLayer)
+        // Step 1: Find all potential targets within lockOnRadius
+        List<Transform> allTargetsInRadius = Physics.OverlapSphere(transform.position, weaponData.lockOnRadius, enemyLayer)
                                 .Select(col => col.transform)
                                 .ToList();
+
+        // Step 2: Filter targets by attackAngle
+        potentialTargets.Clear();
+        foreach (Transform target in allTargetsInRadius)
+        {
+            Vector3 directionToTarget = (target.position - turretTransform.position).normalized;
+            float angleToTarget = Vector3.Angle(turretTransform.forward, directionToTarget);
+
+            if (angleToTarget <= weaponData.attackAngle / 2)
+            {
+                potentialTargets.Add(target);
+            }
+        }
 
         if (potentialTargets.Count == 0)
         {
@@ -299,26 +387,7 @@ public class UnitController : MonoBehaviour
         }
     }
 
-    private void UpdateRadiusVisualizer()
-    {
-        if (lockOnRadiusVisualizer == null) return;
-
-        int segments = 50;
-        lockOnRadiusVisualizer.positionCount = segments + 1;
-        lockOnRadiusVisualizer.useWorldSpace = false; // Draw relative to the player
-        lockOnRadiusVisualizer.loop = true;
-
-        float angle = 0f;
-        for (int i = 0; i < (segments + 1); i++)
-        {
-            float x = Mathf.Sin(Mathf.Deg2Rad * angle) * lockOnRadius;
-            float z = Mathf.Cos(Mathf.Deg2Rad * angle) * lockOnRadius;
-
-            lockOnRadiusVisualizer.SetPosition(i, new Vector3(x, 0, z));
-
-            angle += (360f / segments);
-        }
-    }
+    
 
     private void FixedUpdate()
     {
@@ -356,13 +425,10 @@ public class UnitController : MonoBehaviour
 
     private void OnFire(InputAction.CallbackContext context)
     {
-        if (currentTarget != null && Time.time >= nextFireTime)
+        if (CanFire())
         {
-            if (weaponData != null)
-            {
-                nextFireTime = Time.time + 1f / weaponData.fireRate;
-                Fire();
-            }
+            nextFireTime = Time.time + 1f / weaponData.fireRate;
+            Fire();
         }
     }
 
@@ -378,20 +444,39 @@ public class UnitController : MonoBehaviour
 
     private void RotateTurret(Transform target)
     {
-        if (turretTransform == null) return;
+        if (turretTransform == null || weaponData == null) return;
 
-        Quaternion targetRotation;
+        Quaternion desiredRotation;
         if (target != null)
         {
             Vector3 direction = target.position - turretTransform.position;
             direction.y = 0;
-            targetRotation = Quaternion.LookRotation(direction);
+            desiredRotation = Quaternion.LookRotation(direction);
         }
         else
         {
-            targetRotation = transform.rotation;
+            desiredRotation = transform.rotation; // Align with player's forward if no target
         }
-        turretTransform.rotation = Quaternion.Slerp(turretTransform.rotation, targetRotation, turretRotationSpeed * Time.deltaTime);
+
+        // Calculate the angle difference from the player's forward direction
+        Quaternion playerForwardRotation = transform.rotation;
+        Quaternion rotationDelta = Quaternion.Inverse(playerForwardRotation) * desiredRotation;
+        float angle = 0;
+        Vector3 axis = Vector3.zero;
+        rotationDelta.ToAngleAxis(out angle, out axis);
+
+        // Ensure the angle is within -180 to 180 range for clamping
+        if (angle > 180f) angle -= 360f;
+        if (angle < -180f) angle += 360f;
+
+        // Clamp the angle
+        float clampedAngle = Mathf.Clamp(angle, -weaponData.attackAngle / 2, weaponData.attackAngle / 2);
+
+        // Reconstruct the clamped rotation
+        Quaternion clampedRotation = playerForwardRotation * Quaternion.AngleAxis(clampedAngle, Vector3.up);
+
+        // Smoothly rotate the turret
+        turretTransform.rotation = Quaternion.Slerp(turretTransform.rotation, clampedRotation, turretRotationSpeed * Time.deltaTime);
     }
 
     private void Fire()
@@ -502,5 +587,29 @@ public class UnitController : MonoBehaviour
     private void ResetPlayerLayer()
     {
         gameObject.layer = originalLayer;
+    }
+
+    
+
+    private void UpdateRadiusVisualizer()
+    {
+        if (radiusVisualizer == null) return;
+
+        int segments = 36;
+        radiusVisualizer.positionCount = segments + 1;
+        radiusVisualizer.loop = true;
+        radiusVisualizer.useWorldSpace = false; // Draw relative to the unit
+
+        float radius = weaponData.lockOnRadius;
+        float angle = 0f;
+        float angleStep = 360f / segments;
+
+        for (int i = 0; i <= segments; i++)
+        {
+            float x = Mathf.Sin(Mathf.Deg2Rad * angle) * radius;
+            float z = Mathf.Cos(Mathf.Deg2Rad * angle) * radius;
+            radiusVisualizer.SetPosition(i, new Vector3(x, 0.01f, z)); // 0.01f to avoid z-fighting with ground
+            angle += angleStep;
+        }
     }
 }
