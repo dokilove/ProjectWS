@@ -54,7 +54,16 @@ public class UnitController : MonoBehaviour
 
     private bool isFireHeld = false;
 
+    // --- Ammo & Reloading ---
+    private int currentAmmo;
+    private bool isReloading = false;
+
     public bool IsControlledByPlayer { get; private set; } = false;
+
+    public int CurrentAmmo => currentAmmo;
+    public WeaponData WeaponData => weaponData;
+    public bool IsReloading => isReloading;
+
 
 #if UNITY_EDITOR
     private void OnValidate()
@@ -107,6 +116,8 @@ public class UnitController : MonoBehaviour
             Debug.LogError("WeaponData, ProjectileData, or ProjectilePrefab is not assigned in the inspector!", this);
             return;
         }
+
+        currentAmmo = weaponData.magazineSize;
 
         for (int i = 0; i < poolSize; i++)
         {
@@ -209,11 +220,15 @@ public class UnitController : MonoBehaviour
             nextFireTime = Time.time + 1f / weaponData.fireRate;
             Fire();
         }
+        else if (isFireHeld && currentAmmo <= 0 && !isReloading)
+        {
+            StartCoroutine(Reload());
+        }
     }
 
     private bool CanFire()
     {
-        if (currentTarget == null || Time.time < nextFireTime || weaponData == null)
+        if (currentTarget == null || Time.time < nextFireTime || weaponData == null || isReloading || currentAmmo <= 0)
         {
             return false;
         }
@@ -235,6 +250,18 @@ public class UnitController : MonoBehaviour
         }
 
         return true;
+    }
+
+    private IEnumerator Reload()
+    {
+        isReloading = true;
+        Debug.Log("Reloading...");
+
+        yield return new WaitForSeconds(weaponData.reloadTime);
+
+        currentAmmo = weaponData.magazineSize;
+        isReloading = false;
+        Debug.Log("Reload complete.");
     }
 
     private void HandleTargetSwitching()
@@ -430,6 +457,10 @@ public class UnitController : MonoBehaviour
             nextFireTime = Time.time + 1f / weaponData.fireRate;
             Fire();
         }
+        else if (currentAmmo <= 0 && !isReloading)
+        {
+            StartCoroutine(Reload());
+        }
     }
 
     private void OnFireHoldStarted(InputAction.CallbackContext context)
@@ -483,7 +514,9 @@ public class UnitController : MonoBehaviour
     {
         if (currentTarget == null) return;
 
-        Debug.Log("Unit Fire action triggered!");
+        currentAmmo--;
+        Debug.Log($"Unit Fire action triggered! Ammo left: {currentAmmo}");
+
         GameObject projectile = GetPooledProjectile();
         if (projectile != null)
         {

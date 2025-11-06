@@ -16,3 +16,5 @@ MonoBehaviour:
   projectileData: {fileID: 11400000, guid: e9cbc7d040998d745b8982e804cd51da, type: 2}
   lockOnRadius: 20
   attackAngle: 30
+  magazineSize: 300
+  reloadTime: 4

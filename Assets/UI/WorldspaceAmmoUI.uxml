@@ -1,0 +1,6 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:VisualElement style="flex-direction: row; align-items: center; justify-content: center;">
+        <ui:Label name="ammo-label" text="30/30" style="-unity-font-style: bold; color: white; font-size: 64px; background-color: rgba(0, 0, 0, 0.56);" />
+        <ui:Label name="reload-status" text=" (Reloading...)" style="-unity-font-style: italic; color: yellow; display: none; font-size: 64px; background-color: rgba(0, 0, 0, 0.65);" />
+    </ui:VisualElement>
+</ui:UXML>

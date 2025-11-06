@@ -42,7 +42,16 @@ public class VehicleController : MonoBehaviour
     private InputSystem_Actions playerActions; // Will use player's input actions
     private Vector2 moveInput;
 
+    // --- Ammo & Reloading ---
+    private int currentAmmo;
+    private bool isReloading = false;
+
     public bool IsControlledByPlayer { get; private set; } = false;
+
+    public int CurrentAmmo => currentAmmo;
+    public WeaponData WeaponData => weaponData;
+    public bool IsReloading => isReloading;
+
 
 #if UNITY_EDITOR
     private void OnValidate()
@@ -92,6 +101,8 @@ public class VehicleController : MonoBehaviour
     {
         if (weaponData == null || weaponData.projectileData == null || weaponData.projectileData.projectilePrefab == null) return;
 
+        currentAmmo = weaponData.magazineSize;
+
         for (int i = 0; i < poolSize; i++)
         {
             GameObject proj = Instantiate(weaponData.projectileData.projectilePrefab);
@@ -140,6 +151,40 @@ public class VehicleController : MonoBehaviour
         if (IsControlledByPlayer)
         {
             moveInput = playerActions.Vehicle.Move.ReadValue<Vector2>();
+
+            UpdateAndSelectTarget();
+            RotateTurret(currentTarget);
+
+            // Update filled cone visualizer
+            if (attackRangeVisualizer != null)
+            {
+                bool shouldShow = currentTarget != null;
+                attackRangeVisualizer.SetActive(shouldShow);
+
+                if (shouldShow)
+                {
+                    attackRangeVisualizer.transform.position = firePoint.position;
+                    attackRangeVisualizer.transform.rotation = turretTransform.rotation;
+                }
+            }
+
+            // Update target line visualizer
+            if (targetLineRenderer != null)
+            {
+                if (currentTarget != null)
+                {
+                    targetLineRenderer.enabled = true;
+                    Color lineColor = defaultTargetColor; // Vehicle AI doesn't have lock-on state
+                    targetLineRenderer.startColor = lineColor;
+                    targetLineRenderer.endColor = lineColor;
+                    targetLineRenderer.SetPosition(0, firePoint.position);
+                    targetLineRenderer.SetPosition(1, currentTarget.position);
+                }
+                else
+                {
+                    targetLineRenderer.enabled = false;
+                }
+            }
         }
         else
         {
@@ -192,12 +237,16 @@ public class VehicleController : MonoBehaviour
                 nextFireTime = Time.time + 1f / weaponData.fireRate;
                 Fire();
             }
+            else if (currentAmmo <= 0 && !isReloading)
+            {
+                StartCoroutine(Reload());
+            }
         }
     }
 
     private bool CanFire()
     {
-        if (currentTarget == null || Time.time < nextFireTime || weaponData == null)
+        if (currentTarget == null || Time.time < nextFireTime || weaponData == null || isReloading || currentAmmo <= 0)
         {
             return false;
         }
@@ -219,6 +268,18 @@ public class VehicleController : MonoBehaviour
         }
 
         return true;
+    }
+
+    private System.Collections.IEnumerator Reload()
+    {
+        isReloading = true;
+        Debug.Log("Vehicle reloading...");
+
+        yield return new WaitForSeconds(weaponData.reloadTime);
+
+        currentAmmo = weaponData.magazineSize;
+        isReloading = false;
+        Debug.Log("Vehicle reload complete.");
     }
 
     private void UpdateAndSelectTarget()
@@ -337,6 +398,9 @@ public class VehicleController : MonoBehaviour
     private void Fire()
     {
         if (currentTarget == null) return;
+
+        currentAmmo--;
+        Debug.Log($"Vehicle Fire action triggered! Ammo left: {currentAmmo}");
 
         GameObject projectile = GetPooledProjectile();
         if (projectile != null)
