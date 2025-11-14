@@ -47,8 +47,10 @@ public class ManualFollowCamera : MonoBehaviour
         pitch = initialPitch;
         cameraInput = Vector2.zero;
 
-        // Calculate final rotation and position
-        Quaternion finalRotation = Quaternion.Euler(pitch, yaw, 0);
+        // Calculate final rotation and position using sequential rotations
+        Quaternion yawRotation = Quaternion.AngleAxis(yaw, Vector3.up);
+        Quaternion pitchRotation = Quaternion.AngleAxis(pitch, Vector3.right);
+        Quaternion finalRotation = yawRotation * pitchRotation;
         Vector3 finalPosition = target.position - (finalRotation * Vector3.forward * distance);
 
         // Apply instantly, bypassing any smoothing
@@ -85,9 +87,11 @@ public class ManualFollowCamera : MonoBehaviour
         Vector3 angles = transform.rotation.eulerAngles;
         yaw = angles.y;
         pitch = angles.x;
+        pitch = Mathf.Clamp(pitch, pitchLimits.x, pitchLimits.y); // Clamp initial pitch
 
         initialYaw = yaw;
         initialPitch = pitch;
+        initialPitch = Mathf.Clamp(initialPitch, pitchLimits.x, pitchLimits.y); // Clamp initial pitch for reset
     }
 
     void LateUpdate()
@@ -97,7 +101,9 @@ public class ManualFollowCamera : MonoBehaviour
         // Manual rotation is now the only logic here
         HandleManualRotation();
 
-        Quaternion desiredRotation = Quaternion.Euler(pitch, yaw, 0);
+        Quaternion yawRotation = Quaternion.AngleAxis(yaw, Vector3.up);
+        Quaternion pitchRotation = Quaternion.AngleAxis(pitch, Vector3.right); // Rotate around local right axis
+        Quaternion desiredRotation = yawRotation * pitchRotation; // Apply yaw then pitch
         Vector3 desiredPosition = target.position - (desiredRotation * Vector3.forward * distance);
 
         // If there is active camera rotation input, snap the position for responsiveness.

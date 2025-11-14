@@ -1,0 +1,47 @@
+#evade-ui-container {
+    width: 200px;
+    height: 80px;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-end;
+}
+
+#evade-charges-container {
+    flex-direction: row;
+    margin-bottom: 5px;
+}
+
+.evade-charge-icon {
+    width: 36px;
+    height: 36px;
+    background-color: gray;
+    border-radius: 10px;
+    margin-right: 5px;
+    border-width: 1px;
+    border-color: rgb(51, 51, 51);
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+    border-bottom-right-radius: 18px;
+    border-bottom-left-radius: 18px;
+}
+
+.evade-charge-icon.available {
+    background-color: rgb(0, 255, 18);
+}
+
+#evade-recharge-progressbar {
+    width: 100%;
+    height: 10px;
+    -unity-background-image-tint-color: rgb(85, 85, 85);
+    margin-top: 10px;
+}
+
+.unity-progress-bar__progress {
+    background-color: rgb(0, 225, 5);
+}
+
+.unity-progress-bar__title {
+    color: white;
+    font-size: 10px;
+    -unity-text-align: middle-center;
+}

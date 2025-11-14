@@ -318,9 +318,9 @@ MonoBehaviour:
   m_Position: 0
   m_WorldSpaceSizeMode: 1
   m_WorldSpaceWidth: 480
-  m_WorldSpaceHeight: 320
+  m_WorldSpaceHeight: 240
   m_PivotReferenceSize: 0
-  m_Pivot: 0
+  m_Pivot: 7
   m_WorldSpaceCollider: {fileID: 0}
 --- !u!114 &6403295398856059359
 MonoBehaviour:

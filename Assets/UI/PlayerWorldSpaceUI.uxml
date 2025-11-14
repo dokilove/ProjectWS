@@ -1,0 +1,13 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/UI/PlayerEvadeUI.uss?fileID=7433441132597879392&amp;guid=74b69669814bbe04ca688d09f1c64546&amp;type=3#PlayerEvadeUI" />
+    <ui:VisualElement name="player-world-ui-root" style="flex-direction: column; align-items: center; justify-content: center;">
+        <ui:VisualElement name="ammo-display-container" style="flex-direction: row; align-items: center; justify-content: center;">
+            <ui:Label name="ammo-label" text="30/30" style="-unity-font-style: bold; color: white; font-size: 64px; background-color: rgba(0, 0, 0, 0.56);" />
+            <ui:Label name="reload-status" text=" (Reloading...)" style="-unity-font-style: italic; color: yellow; display: none; font-size: 64px; background-color: rgba(0, 0, 0, 0.65);" />
+        </ui:VisualElement>
+        <ui:VisualElement name="evade-ui-container" style="flex-direction: column; align-items: center; justify-content: center; margin-top: 10px; width: 200px; height: 80px;">
+            <ui:VisualElement name="evade-charges-container" style="flex-direction: row; margin-bottom: 5px;" />
+            <ui:ProgressBar name="evade-recharge-progressbar" low-value="0" high-value="1" title="Recharging" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

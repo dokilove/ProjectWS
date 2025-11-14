@@ -6,7 +6,6 @@ public class WorldspaceUIController : MonoBehaviour
     private Label ammoLabel;
     private Label reloadStatusLabel;
 
-    private UnitController unitController;
     private VehicleController vehicleController;
 
     private Camera mainCamera;
@@ -14,7 +13,6 @@ public class WorldspaceUIController : MonoBehaviour
     private void Awake()
     {
         // Attempt to get both controller types. Only one should be active.
-        unitController = GetComponentInParent<UnitController>();
         vehicleController = GetComponentInParent<VehicleController>();
         mainCamera = Camera.main;
     }
@@ -33,11 +31,7 @@ public class WorldspaceUIController : MonoBehaviour
         // Make the UI always face the camera's forward direction
         transform.rotation = Quaternion.LookRotation(mainCamera.transform.forward);
 
-        if (unitController != null && unitController.IsControlledByPlayer)
-        {
-            UpdateUnitUI();
-        }
-        else if (vehicleController != null && (vehicleController.IsControlledByPlayer || !vehicleController.IsControlledByPlayer)) // Show for both player and AI vehicle
+        if (vehicleController != null && (vehicleController.IsControlledByPlayer || !vehicleController.IsControlledByPlayer)) // Show for both player and AI vehicle
         {
             UpdateVehicleUI();
         }
@@ -47,17 +41,6 @@ public class WorldspaceUIController : MonoBehaviour
             if (ammoLabel != null) ammoLabel.style.display = DisplayStyle.None;
             if (reloadStatusLabel != null) reloadStatusLabel.style.display = DisplayStyle.None;
         }
-    }
-
-    private void UpdateUnitUI()
-    {
-        if (unitController.WeaponData == null) return;
-
-        ammoLabel.style.display = DisplayStyle.Flex;
-        ammoLabel.text = $"{unitController.CurrentAmmo}/{unitController.WeaponData.magazineSize}";
-
-        bool isReloading = unitController.IsReloading;
-        reloadStatusLabel.style.display = isReloading ? DisplayStyle.Flex : DisplayStyle.None;
     }
 
     private void UpdateVehicleUI()

@@ -13,12 +13,7 @@ public class UnitController : MonoBehaviour
     [SerializeField] private float rotationSpeed = 15f;
 
     [Header("Evade")]
-    [SerializeField] private float evadeForce = 10f;
-    [SerializeField] private float dodgeDuration = 0.5f;
-    [SerializeField] private int dodgingPlayerLayer;
-    [SerializeField] private float pushRadius = 2f;
-    [SerializeField] private float pushForce = 0.05f;
-    [SerializeField] private float pushSmoothTime = 0.2f;
+    [SerializeField] private EvadeData evadeData;
 
     [Header("Attacks - Auto Fire & Targeting")]
     [SerializeField] private Transform turretTransform;
@@ -37,6 +32,9 @@ public class UnitController : MonoBehaviour
     [SerializeField] private LineRenderer targetLineRenderer; // For the line to the target
     [SerializeField] private FieldOfViewMesh attackRangeVisualizer;
 
+    [Header("Visual Effects")]
+    [SerializeField] private TrailRenderer evadeTrailRenderer;
+
     private float nextFireTime = 0f;
     private List<GameObject> projectilePool = new List<GameObject>();
     private int poolSize = 20;
@@ -54,6 +52,10 @@ public class UnitController : MonoBehaviour
 
     private bool isFireHeld = false;
 
+    // --- Evade Charges ---
+    private int currentEvadeCharges;
+    private float lastEvadeTime;
+
     // --- Ammo & Reloading ---
     private int currentAmmo;
     private bool isReloading = false;
@@ -63,6 +65,10 @@ public class UnitController : MonoBehaviour
     public int CurrentAmmo => currentAmmo;
     public WeaponData WeaponData => weaponData;
     public bool IsReloading => isReloading;
+
+    public EvadeData EvadeData => evadeData;
+    public int CurrentEvadeCharges => currentEvadeCharges;
+    public float LastEvadeTime => lastEvadeTime;
 
 
 #if UNITY_EDITOR
@@ -106,7 +112,19 @@ public class UnitController : MonoBehaviour
             targetLineRenderer.enabled = false;
         }
 
-        
+        if (evadeTrailRenderer != null)
+        {
+            evadeTrailRenderer.enabled = false;
+            // Set the trail's time to be dodgeDuration + trailOffset
+            if (evadeData != null)
+            {
+                evadeTrailRenderer.time = evadeData.dodgeDuration + evadeData.trailOffset;
+            }
+            else
+            {
+                Debug.LogWarning("EvadeData is not assigned to UnitController. Cannot set evadeTrailRenderer.time.");
+            }
+        }
     }
 
     private void Start()
@@ -118,6 +136,8 @@ public class UnitController : MonoBehaviour
         }
 
         currentAmmo = weaponData.magazineSize;
+        currentEvadeCharges = evadeData.maxEvadeCharges;
+        lastEvadeTime = Time.time; // Initialize to current time to start regeneration immediately
 
         for (int i = 0; i < poolSize; i++)
         {
@@ -220,9 +240,23 @@ public class UnitController : MonoBehaviour
             nextFireTime = Time.time + 1f / weaponData.fireRate;
             Fire();
         }
-        else if (isFireHeld && currentAmmo <= 0 && !isReloading)
+        if (isFireHeld && currentAmmo <= 0 && !isReloading)
         {
             StartCoroutine(Reload());
+        }
+
+        // --- Evade Charge Regeneration ---
+        if (currentEvadeCharges < evadeData.maxEvadeCharges)
+        {
+            float timeSinceLastEvade = Time.time - lastEvadeTime;
+            int chargesToRegen = Mathf.FloorToInt(timeSinceLastEvade / evadeData.evadeChargeRegenTime);
+
+            if (chargesToRegen > 0)
+            {
+                currentEvadeCharges = Mathf.Min(evadeData.maxEvadeCharges, currentEvadeCharges + chargesToRegen);
+                lastEvadeTime += chargesToRegen * evadeData.evadeChargeRegenTime; // Advance lastEvadeTime by regenerated charges
+                Debug.Log($"Evade charges regenerated. Current charges: {currentEvadeCharges}");
+            }
         }
     }
 
@@ -422,23 +456,14 @@ public class UnitController : MonoBehaviour
 
         rb.angularVelocity = Vector3.zero;
 
-        Vector3 moveForward;
-        Vector3 moveRight;
+        // Calculate camera-relative forward and right vectors on the XZ plane
+        Vector3 cameraRight = Camera.main.transform.right;
+        Vector3 cameraRightFlat = new Vector3(cameraRight.x, 0, cameraRight.z).normalized;
+        
+        Vector3 cameraForwardFlat = Vector3.Cross(Vector3.up, cameraRightFlat); // Forward is perpendicular to up and right
 
-        if (Mathf.Abs(Vector3.Dot(Camera.main.transform.forward, Vector3.up)) > 0.99f)
-        {
-            moveForward = Vector3.forward;
-            moveRight = Vector3.right;
-        }
-        else
-        {
-            moveForward = Camera.main.transform.forward;
-            moveRight = Camera.main.transform.right;
-            moveForward.y = 0;
-            moveRight.y = 0;
-            moveForward.Normalize();
-            moveRight.Normalize();
-        }
+        Vector3 moveForward = -cameraForwardFlat; // Invert forward direction
+        Vector3 moveRight = cameraRightFlat;
 
         Vector3 moveVector = (moveForward * moveInput.y + moveRight * moveInput.x);
         rb.linearVelocity = moveVector * moveSpeed;
@@ -544,7 +569,12 @@ public class UnitController : MonoBehaviour
 
     private void OnEvade(InputAction.CallbackContext context)
     {
-        if (gameObject.layer == dodgingPlayerLayer) return;
+        // Check if already dodging or if no charges are available
+        if (gameObject.layer == evadeData.dodgingPlayerLayer || currentEvadeCharges <= 0) return;
+
+        // Consume a charge
+        currentEvadeCharges--;
+        lastEvadeTime = Time.time;
 
         Vector3 evadeDirection;
         if (moveInput.sqrMagnitude > 0.1f)
@@ -563,11 +593,16 @@ public class UnitController : MonoBehaviour
             evadeDirection = -transform.forward;
         }
 
-        rb.AddForce(evadeDirection * evadeForce, ForceMode.Impulse);
-        gameObject.layer = dodgingPlayerLayer;
-        Invoke(nameof(ResetPlayerLayer), dodgeDuration);
+        rb.AddForce(evadeDirection * evadeData.evadeForce, ForceMode.Impulse);
+        gameObject.layer = evadeData.dodgingPlayerLayer;
+        if (evadeTrailRenderer != null)
+        {
+            evadeTrailRenderer.Clear(); // Clear any existing trail
+            evadeTrailRenderer.enabled = true;
+        }
+        Invoke(nameof(ResetPlayerLayer), evadeData.dodgeDuration);
 
-        Collider[] hitColliders = Physics.OverlapSphere(transform.position, pushRadius);
+        Collider[] hitColliders = Physics.OverlapSphere(transform.position, evadeData.pushRadius);
         foreach (var hitCollider in hitColliders)
         {
             if (hitCollider.CompareTag("Enemy"))
@@ -576,7 +611,7 @@ public class UnitController : MonoBehaviour
                 {
                     Vector3 pushDir = (hitCollider.transform.position - transform.position).normalized;
                     pushDir.y = 0;
-                    StartCoroutine(SmoothPushEnemy(enemyAgent, pushDir.normalized * pushForce, pushSmoothTime));
+                    StartCoroutine(SmoothPushEnemy(enemyAgent, pushDir.normalized * evadeData.pushForce, evadeData.pushSmoothTime));
                 }
             }
         }
@@ -620,6 +655,10 @@ public class UnitController : MonoBehaviour
     private void ResetPlayerLayer()
     {
         gameObject.layer = originalLayer;
+        if (evadeTrailRenderer != null)
+        {
+            evadeTrailRenderer.enabled = false;
+        }
     }
 
     
