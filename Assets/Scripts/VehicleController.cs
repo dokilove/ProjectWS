@@ -41,6 +41,8 @@ public class VehicleController : MonoBehaviour
     private NavMeshAgent agent;
     private InputSystem_Actions playerActions; // Will use player's input actions
     private Vector2 moveInput;
+    private bool isFireHeld = false;
+    private bool isBraking = false;
 
     // --- Ammo & Reloading ---
     private int currentAmmo;
@@ -123,6 +125,11 @@ public class VehicleController : MonoBehaviour
         rb.isKinematic = false;
         rb.constraints = RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
         playerActions.Vehicle.Enable();
+        playerActions.Vehicle.Fire.performed += OnFire;
+        playerActions.Vehicle.Fire_Hold.started += OnFireHoldStarted;
+        playerActions.Vehicle.Fire_Hold.canceled += OnFireHoldCanceled;
+        playerActions.Vehicle.Brake.started += OnBrakeStarted;
+        playerActions.Vehicle.Brake.canceled += OnBrakeCanceled;
     }
 
     public void DisableControl()
@@ -141,6 +148,11 @@ public class VehicleController : MonoBehaviour
         if (playerActions != null)
         {
             playerActions.Vehicle.Disable();
+            playerActions.Vehicle.Fire.performed -= OnFire;
+            playerActions.Vehicle.Fire_Hold.started -= OnFireHoldStarted;
+            playerActions.Vehicle.Fire_Hold.canceled -= OnFireHoldCanceled;
+            playerActions.Vehicle.Brake.started -= OnBrakeStarted;
+            playerActions.Vehicle.Brake.canceled -= OnBrakeCanceled;
         }
         rb.linearVelocity = Vector3.zero;
         moveInput = Vector2.zero;
@@ -184,6 +196,16 @@ public class VehicleController : MonoBehaviour
                 {
                     targetLineRenderer.enabled = false;
                 }
+            }
+            
+            if (isFireHeld && CanFire())
+            {
+                nextFireTime = Time.time + 1f / weaponData.fireRate;
+                Fire();
+            }
+            if (isFireHeld && currentAmmo <= 0 && !isReloading)
+            {
+                StartCoroutine(Reload());
             }
         }
         else
@@ -329,6 +351,7 @@ public class VehicleController : MonoBehaviour
 
         rb.angularVelocity = Vector3.zero;
 
+        // Calculate camera-relative movement vectors
         Vector3 moveForward;
         Vector3 moveRight;
 
@@ -349,13 +372,63 @@ public class VehicleController : MonoBehaviour
         }
 
         Vector3 moveVector = (moveForward * moveInput.y + moveRight * moveInput.x);
-        rb.linearVelocity = moveVector * moveSpeed;
 
-        if (moveVector != Vector3.zero)
+        if (isBraking)
         {
-            Quaternion targetRotation = Quaternion.LookRotation(moveVector);
-            rb.rotation = Quaternion.Slerp(rb.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime);
+            // Stop movement
+            rb.linearVelocity = Vector3.zero;
+
+            // Rotate in place
+            if (moveVector.sqrMagnitude > 0.1f)
+            {
+                Quaternion targetRotation = Quaternion.LookRotation(moveVector);
+                rb.rotation = Quaternion.Slerp(rb.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime);
+            }
         }
+        else
+        {
+            // Normal movement
+            rb.linearVelocity = moveVector * moveSpeed;
+
+            if (moveVector != Vector3.zero)
+            {
+                Quaternion targetRotation = Quaternion.LookRotation(moveVector);
+                rb.rotation = Quaternion.Slerp(rb.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime);
+            }
+        }
+    }
+    
+    private void OnFire(InputAction.CallbackContext context)
+    {
+        if (CanFire())
+        {
+            nextFireTime = Time.time + 1f / weaponData.fireRate;
+            Fire();
+        }
+        else if (currentAmmo <= 0 && !isReloading)
+        {
+            StartCoroutine(Reload());
+        }
+    }
+
+    private void OnFireHoldStarted(InputAction.CallbackContext context)
+    {
+        isFireHeld = true;
+    }
+
+    private void OnFireHoldCanceled(InputAction.CallbackContext context)
+    {
+        isFireHeld = false;
+    }
+
+    private void OnBrakeStarted(InputAction.CallbackContext context)
+    {
+        isBraking = true;
+    }
+
+    private void OnBrakeCanceled(InputAction.CallbackContext context)
+    {
+        isBraking = false;
     }
 
     private void RotateTurret(Transform target)
@@ -449,3 +522,4 @@ public class VehicleController : MonoBehaviour
         }
     }
 }
+
