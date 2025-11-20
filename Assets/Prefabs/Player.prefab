@@ -699,17 +699,12 @@ MonoBehaviour:
   evadeData: {fileID: 11400000, guid: 30457d724aa3f904996c68251f2f2a32, type: 2}
   turretTransform: {fileID: 8119486018014156151}
   turretRotationSpeed: 10
-  targetStickiness: 2
   firePoint: {fileID: 3147461973573372184}
-  enemyLayer:
-    serializedVersion: 2
-    m_Bits: 1024
   weaponData: {fileID: 11400000, guid: 210a2650f3422474fb29c6c5a8312879, type: 2}
-  defaultTargetColor: {r: 1, g: 0, b: 0, a: 1}
-  lockOnTargetColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   radiusVisualizer: {fileID: 8041515074156234456}
-  targetLineRenderer: {fileID: 8203341390165887986}
   attackRangeVisualizer: {fileID: 6255458938232293775}
+  targetLineRenderer: {fileID: 8203341390165887986}
+  aimLineColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   evadeTrailRenderer: {fileID: 942299507975720265}
 --- !u!120 &4692308581314391066
 LineRenderer:
