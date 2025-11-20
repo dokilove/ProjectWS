@@ -351,25 +351,14 @@ public class VehicleController : MonoBehaviour
 
         rb.angularVelocity = Vector3.zero;
 
-        // Calculate camera-relative movement vectors
-        Vector3 moveForward;
-        Vector3 moveRight;
+        // Calculate camera-relative forward and right vectors on the XZ plane (from UnitController)
+        Vector3 cameraRight = Camera.main.transform.right;
+        Vector3 cameraRightFlat = new Vector3(cameraRight.x, 0, cameraRight.z).normalized;
+        
+        Vector3 cameraForwardFlat = Vector3.Cross(Vector3.up, cameraRightFlat); // Forward is perpendicular to up and right
 
-        if (Mathf.Abs(Vector3.Dot(Camera.main.transform.forward, Vector3.up)) > 0.99f)
-        {
-            moveForward = Vector3.forward;
-            moveRight = Vector3.right;
-        }
-        else
-        {
-            moveForward = Camera.main.transform.forward;
-            moveRight = Camera.main.transform.right;
-
-            moveForward.y = 0;
-            moveRight.y = 0;
-            moveForward.Normalize();
-            moveRight.Normalize();
-        }
+        Vector3 moveForward = -cameraForwardFlat; // Invert forward direction
+        Vector3 moveRight = cameraRightFlat;
 
         Vector3 moveVector = (moveForward * moveInput.y + moveRight * moveInput.x);
 
