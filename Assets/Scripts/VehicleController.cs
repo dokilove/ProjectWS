@@ -27,6 +27,7 @@ public class VehicleController : MonoBehaviour
     [Header("Visuals")]
     [SerializeField] private LineRenderer radiusVisualizer;
     [SerializeField] private FieldOfViewMesh attackRangeVisualizer;
+    [SerializeField] private FieldOfViewMesh spreadAngleVisualizer;
     [SerializeField] private LineRenderer targetLineRenderer; // AI Only
     [SerializeField] private Color defaultTargetColor = Color.cyan;
 
@@ -116,6 +117,23 @@ public class VehicleController : MonoBehaviour
             attackRangeVisualizer.GenerateMesh(weaponData.attackAngle, weaponData.lockOnRadius);
             attackRangeVisualizer.SetActive(true);
         }
+
+        if (spreadAngleVisualizer != null)
+        {
+            if (weaponData.spreadAngle > 0)
+            {
+                spreadAngleVisualizer.GenerateMesh(weaponData.spreadAngle, weaponData.lockOnRadius);
+                spreadAngleVisualizer.SetColor(new Color(1f, 0.5f, 0f, 0.15f)); // Orange, semi-transparent
+                spreadAngleVisualizer.SetActive(true);
+                spreadAngleVisualizer.transform.SetParent(turretTransform);
+                spreadAngleVisualizer.transform.localPosition = Vector3.zero;
+                spreadAngleVisualizer.transform.localRotation = Quaternion.identity;
+            }
+            else
+            {
+                spreadAngleVisualizer.SetActive(false);
+            }
+        }
     }
 
     public void EnableControl()
@@ -135,6 +153,7 @@ public class VehicleController : MonoBehaviour
         playerActions.Vehicle.Fire_Hold.canceled += OnFireHoldCanceled;
         playerActions.Vehicle.Brake.started += OnBrakeStarted;
         playerActions.Vehicle.Brake.canceled += OnBrakeCanceled;
+        playerActions.Vehicle.Reload.performed += OnReload;
     }
 
     public void DisableControl()
@@ -162,6 +181,7 @@ public class VehicleController : MonoBehaviour
             playerActions.Vehicle.Fire_Hold.canceled -= OnFireHoldCanceled;
             playerActions.Vehicle.Brake.started -= OnBrakeStarted;
             playerActions.Vehicle.Brake.canceled -= OnBrakeCanceled;
+            playerActions.Vehicle.Reload.performed -= OnReload;
         }
         rb.linearVelocity = Vector3.zero;
         moveInput = Vector2.zero;
@@ -446,6 +466,14 @@ public class VehicleController : MonoBehaviour
         isBraking = false;
     }
 
+    private void OnReload(InputAction.CallbackContext context)
+    {
+        if (IsControlledByPlayer && !isReloading && currentAmmo < weaponData.magazineSize)
+        {
+            StartCoroutine(Reload());
+        }
+    }
+
     private void RotateTurretAI(Transform target)
     {
         if (turretTransform == null || weaponData == null) return;
@@ -482,56 +510,65 @@ public class VehicleController : MonoBehaviour
         currentAmmo--;
         Debug.Log($"Vehicle Fire! Ammo left: {currentAmmo}");
 
-        GameObject projectile = GetPooledProjectile();
-        if (projectile != null)
+        // --- Base Fire Direction Calculation (with Aim-Assist) ---
+        Vector3 baseFireDirection = turretTransform.forward; // Default horizontal direction
+        if (IsControlledByPlayer)
         {
-            Vector3 fireDirection = turretTransform.forward; // Default horizontal direction
+            // Find the closest enemy in the aim direction to adjust height
+            RaycastHit[] hits = Physics.SphereCastAll(firePoint.position, 1f, turretTransform.forward, weaponData.lockOnRadius, enemyLayer);
+            
+            Transform closestEnemy = null;
+            float minDistance = float.MaxValue;
 
-            // --- Vertical Aim-Assist ---
-            if (IsControlledByPlayer)
+            if (hits.Length > 0)
             {
-                // Find the closest enemy in the aim direction to adjust height
-                RaycastHit[] hits = Physics.SphereCastAll(firePoint.position, 1f, turretTransform.forward, weaponData.lockOnRadius, enemyLayer);
-                
-                Transform closestEnemy = null;
-                float minDistance = float.MaxValue;
-
-                if (hits.Length > 0)
+                foreach (var hit in hits)
                 {
-                    foreach (var hit in hits)
+                    if (hit.transform.CompareTag("Enemy")) // Assuming enemies have this tag
                     {
-                        if (hit.transform.CompareTag("Enemy")) // Assuming enemies have this tag
+                        float distance = Vector3.Distance(firePoint.position, hit.transform.position);
+                        if (distance < minDistance)
                         {
-                            float distance = Vector3.Distance(firePoint.position, hit.transform.position);
-                            if (distance < minDistance)
-                            {
-                                minDistance = distance;
-                                closestEnemy = hit.transform;
-                            }
+                            minDistance = distance;
+                            closestEnemy = hit.transform;
                         }
                     }
                 }
-
-                // If an enemy was found, adjust the fire direction to aim at its center
-                if (closestEnemy != null)
-                {
-                    fireDirection = (closestEnemy.position - firePoint.position).normalized;
-                }
             }
-            else // AI adjusts for target height (already implemented)
+
+            // If an enemy was found, adjust the fire direction to aim at its center
+            if (closestEnemy != null)
             {
-                if (currentTarget != null)
-                {
-                    fireDirection = (currentTarget.position - firePoint.position).normalized;
-                }
-                // else, fireDirection remains turretTransform.forward (default)
+                baseFireDirection = (closestEnemy.position - firePoint.position).normalized;
             }
-            // --- End of Vertical Aim-Assist ---
+        }
+        else // AI adjusts for target height
+        {
+            if (currentTarget != null)
+            {
+                baseFireDirection = (currentTarget.position - firePoint.position).normalized;
+            }
+        }
+        // --- End of Base Fire Direction Calculation ---
 
-            projectile.transform.position = firePoint.position;
-            projectile.transform.rotation = Quaternion.LookRotation(fireDirection);
-            projectile.SetActive(true);
-            projectile.GetComponent<Projectile>().Initialize(fireDirection);
+        for (int i = 0; i < weaponData.projectilesPerShot; i++)
+        {
+            GameObject projectile = GetPooledProjectile();
+            if (projectile != null)
+            {
+                // Calculate spread for each projectile
+                Vector3 finalFireDirection = baseFireDirection;
+                if (weaponData.spreadAngle > 0)
+                {
+                    float randomAngle = Random.Range(-weaponData.spreadAngle / 2, weaponData.spreadAngle / 2);
+                    finalFireDirection = Quaternion.Euler(0, randomAngle, 0) * finalFireDirection;
+                }
+
+                projectile.transform.position = firePoint.position;
+                projectile.transform.rotation = Quaternion.LookRotation(finalFireDirection);
+                projectile.SetActive(true);
+                projectile.GetComponent<Projectile>().Initialize(finalFireDirection);
+            }
         }
     }
 

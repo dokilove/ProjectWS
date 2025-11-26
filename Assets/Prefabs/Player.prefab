@@ -206,6 +206,110 @@ LineRenderer:
   m_UseWorldSpace: 1
   m_Loop: 0
   m_ApplyActiveColorSpace: 1
+--- !u!1 &2227480089840701974
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2481004486812860670}
+  - component: {fileID: 1893889469563719049}
+  - component: {fileID: 4195794680351024966}
+  - component: {fileID: 5280977291566128888}
+  m_Layer: 8
+  m_Name: SpreadAngleVisualizer
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2481004486812860670
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2227480089840701974}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1861158880881925691}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!33 &1893889469563719049
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2227480089840701974}
+  m_Mesh: {fileID: 0}
+--- !u!23 &4195794680351024966
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2227480089840701974}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 0}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &5280977291566128888
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2227480089840701974}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6c2722cc63e20c54182cc2834b7f5683, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FieldOfViewMesh
+  fovMaterial: {fileID: 2100000, guid: f83b89d1e5b212a498f53d7dacadcd75, type: 2}
+  fovColor: {r: 1, g: 0, b: 0, a: 0.8156863}
 --- !u!1 &3198966564645518861
 GameObject:
   m_ObjectHideFlags: 0
@@ -257,7 +361,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &6063169060996169537
 Transform:
   m_ObjectHideFlags: 0
@@ -342,7 +446,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FieldOfViewMesh
   fovMaterial: {fileID: 2100000, guid: 5d499f4f7a105f343b18b79f82b53950, type: 2}
-  fovColor: {r: 1, g: 0, b: 0, a: 0.2}
+  fovColor: {r: 1, g: 0, b: 0, a: 0.8}
 --- !u!1 &5768931338896784999
 GameObject:
   m_ObjectHideFlags: 0
@@ -630,6 +734,7 @@ Transform:
   - {fileID: 6063169060996169537}
   - {fileID: 1715542785353008688}
   - {fileID: 8534537649741814998}
+  - {fileID: 2481004486812860670}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!136 &6988497974824472418
@@ -700,9 +805,10 @@ MonoBehaviour:
   turretTransform: {fileID: 8119486018014156151}
   turretRotationSpeed: 10
   firePoint: {fileID: 3147461973573372184}
-  weaponData: {fileID: 11400000, guid: 210a2650f3422474fb29c6c5a8312879, type: 2}
+  weaponData: {fileID: 11400000, guid: 3f863e2be28fa32469bc853300811ebd, type: 2}
   radiusVisualizer: {fileID: 8041515074156234456}
   attackRangeVisualizer: {fileID: 6255458938232293775}
+  spreadAngleVisualizer: {fileID: 5280977291566128888}
   targetLineRenderer: {fileID: 8203341390165887986}
   aimLineColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   evadeTrailRenderer: {fileID: 942299507975720265}

@@ -23,6 +23,7 @@ public class UnitController : MonoBehaviour
     [Header("Visuals")]
     [SerializeField] private LineRenderer radiusVisualizer;
     [SerializeField] private FieldOfViewMesh attackRangeVisualizer;
+    [SerializeField] private FieldOfViewMesh spreadAngleVisualizer;
     [SerializeField] private LineRenderer targetLineRenderer; // For aiming direction
     [SerializeField] private Color aimLineColor = Color.yellow;
 
@@ -40,7 +41,7 @@ public class UnitController : MonoBehaviour
     private int originalLayer;
 
     private bool isFireHeld = false;
-    private bool isBraking = false; // Added for player brake functionality
+    private Vector3 aimDirection;
 
     // --- Evade Charges ---
     private int currentEvadeCharges;
@@ -123,6 +124,7 @@ public class UnitController : MonoBehaviour
         currentAmmo = weaponData.magazineSize;
         currentEvadeCharges = evadeData.maxEvadeCharges;
         lastEvadeTime = Time.time;
+        aimDirection = transform.forward;
 
         for (int i = 0; i < poolSize; i++)
         {
@@ -136,6 +138,23 @@ public class UnitController : MonoBehaviour
         {
             attackRangeVisualizer.GenerateMesh(weaponData.attackAngle, weaponData.lockOnRadius);
             attackRangeVisualizer.SetActive(true); // Show attack angle visual for player
+        }
+
+        if (spreadAngleVisualizer != null)
+        {
+            if (weaponData.spreadAngle > 0)
+            {
+                spreadAngleVisualizer.GenerateMesh(weaponData.spreadAngle, weaponData.lockOnRadius);
+                spreadAngleVisualizer.SetColor(new Color(1f, 0.5f, 0f, 0.15f)); // Orange, semi-transparent
+                spreadAngleVisualizer.SetActive(true);
+                spreadAngleVisualizer.transform.SetParent(turretTransform);
+                spreadAngleVisualizer.transform.localPosition = Vector3.zero;
+                spreadAngleVisualizer.transform.localRotation = Quaternion.identity;
+            }
+            else
+            {
+                spreadAngleVisualizer.SetActive(false);
+            }
         }
     }
 
@@ -157,8 +176,7 @@ public class UnitController : MonoBehaviour
         playerActions.Player.Fire.performed += OnFire;
         playerActions.Player.Fire_Hold.started += OnFireHoldStarted;
         playerActions.Player.Fire_Hold.canceled += OnFireHoldCanceled;
-        playerActions.Player.Brake.started += OnBrakeStarted; // Added brake input
-        playerActions.Player.Brake.canceled += OnBrakeCanceled; // Added brake input
+        playerActions.Player.Reload.performed += OnReload;
     }
 
     public void DisableControl()
@@ -186,12 +204,12 @@ public class UnitController : MonoBehaviour
             playerActions.Player.Fire.performed -= OnFire;
             playerActions.Player.Fire_Hold.started -= OnFireHoldStarted;
             playerActions.Player.Fire_Hold.canceled -= OnFireHoldCanceled;
-            playerActions.Player.Brake.started -= OnBrakeStarted; // Removed brake input
-            playerActions.Player.Brake.canceled -= OnBrakeCanceled; // Removed brake input
+            playerActions.Player.Reload.performed -= OnReload;
         }
         rb.linearVelocity = Vector3.zero;
         moveInput = Vector2.zero;
         lookInput = Vector2.zero;
+        isFireHeld = false;
     }
 
     private void Update()
@@ -232,34 +250,19 @@ public class UnitController : MonoBehaviour
         Vector3 moveVector = (moveForward * moveInput.y + moveRight * moveInput.x);
         rb.linearVelocity = moveVector * moveSpeed;
 
-        // --- Body Rotation (Movement Only) ---
-        // Body rotation is now ONLY determined by movement input. Aiming does not affect it.
-        if (!isBraking && moveVector.sqrMagnitude > 0.1f) // Only rotate based on movement if not braking
+        // --- Body Rotation (Aiming) ---
+        // Body now rotates to face the aim direction, allowing for strafing.
+        if (aimDirection.sqrMagnitude > 0.01f)
         {
-            Quaternion targetRotation = Quaternion.LookRotation(moveVector);
+            Quaternion targetRotation = Quaternion.LookRotation(aimDirection);
             rb.rotation = Quaternion.Slerp(rb.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime);
-        }
-        else if (isBraking && moveInput.sqrMagnitude > 0.1f) // New: Rotate in place when braking, using moveInput
-        {
-            // Use moveInput to determine rotation direction
-            // Reuse cameraRightFlat and cameraForwardFlat from outer scope
-            Vector3 moveForwardForRotation = -cameraForwardFlat; // cameraForwardFlat is already defined
-            Vector3 moveRightForRotation = cameraRightFlat; // cameraRightFlat is already defined
-
-            Vector3 rotationVector = (moveForwardForRotation * moveInput.y + moveRightForRotation * moveInput.x);
-            
-            if (rotationVector != Vector3.zero)
-            {
-                Quaternion targetRotation = Quaternion.LookRotation(rotationVector);
-                rb.rotation = Quaternion.Slerp(rb.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime);
-            }
         }
     }
 
     private void HandleAimingAndFiring()
     {
         // --- Aiming ---
-        Quaternion desiredRotation = turretTransform.rotation; // Default to current rotation
+        // Right stick input determines the body's facing direction.
         if (lookInput.sqrMagnitude > 0.1f * 0.1f) // Deadzone check
         {
             // Convert look input to a camera-relative direction
@@ -271,34 +274,17 @@ public class UnitController : MonoBehaviour
             camRight.Normalize();
 
             // Vertical aim is NOT inverted, unlike movement
-            Vector3 aimDirection = (camForward * lookInput.y + camRight * lookInput.x).normalized;
+            Vector3 lookDirection = (camForward * lookInput.y + camRight * lookInput.x).normalized;
 
-            if (aimDirection != Vector3.zero)
+            if (lookDirection != Vector3.zero)
             {
-                desiredRotation = Quaternion.LookRotation(aimDirection);
+                this.aimDirection = lookDirection;
             }
         }
-        
-        // --- Apply Clamping to desiredRotation's World Y-angle ---
-        float halfAttackAngle = weaponData.attackAngle / 2;
-        float playerForwardYAngle = transform.rotation.eulerAngles.y;
-        float desiredYAngle = desiredRotation.eulerAngles.y;
 
-        // Normalize desiredYAngle to be relative to playerForwardYAngle for easier clamping
-        float relativeDesiredYAngle = desiredYAngle - playerForwardYAngle;
-        if (relativeDesiredYAngle > 180f) relativeDesiredYAngle -= 360f;
-        if (relativeDesiredYAngle < -180f) relativeDesiredYAngle += 360f;
+        // Turret simply aligns with the body.
+        turretTransform.localRotation = Quaternion.Slerp(turretTransform.localRotation, Quaternion.identity, turretRotationSpeed * Time.deltaTime);
 
-        float clampedRelativeYAngle = Mathf.Clamp(relativeDesiredYAngle, -halfAttackAngle, halfAttackAngle);
-        
-        // Convert back to world angle
-        float finalClampedWorldYAngle = playerForwardYAngle + clampedRelativeYAngle;
-        
-        // Construct the final desired rotation from the clamped world Y-angle
-        desiredRotation = Quaternion.Euler(0, finalClampedWorldYAngle, 0);
-
-        // Slerp to the desired rotation (now clamped)
-        turretTransform.rotation = Quaternion.Slerp(turretTransform.rotation, desiredRotation, turretRotationSpeed * Time.deltaTime);
 
         // --- Firing ---
         if (isFireHeld && CanFire())
@@ -323,17 +309,29 @@ public class UnitController : MonoBehaviour
         currentAmmo--;
         Debug.Log($"Unit Fire! Ammo left: {currentAmmo}");
 
-        GameObject projectileGO = GetPooledProjectile();
-        if (projectileGO != null)
+        for (int i = 0; i < weaponData.projectilesPerShot; i++)
         {
-            projectileGO.transform.position = firePoint.position;
-            projectileGO.transform.rotation = turretTransform.rotation; // Fire in the direction turret is facing
-            projectileGO.SetActive(true);
-
-            Projectile projectile = projectileGO.GetComponent<Projectile>();
-            if (projectile != null)
+            GameObject projectileGO = GetPooledProjectile();
+            if (projectileGO != null)
             {
-                projectile.Initialize(turretTransform.forward);
+                projectileGO.transform.position = firePoint.position;
+
+                // Calculate spread
+                Vector3 fireDirection = turretTransform.forward;
+                if (weaponData.spreadAngle > 0)
+                {
+                    float randomAngle = Random.Range(-weaponData.spreadAngle / 2, weaponData.spreadAngle / 2);
+                    fireDirection = Quaternion.Euler(0, randomAngle, 0) * fireDirection;
+                }
+                
+                projectileGO.transform.rotation = Quaternion.LookRotation(fireDirection);
+                projectileGO.SetActive(true);
+
+                Projectile projectile = projectileGO.GetComponent<Projectile>();
+                if (projectile != null)
+                {
+                    projectile.Initialize(fireDirection);
+                }
             }
         }
     }
@@ -398,14 +396,12 @@ public class UnitController : MonoBehaviour
         isFireHeld = false;
     }
 
-    private void OnBrakeStarted(InputAction.CallbackContext context)
+    private void OnReload(InputAction.CallbackContext context)
     {
-        isBraking = true;
-    }
-
-    private void OnBrakeCanceled(InputAction.CallbackContext context)
-    {
-        isBraking = false;
+        if (!isReloading && currentAmmo < weaponData.magazineSize)
+        {
+            StartCoroutine(Reload());
+        }
     }
 
     private void OnEvade(InputAction.CallbackContext context)

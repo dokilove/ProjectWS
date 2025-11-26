@@ -79,4 +79,14 @@ public class FieldOfViewMesh : MonoBehaviour
             meshRenderer.enabled = active;
         }
     }
+
+    public void SetColor(Color color)
+    {
+        fovColor = color;
+        // Only apply color if no explicit material is set and we are using the default one.
+        if (fovMaterial == null && meshRenderer != null && meshRenderer.material != null)
+        {
+            meshRenderer.material.SetColor("_BaseColor", fovColor);
+        }
+    }
 }
