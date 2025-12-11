@@ -38,6 +38,7 @@ public class UnitController : MonoBehaviour
     private InputSystem_Actions playerActions;
     private Vector2 moveInput;
     private Vector2 lookInput; // For twin-stick aiming
+    private Vector2 mousePositionInput; // For mouse aiming
     private int originalLayer;
 
     private bool isFireHeld = false;
@@ -171,6 +172,8 @@ public class UnitController : MonoBehaviour
         playerActions.Player.Move.canceled += ctx => moveInput = Vector2.zero;
         playerActions.Player.Look.performed += ctx => lookInput = ctx.ReadValue<Vector2>();
         playerActions.Player.Look.canceled += ctx => lookInput = Vector2.zero;
+        playerActions.Player.MousePosition.performed += ctx => mousePositionInput = ctx.ReadValue<Vector2>();
+        playerActions.Player.MousePosition.canceled += ctx => mousePositionInput = Vector2.zero;
         playerActions.Player.Evade.performed += OnEvade;
         playerActions.Player.Interact.performed += OnInteract;
         playerActions.Player.Fire.performed += OnFire;
@@ -199,6 +202,8 @@ public class UnitController : MonoBehaviour
             playerActions.Player.Move.canceled -= ctx => moveInput = Vector2.zero;
             playerActions.Player.Look.performed -= ctx => lookInput = ctx.ReadValue<Vector2>();
             playerActions.Player.Look.canceled -= ctx => lookInput = Vector2.zero;
+            playerActions.Player.MousePosition.performed -= ctx => mousePositionInput = ctx.ReadValue<Vector2>();
+            playerActions.Player.MousePosition.canceled -= ctx => mousePositionInput = Vector2.zero;
             playerActions.Player.Evade.performed -= OnEvade;
             playerActions.Player.Interact.performed -= OnInteract;
             playerActions.Player.Fire.performed -= OnFire;
@@ -262,28 +267,58 @@ public class UnitController : MonoBehaviour
     private void HandleAimingAndFiring()
     {
         // --- Aiming ---
-        // Right stick input determines the body's facing direction.
-        if (lookInput.sqrMagnitude > 0.1f * 0.1f) // Deadzone check
+        // Determine aiming based on active input device
+        Vector3 currentAimDirection = aimDirection; // Store current aimDirection to check if it changes
+
+        if (playerActions.Player.Look.activeControl?.device is Gamepad)
         {
-            // Convert look input to a camera-relative direction
-            Vector3 camForward = Camera.main.transform.forward;
-            Vector3 camRight = Camera.main.transform.right;
-            camForward.y = 0;
-            camRight.y = 0;
-            camForward.Normalize();
-            camRight.Normalize();
-
-            // Vertical aim is NOT inverted, unlike movement
-            Vector3 lookDirection = (camForward * lookInput.y + camRight * lookInput.x).normalized;
-
-            if (lookDirection != Vector3.zero)
+            // Gamepad aiming (right stick)
+            if (lookInput.sqrMagnitude > 0.1f * 0.1f) // Deadzone check
             {
-                this.aimDirection = lookDirection;
+                // Convert look input to a camera-relative direction
+                Vector3 camForward = Camera.main.transform.forward;
+                Vector3 camRight = Camera.main.transform.right;
+                camForward.y = 0;
+                camRight.y = 0;
+                camForward.Normalize();
+                camRight.Normalize();
+
+                Vector3 lookDirection = (camForward * lookInput.y + camRight * lookInput.x).normalized;
+
+                if (lookDirection != Vector3.zero)
+                {
+                    aimDirection = lookDirection;
+                }
+            }
+        }
+        else if (playerActions.Player.MousePosition.activeControl?.device is Mouse)
+        {
+            // Mouse aiming
+            Ray ray = Camera.main.ScreenPointToRay(mousePositionInput);
+            if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, LayerMask.GetMask("Ground"))) // Assuming a "Ground" layer for raycasting
+            {
+                Vector3 targetPoint = hit.point;
+                Vector3 directionToMouse = targetPoint - transform.position;
+                directionToMouse.y = 0; // Flatten the direction to aim on the XZ plane
+                if (directionToMouse.sqrMagnitude > 0.01f) // Avoid zero vector
+                {
+                    aimDirection = directionToMouse.normalized;
+                }
             }
         }
 
-        // Turret simply aligns with the body.
-        turretTransform.localRotation = Quaternion.Slerp(turretTransform.localRotation, Quaternion.identity, turretRotationSpeed * Time.deltaTime);
+        // Rotate turret to face the aim direction
+        if (aimDirection.sqrMagnitude > 0.01f)
+        {
+            Quaternion targetRotation = Quaternion.LookRotation(aimDirection);
+            turretTransform.rotation = Quaternion.Slerp(turretTransform.rotation, targetRotation, turretRotationSpeed * Time.deltaTime);
+        }
+
+        // If aimDirection changed, reset lookInput to prevent residual gamepad input from interfering
+        if (currentAimDirection != aimDirection)
+        {
+            lookInput = Vector2.zero;
+        }
 
 
         // --- Firing ---

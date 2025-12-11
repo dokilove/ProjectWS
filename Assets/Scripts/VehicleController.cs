@@ -44,6 +44,7 @@ public class VehicleController : MonoBehaviour
     private InputSystem_Actions playerActions;
     private Vector2 moveInput;
     private Vector2 lookInput; // For Player Control
+    private Vector2 mousePositionInput; // For mouse aiming
     private bool isFireHeld = false;
     private bool isBraking = false;
     private Vector3 currentAimDirection; // For body rotation
@@ -148,6 +149,8 @@ public class VehicleController : MonoBehaviour
         playerActions.Vehicle.Move.canceled += ctx => moveInput = Vector2.zero;
         playerActions.Vehicle.Look.performed += ctx => lookInput = ctx.ReadValue<Vector2>();
         playerActions.Vehicle.Look.canceled += ctx => lookInput = Vector2.zero;
+        playerActions.Vehicle.MousePosition.performed += ctx => mousePositionInput = ctx.ReadValue<Vector2>();
+        playerActions.Vehicle.MousePosition.canceled += ctx => mousePositionInput = Vector2.zero;
         playerActions.Vehicle.Fire.performed += OnFire;
         playerActions.Vehicle.Fire_Hold.started += OnFireHoldStarted;
         playerActions.Vehicle.Fire_Hold.canceled += OnFireHoldCanceled;
@@ -176,6 +179,8 @@ public class VehicleController : MonoBehaviour
             playerActions.Vehicle.Move.canceled -= ctx => moveInput = Vector2.zero;
             playerActions.Vehicle.Look.performed -= ctx => lookInput = ctx.ReadValue<Vector2>();
             playerActions.Vehicle.Look.canceled -= ctx => lookInput = Vector2.zero;
+            playerActions.Vehicle.MousePosition.performed -= ctx => mousePositionInput = ctx.ReadValue<Vector2>();
+            playerActions.Vehicle.MousePosition.canceled -= ctx => mousePositionInput = Vector2.zero;
             playerActions.Vehicle.Fire.performed -= OnFire;
             playerActions.Vehicle.Fire_Hold.started -= OnFireHoldStarted;
             playerActions.Vehicle.Fire_Hold.canceled -= OnFireHoldCanceled;
@@ -285,24 +290,55 @@ public class VehicleController : MonoBehaviour
 
     private void HandlePlayerAiming()
     {
-        Quaternion desiredRotation = turretTransform.rotation; // Default to current rotation
-        if (lookInput.sqrMagnitude > 0.1f * 0.1f)
+        Vector3 previousAimDirection = currentAimDirection; // Store previous aimDirection to check if it changes
+        Vector3 calculatedAimDirection = Vector3.zero;
+
+        if (playerActions.Vehicle.Look.activeControl?.device is Gamepad)
         {
-            // Convert look input to a camera-relative direction
-            Vector3 camForward = Camera.main.transform.forward;
-            Vector3 camRight = Camera.main.transform.right;
-            camForward.y = 0;
-            camRight.y = 0;
-            camForward.Normalize();
-            camRight.Normalize();
-
-            // Vertical aim is NOT inverted, unlike movement
-            Vector3 aimDirection = (camForward * lookInput.y + camRight * lookInput.x).normalized;
-
-            if (aimDirection != Vector3.zero)
+            // Gamepad aiming (right stick)
+            if (lookInput.sqrMagnitude > 0.1f * 0.1f) // Deadzone check
             {
-                desiredRotation = Quaternion.LookRotation(aimDirection);
+                // Convert look input to a camera-relative direction
+                Vector3 camForward = Camera.main.transform.forward;
+                Vector3 camRight = Camera.main.transform.right;
+                camForward.y = 0;
+                camRight.y = 0;
+                camForward.Normalize();
+                camRight.Normalize();
+
+                Vector3 lookDirection = (camForward * lookInput.y + camRight * lookInput.x).normalized;
+
+                if (lookDirection != Vector3.zero)
+                {
+                    calculatedAimDirection = lookDirection;
+                }
             }
+        }
+        else if (playerActions.Vehicle.MousePosition.activeControl?.device is Mouse)
+        {
+            // Mouse aiming
+            Ray ray = Camera.main.ScreenPointToRay(mousePositionInput);
+            if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, LayerMask.GetMask("Ground"))) // Assuming a "Ground" layer for raycasting
+            {
+                Vector3 targetPoint = hit.point;
+                Vector3 directionToMouse = targetPoint - transform.position;
+                directionToMouse.y = 0; // Flatten the direction to aim on the XZ plane
+                if (directionToMouse.sqrMagnitude > 0.01f) // Avoid zero vector
+                {
+                    calculatedAimDirection = directionToMouse.normalized;
+                }
+            }
+        }
+
+        if (calculatedAimDirection.sqrMagnitude > 0.01f)
+        {
+            currentAimDirection = calculatedAimDirection;
+        }
+
+        Quaternion desiredRotation = turretTransform.rotation; // Default to current rotation
+        if (currentAimDirection.sqrMagnitude > 0.01f)
+        {
+            desiredRotation = Quaternion.LookRotation(currentAimDirection);
         }
         
         // --- Apply Clamping to desiredRotation's World Y-angle ---
@@ -325,6 +361,12 @@ public class VehicleController : MonoBehaviour
 
         // Slerp to the desired rotation (now clamped)
         turretTransform.rotation = Quaternion.Slerp(turretTransform.rotation, desiredRotation, turretRotationSpeed * Time.deltaTime);
+
+        // If aimDirection changed, reset lookInput to prevent residual gamepad input from interfering
+        if (calculatedAimDirection.sqrMagnitude > 0.01f)
+        {
+            lookInput = Vector2.zero;
+        }
     }
     
     private void HandlePlayerMovementAndRotation()
