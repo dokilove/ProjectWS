@@ -43,6 +43,15 @@
                     "initialStateCheck": false
                 },
                 {
+                    "name": "Interact_Hold",
+                    "type": "Button",
+                    "id": "148fc2e3-1a8a-477d-8f97-3c4139aa710b",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
                     "name": "Evade",
                     "type": "Button",
                     "id": "361262f9-7100-4310-8e85-6864af198c4a",
@@ -375,6 +384,28 @@
                 },
                 {
                     "name": "",
+                    "id": "618643d3-3889-4e02-89e7-b49dfb584dcb",
+                    "path": "<Gamepad>/buttonNorth",
+                    "interactions": "Hold",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Interact_Hold",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "8b1accfe-6e77-4920-bf32-481907ec149e",
+                    "path": "<Keyboard>/f",
+                    "interactions": "Hold",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Interact_Hold",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
                     "id": "5310cace-17d3-49a5-83ec-0a7dc9c67998",
                     "path": "<Gamepad>/rightTrigger",
                     "interactions": "",
@@ -550,6 +581,15 @@
                     "initialStateCheck": false
                 },
                 {
+                    "name": "Interact_Hold",
+                    "type": "Button",
+                    "id": "88830630-f97a-49f8-923a-f463a0ec10b8",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
                     "name": "Evade",
                     "type": "Button",
                     "id": "4f87ad5a-3f6d-48be-96bc-49a4d13cf4b0",
@@ -568,15 +608,6 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "Fire_Hold",
-                    "type": "Button",
-                    "id": "41392efb-2658-4e8d-8b5d-df2d1b0d20f7",
-                    "expectedControlType": "",
-                    "processors": "",
-                    "interactions": "",
-                    "initialStateCheck": false
-                },
-                {
                     "name": "Brake",
                     "type": "Button",
                     "id": "49cfc5cc-3474-4f87-bd64-c90582e58105",
@@ -589,6 +620,15 @@
                     "name": "Fire",
                     "type": "Button",
                     "id": "82cb722e-7c87-465e-8754-609c8d64e1e1",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "Fire_Hold",
+                    "type": "Button",
+                    "id": "41392efb-2658-4e8d-8b5d-df2d1b0d20f7",
                     "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
@@ -935,8 +975,8 @@
                 },
                 {
                     "name": "",
-                    "id": "51287505-e8a6-4208-a9fc-9e82a67d47c9",
-                    "path": "<Mouse>/leftButton",
+                    "id": "d4ea7f09-0dd0-48af-9ec5-44a7c3628cee",
+                    "path": "<Keyboard>/f",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
@@ -946,12 +986,23 @@
                 },
                 {
                     "name": "",
-                    "id": "d4ea7f09-0dd0-48af-9ec5-44a7c3628cee",
-                    "path": "<Keyboard>/f",
-                    "interactions": "",
+                    "id": "032e885a-07e5-456b-ba06-c94d602cec10",
+                    "path": "<Gamepad>/buttonNorth",
+                    "interactions": "Hold",
                     "processors": "",
                     "groups": "",
-                    "action": "Interact",
+                    "action": "Interact_Hold",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "3733231f-6c10-41b4-a352-3ca2f0cfa3bb",
+                    "path": "<Keyboard>/f",
+                    "interactions": "Hold",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Interact_Hold",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },

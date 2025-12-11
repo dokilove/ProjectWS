@@ -41,6 +41,23 @@ public class UnitController : MonoBehaviour
     private Vector2 mousePositionInput; // For mouse aiming
     private int originalLayer;
 
+    private enum InputDeviceType { None, Gamepad, MouseKeyboard }
+    private InputDeviceType lastUsedInputDevice = InputDeviceType.None;
+
+    // Delegates for input actions to allow proper unsubscribe
+    private System.Action<InputAction.CallbackContext> onMovePerformed;
+    private System.Action<InputAction.CallbackContext> onMoveCanceled;
+    private System.Action<InputAction.CallbackContext> onLookPerformed;
+    private System.Action<InputAction.CallbackContext> onLookCanceled;
+    private System.Action<InputAction.CallbackContext> onMousePositionPerformed;
+    private System.Action<InputAction.CallbackContext> onMousePositionCanceled;
+    private System.Action<InputAction.CallbackContext> onEvadePerformed;
+    private System.Action<InputAction.CallbackContext> onInteractPerformed;
+    private System.Action<InputAction.CallbackContext> onFirePerformed;
+    private System.Action<InputAction.CallbackContext> onFireHoldStarted;
+    private System.Action<InputAction.CallbackContext> onFireHoldCanceled;
+    private System.Action<InputAction.CallbackContext> onReloadPerformed;
+
     private bool isFireHeld = false;
     private Vector3 aimDirection;
 
@@ -87,6 +104,20 @@ public class UnitController : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         playerActions = new InputSystem_Actions();
         originalLayer = gameObject.layer;
+
+        // Initialize delegates
+        onMovePerformed = ctx => { moveInput = ctx.ReadValue<Vector2>(); if (ctx.control.device is Gamepad) lastUsedInputDevice = InputDeviceType.Gamepad; else lastUsedInputDevice = InputDeviceType.MouseKeyboard; };
+        onMoveCanceled = ctx => moveInput = Vector2.zero;
+        onLookPerformed = ctx => { lookInput = ctx.ReadValue<Vector2>(); if (ctx.control.device is Gamepad) lastUsedInputDevice = InputDeviceType.Gamepad; };
+        onLookCanceled = ctx => lookInput = Vector2.zero;
+        onMousePositionPerformed = ctx => { mousePositionInput = ctx.ReadValue<Vector2>(); if (ctx.control.device is Mouse) lastUsedInputDevice = InputDeviceType.MouseKeyboard; };
+        onMousePositionCanceled = ctx => mousePositionInput = Vector2.zero;
+        onEvadePerformed = ctx => { OnEvade(ctx); if (ctx.control.device is Gamepad) lastUsedInputDevice = InputDeviceType.Gamepad; else lastUsedInputDevice = InputDeviceType.MouseKeyboard; };
+        onInteractPerformed = ctx => { OnInteract(ctx); if (ctx.control.device is Gamepad) lastUsedInputDevice = InputDeviceType.Gamepad; else lastUsedInputDevice = InputDeviceType.MouseKeyboard; };
+        onFirePerformed = ctx => { OnFire(ctx); if (ctx.control.device is Gamepad) lastUsedInputDevice = InputDeviceType.Gamepad; else lastUsedInputDevice = InputDeviceType.MouseKeyboard; };
+        onFireHoldStarted = ctx => { OnFireHoldStarted(ctx); if (ctx.control.device is Gamepad) lastUsedInputDevice = InputDeviceType.Gamepad; else lastUsedInputDevice = InputDeviceType.MouseKeyboard; };
+        onFireHoldCanceled = ctx => OnFireHoldCanceled(ctx);
+        onReloadPerformed = ctx => { OnReload(ctx); if (ctx.control.device is Gamepad) lastUsedInputDevice = InputDeviceType.Gamepad; else lastUsedInputDevice = InputDeviceType.MouseKeyboard; };
 
         if (radiusVisualizer != null)
         {
@@ -168,18 +199,18 @@ public class UnitController : MonoBehaviour
         gameObject.SetActive(true);
 
         playerActions.Player.Enable();
-        playerActions.Player.Move.performed += ctx => moveInput = ctx.ReadValue<Vector2>();
-        playerActions.Player.Move.canceled += ctx => moveInput = Vector2.zero;
-        playerActions.Player.Look.performed += ctx => lookInput = ctx.ReadValue<Vector2>();
-        playerActions.Player.Look.canceled += ctx => lookInput = Vector2.zero;
-        playerActions.Player.MousePosition.performed += ctx => mousePositionInput = ctx.ReadValue<Vector2>();
-        playerActions.Player.MousePosition.canceled += ctx => mousePositionInput = Vector2.zero;
-        playerActions.Player.Evade.performed += OnEvade;
-        playerActions.Player.Interact.performed += OnInteract;
-        playerActions.Player.Fire.performed += OnFire;
-        playerActions.Player.Fire_Hold.started += OnFireHoldStarted;
-        playerActions.Player.Fire_Hold.canceled += OnFireHoldCanceled;
-        playerActions.Player.Reload.performed += OnReload;
+        playerActions.Player.Move.performed += onMovePerformed;
+        playerActions.Player.Move.canceled += onMoveCanceled;
+        playerActions.Player.Look.performed += onLookPerformed;
+        playerActions.Player.Look.canceled += onLookCanceled;
+        playerActions.Player.MousePosition.performed += onMousePositionPerformed;
+        playerActions.Player.MousePosition.canceled += onMousePositionCanceled;
+        playerActions.Player.Evade.performed += onEvadePerformed;
+        playerActions.Player.Interact.performed += onInteractPerformed;
+        playerActions.Player.Fire.performed += onFirePerformed;
+        playerActions.Player.Fire_Hold.started += onFireHoldStarted;
+        playerActions.Player.Fire_Hold.canceled += onFireHoldCanceled;
+        playerActions.Player.Reload.performed += onReloadPerformed;
     }
 
     public void DisableControl()
@@ -198,18 +229,22 @@ public class UnitController : MonoBehaviour
         if (playerActions != null)
         {
             playerActions.Player.Disable();
-            playerActions.Player.Move.performed -= ctx => moveInput = ctx.ReadValue<Vector2>();
-            playerActions.Player.Move.canceled -= ctx => moveInput = Vector2.zero;
-            playerActions.Player.Look.performed -= ctx => lookInput = ctx.ReadValue<Vector2>();
-            playerActions.Player.Look.canceled -= ctx => lookInput = Vector2.zero;
-            playerActions.Player.MousePosition.performed -= ctx => mousePositionInput = ctx.ReadValue<Vector2>();
-            playerActions.Player.MousePosition.canceled -= ctx => mousePositionInput = Vector2.zero;
-            playerActions.Player.Evade.performed -= OnEvade;
-            playerActions.Player.Interact.performed -= OnInteract;
-            playerActions.Player.Fire.performed -= OnFire;
-            playerActions.Player.Fire_Hold.started -= OnFireHoldStarted;
-            playerActions.Player.Fire_Hold.canceled -= OnFireHoldCanceled;
-            playerActions.Player.Reload.performed -= OnReload;
+            if (playerActions != null)
+        {
+            playerActions.Player.Disable();
+            playerActions.Player.Move.performed -= onMovePerformed;
+            playerActions.Player.Move.canceled -= onMoveCanceled;
+            playerActions.Player.Look.performed -= onLookPerformed;
+            playerActions.Player.Look.canceled -= onLookCanceled;
+            playerActions.Player.MousePosition.performed -= onMousePositionPerformed;
+            playerActions.Player.MousePosition.canceled -= onMousePositionCanceled;
+            playerActions.Player.Evade.performed -= onEvadePerformed;
+            playerActions.Player.Interact.performed -= onInteractPerformed;
+            playerActions.Player.Fire.performed -= onFirePerformed;
+            playerActions.Player.Fire_Hold.started -= onFireHoldStarted;
+            playerActions.Player.Fire_Hold.canceled -= onFireHoldCanceled;
+            playerActions.Player.Reload.performed -= onReloadPerformed;
+        }
         }
         rb.linearVelocity = Vector3.zero;
         moveInput = Vector2.zero;
@@ -267,10 +302,10 @@ public class UnitController : MonoBehaviour
     private void HandleAimingAndFiring()
     {
         // --- Aiming ---
-        // Determine aiming based on active input device
+        // Determine aiming based on last used input device
         Vector3 currentAimDirection = aimDirection; // Store current aimDirection to check if it changes
 
-        if (playerActions.Player.Look.activeControl?.device is Gamepad)
+        if (lastUsedInputDevice == InputDeviceType.Gamepad)
         {
             // Gamepad aiming (right stick)
             if (lookInput.sqrMagnitude > 0.1f * 0.1f) // Deadzone check
@@ -290,8 +325,9 @@ public class UnitController : MonoBehaviour
                     aimDirection = lookDirection;
                 }
             }
+            // If gamepad is active but lookInput is not significant, maintain current aimDirection
         }
-        else if (playerActions.Player.MousePosition.activeControl?.device is Mouse)
+        else if (lastUsedInputDevice == InputDeviceType.MouseKeyboard)
         {
             // Mouse aiming
             Ray ray = Camera.main.ScreenPointToRay(mousePositionInput);
@@ -315,6 +351,7 @@ public class UnitController : MonoBehaviour
         }
 
         // If aimDirection changed, reset lookInput to prevent residual gamepad input from interfering
+        // This is less critical now with lastUsedInputDevice, but good for immediate feedback.
         if (currentAimDirection != aimDirection)
         {
             lookInput = Vector2.zero;

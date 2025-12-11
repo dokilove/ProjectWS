@@ -129,6 +129,15 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""initialStateCheck"": false
                 },
                 {
+                    ""name"": ""Interact_Hold"",
+                    ""type"": ""Button"",
+                    ""id"": ""148fc2e3-1a8a-477d-8f97-3c4139aa710b"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
                     ""name"": ""Evade"",
                     ""type"": ""Button"",
                     ""id"": ""361262f9-7100-4310-8e85-6864af198c4a"",
@@ -461,6 +470,28 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                 },
                 {
                     ""name"": """",
+                    ""id"": ""618643d3-3889-4e02-89e7-b49dfb584dcb"",
+                    ""path"": ""<Gamepad>/buttonNorth"",
+                    ""interactions"": ""Hold"",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Interact_Hold"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""8b1accfe-6e77-4920-bf32-481907ec149e"",
+                    ""path"": ""<Keyboard>/f"",
+                    ""interactions"": ""Hold"",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Interact_Hold"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
                     ""id"": ""5310cace-17d3-49a5-83ec-0a7dc9c67998"",
                     ""path"": ""<Gamepad>/rightTrigger"",
                     ""interactions"": """",
@@ -636,6 +667,15 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""initialStateCheck"": false
                 },
                 {
+                    ""name"": ""Interact_Hold"",
+                    ""type"": ""Button"",
+                    ""id"": ""88830630-f97a-49f8-923a-f463a0ec10b8"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
                     ""name"": ""Evade"",
                     ""type"": ""Button"",
                     ""id"": ""4f87ad5a-3f6d-48be-96bc-49a4d13cf4b0"",
@@ -654,15 +694,6 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""initialStateCheck"": false
                 },
                 {
-                    ""name"": ""Fire_Hold"",
-                    ""type"": ""Button"",
-                    ""id"": ""41392efb-2658-4e8d-8b5d-df2d1b0d20f7"",
-                    ""expectedControlType"": """",
-                    ""processors"": """",
-                    ""interactions"": """",
-                    ""initialStateCheck"": false
-                },
-                {
                     ""name"": ""Brake"",
                     ""type"": ""Button"",
                     ""id"": ""49cfc5cc-3474-4f87-bd64-c90582e58105"",
@@ -675,6 +706,15 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""name"": ""Fire"",
                     ""type"": ""Button"",
                     ""id"": ""82cb722e-7c87-465e-8754-609c8d64e1e1"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Fire_Hold"",
+                    ""type"": ""Button"",
+                    ""id"": ""41392efb-2658-4e8d-8b5d-df2d1b0d20f7"",
                     ""expectedControlType"": """",
                     ""processors"": """",
                     ""interactions"": """",
@@ -1021,8 +1061,8 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                 },
                 {
                     ""name"": """",
-                    ""id"": ""51287505-e8a6-4208-a9fc-9e82a67d47c9"",
-                    ""path"": ""<Mouse>/leftButton"",
+                    ""id"": ""d4ea7f09-0dd0-48af-9ec5-44a7c3628cee"",
+                    ""path"": ""<Keyboard>/f"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
@@ -1032,12 +1072,23 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                 },
                 {
                     ""name"": """",
-                    ""id"": ""d4ea7f09-0dd0-48af-9ec5-44a7c3628cee"",
-                    ""path"": ""<Keyboard>/f"",
-                    ""interactions"": """",
+                    ""id"": ""032e885a-07e5-456b-ba06-c94d602cec10"",
+                    ""path"": ""<Gamepad>/buttonNorth"",
+                    ""interactions"": ""Hold"",
                     ""processors"": """",
                     ""groups"": """",
-                    ""action"": ""Interact"",
+                    ""action"": ""Interact_Hold"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""3733231f-6c10-41b4-a352-3ca2f0cfa3bb"",
+                    ""path"": ""<Keyboard>/f"",
+                    ""interactions"": ""Hold"",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Interact_Hold"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -1765,6 +1816,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         m_Player_Brake = m_Player.FindAction("Brake", throwIfNotFound: true);
         m_Player_Look = m_Player.FindAction("Look", throwIfNotFound: true);
         m_Player_Interact = m_Player.FindAction("Interact", throwIfNotFound: true);
+        m_Player_Interact_Hold = m_Player.FindAction("Interact_Hold", throwIfNotFound: true);
         m_Player_Evade = m_Player.FindAction("Evade", throwIfNotFound: true);
         m_Player_Fire = m_Player.FindAction("Fire", throwIfNotFound: true);
         m_Player_Fire_Hold = m_Player.FindAction("Fire_Hold", throwIfNotFound: true);
@@ -1776,11 +1828,12 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         m_Vehicle_Move = m_Vehicle.FindAction("Move", throwIfNotFound: true);
         m_Vehicle_Look = m_Vehicle.FindAction("Look", throwIfNotFound: true);
         m_Vehicle_Interact = m_Vehicle.FindAction("Interact", throwIfNotFound: true);
+        m_Vehicle_Interact_Hold = m_Vehicle.FindAction("Interact_Hold", throwIfNotFound: true);
         m_Vehicle_Evade = m_Vehicle.FindAction("Evade", throwIfNotFound: true);
         m_Vehicle_Exit = m_Vehicle.FindAction("Exit", throwIfNotFound: true);
-        m_Vehicle_Fire_Hold = m_Vehicle.FindAction("Fire_Hold", throwIfNotFound: true);
         m_Vehicle_Brake = m_Vehicle.FindAction("Brake", throwIfNotFound: true);
         m_Vehicle_Fire = m_Vehicle.FindAction("Fire", throwIfNotFound: true);
+        m_Vehicle_Fire_Hold = m_Vehicle.FindAction("Fire_Hold", throwIfNotFound: true);
         m_Vehicle_Reload = m_Vehicle.FindAction("Reload", throwIfNotFound: true);
         m_Vehicle_MousePosition = m_Vehicle.FindAction("MousePosition", throwIfNotFound: true);
         // UI
@@ -1886,6 +1939,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
     private readonly InputAction m_Player_Brake;
     private readonly InputAction m_Player_Look;
     private readonly InputAction m_Player_Interact;
+    private readonly InputAction m_Player_Interact_Hold;
     private readonly InputAction m_Player_Evade;
     private readonly InputAction m_Player_Fire;
     private readonly InputAction m_Player_Fire_Hold;
@@ -1919,6 +1973,10 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// Provides access to the underlying input action "Player/Interact".
         /// </summary>
         public InputAction @Interact => m_Wrapper.m_Player_Interact;
+        /// <summary>
+        /// Provides access to the underlying input action "Player/Interact_Hold".
+        /// </summary>
+        public InputAction @Interact_Hold => m_Wrapper.m_Player_Interact_Hold;
         /// <summary>
         /// Provides access to the underlying input action "Player/Evade".
         /// </summary>
@@ -1981,6 +2039,9 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
             @Interact.started += instance.OnInteract;
             @Interact.performed += instance.OnInteract;
             @Interact.canceled += instance.OnInteract;
+            @Interact_Hold.started += instance.OnInteract_Hold;
+            @Interact_Hold.performed += instance.OnInteract_Hold;
+            @Interact_Hold.canceled += instance.OnInteract_Hold;
             @Evade.started += instance.OnEvade;
             @Evade.performed += instance.OnEvade;
             @Evade.canceled += instance.OnEvade;
@@ -2022,6 +2083,9 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
             @Interact.started -= instance.OnInteract;
             @Interact.performed -= instance.OnInteract;
             @Interact.canceled -= instance.OnInteract;
+            @Interact_Hold.started -= instance.OnInteract_Hold;
+            @Interact_Hold.performed -= instance.OnInteract_Hold;
+            @Interact_Hold.canceled -= instance.OnInteract_Hold;
             @Evade.started -= instance.OnEvade;
             @Evade.performed -= instance.OnEvade;
             @Evade.canceled -= instance.OnEvade;
@@ -2080,11 +2144,12 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
     private readonly InputAction m_Vehicle_Move;
     private readonly InputAction m_Vehicle_Look;
     private readonly InputAction m_Vehicle_Interact;
+    private readonly InputAction m_Vehicle_Interact_Hold;
     private readonly InputAction m_Vehicle_Evade;
     private readonly InputAction m_Vehicle_Exit;
-    private readonly InputAction m_Vehicle_Fire_Hold;
     private readonly InputAction m_Vehicle_Brake;
     private readonly InputAction m_Vehicle_Fire;
+    private readonly InputAction m_Vehicle_Fire_Hold;
     private readonly InputAction m_Vehicle_Reload;
     private readonly InputAction m_Vehicle_MousePosition;
     /// <summary>
@@ -2111,6 +2176,10 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// </summary>
         public InputAction @Interact => m_Wrapper.m_Vehicle_Interact;
         /// <summary>
+        /// Provides access to the underlying input action "Vehicle/Interact_Hold".
+        /// </summary>
+        public InputAction @Interact_Hold => m_Wrapper.m_Vehicle_Interact_Hold;
+        /// <summary>
         /// Provides access to the underlying input action "Vehicle/Evade".
         /// </summary>
         public InputAction @Evade => m_Wrapper.m_Vehicle_Evade;
@@ -2119,10 +2188,6 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// </summary>
         public InputAction @Exit => m_Wrapper.m_Vehicle_Exit;
         /// <summary>
-        /// Provides access to the underlying input action "Vehicle/Fire_Hold".
-        /// </summary>
-        public InputAction @Fire_Hold => m_Wrapper.m_Vehicle_Fire_Hold;
-        /// <summary>
         /// Provides access to the underlying input action "Vehicle/Brake".
         /// </summary>
         public InputAction @Brake => m_Wrapper.m_Vehicle_Brake;
@@ -2130,6 +2195,10 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// Provides access to the underlying input action "Vehicle/Fire".
         /// </summary>
         public InputAction @Fire => m_Wrapper.m_Vehicle_Fire;
+        /// <summary>
+        /// Provides access to the underlying input action "Vehicle/Fire_Hold".
+        /// </summary>
+        public InputAction @Fire_Hold => m_Wrapper.m_Vehicle_Fire_Hold;
         /// <summary>
         /// Provides access to the underlying input action "Vehicle/Reload".
         /// </summary>
@@ -2173,21 +2242,24 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
             @Interact.started += instance.OnInteract;
             @Interact.performed += instance.OnInteract;
             @Interact.canceled += instance.OnInteract;
+            @Interact_Hold.started += instance.OnInteract_Hold;
+            @Interact_Hold.performed += instance.OnInteract_Hold;
+            @Interact_Hold.canceled += instance.OnInteract_Hold;
             @Evade.started += instance.OnEvade;
             @Evade.performed += instance.OnEvade;
             @Evade.canceled += instance.OnEvade;
             @Exit.started += instance.OnExit;
             @Exit.performed += instance.OnExit;
             @Exit.canceled += instance.OnExit;
-            @Fire_Hold.started += instance.OnFire_Hold;
-            @Fire_Hold.performed += instance.OnFire_Hold;
-            @Fire_Hold.canceled += instance.OnFire_Hold;
             @Brake.started += instance.OnBrake;
             @Brake.performed += instance.OnBrake;
             @Brake.canceled += instance.OnBrake;
             @Fire.started += instance.OnFire;
             @Fire.performed += instance.OnFire;
             @Fire.canceled += instance.OnFire;
+            @Fire_Hold.started += instance.OnFire_Hold;
+            @Fire_Hold.performed += instance.OnFire_Hold;
+            @Fire_Hold.canceled += instance.OnFire_Hold;
             @Reload.started += instance.OnReload;
             @Reload.performed += instance.OnReload;
             @Reload.canceled += instance.OnReload;
@@ -2214,21 +2286,24 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
             @Interact.started -= instance.OnInteract;
             @Interact.performed -= instance.OnInteract;
             @Interact.canceled -= instance.OnInteract;
+            @Interact_Hold.started -= instance.OnInteract_Hold;
+            @Interact_Hold.performed -= instance.OnInteract_Hold;
+            @Interact_Hold.canceled -= instance.OnInteract_Hold;
             @Evade.started -= instance.OnEvade;
             @Evade.performed -= instance.OnEvade;
             @Evade.canceled -= instance.OnEvade;
             @Exit.started -= instance.OnExit;
             @Exit.performed -= instance.OnExit;
             @Exit.canceled -= instance.OnExit;
-            @Fire_Hold.started -= instance.OnFire_Hold;
-            @Fire_Hold.performed -= instance.OnFire_Hold;
-            @Fire_Hold.canceled -= instance.OnFire_Hold;
             @Brake.started -= instance.OnBrake;
             @Brake.performed -= instance.OnBrake;
             @Brake.canceled -= instance.OnBrake;
             @Fire.started -= instance.OnFire;
             @Fire.performed -= instance.OnFire;
             @Fire.canceled -= instance.OnFire;
+            @Fire_Hold.started -= instance.OnFire_Hold;
+            @Fire_Hold.performed -= instance.OnFire_Hold;
+            @Fire_Hold.canceled -= instance.OnFire_Hold;
             @Reload.started -= instance.OnReload;
             @Reload.performed -= instance.OnReload;
             @Reload.canceled -= instance.OnReload;
@@ -2671,6 +2746,13 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnInteract(InputAction.CallbackContext context);
         /// <summary>
+        /// Method invoked when associated input action "Interact_Hold" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnInteract_Hold(InputAction.CallbackContext context);
+        /// <summary>
         /// Method invoked when associated input action "Evade" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>
         /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
@@ -2742,6 +2824,13 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnInteract(InputAction.CallbackContext context);
         /// <summary>
+        /// Method invoked when associated input action "Interact_Hold" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnInteract_Hold(InputAction.CallbackContext context);
+        /// <summary>
         /// Method invoked when associated input action "Evade" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>
         /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
@@ -2756,13 +2845,6 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnExit(InputAction.CallbackContext context);
         /// <summary>
-        /// Method invoked when associated input action "Fire_Hold" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
-        /// </summary>
-        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
-        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
-        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
-        void OnFire_Hold(InputAction.CallbackContext context);
-        /// <summary>
         /// Method invoked when associated input action "Brake" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>
         /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
@@ -2776,6 +2858,13 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnFire(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "Fire_Hold" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnFire_Hold(InputAction.CallbackContext context);
         /// <summary>
         /// Method invoked when associated input action "Reload" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>

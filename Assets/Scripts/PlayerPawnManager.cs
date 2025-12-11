@@ -32,7 +32,8 @@ public class PlayerPawnManager : MonoBehaviour
 
         // Subscribe to Interact action (always active for the PlayerPawnManager)
         playerOnFootActions.Interact.performed += OnInteract;
-        // The Exit action will be subscribed/unsubscribed dynamically
+        playerOnFootActions.Interact_Hold.performed += OnInteractHold;
+        // The Interact_Hold action will be subscribed/unsubscribed dynamically for vehicle
 
         // Initially disable all pawns
         // Pawns will be disabled/enabled by PossessUnit/PossessVehicle in Start()
@@ -80,8 +81,9 @@ public class PlayerPawnManager : MonoBehaviour
         playerOnFootActions.Disable();
         playerInVehicleActions.Disable();
         playerOnFootActions.Interact.performed -= OnInteract;
-        // Unsubscribe Exit if it was subscribed
-        playerInVehicleActions.Exit.performed -= OnExitVehicle;
+        playerOnFootActions.Interact_Hold.performed -= OnInteractHold;
+        // Unsubscribe Interact_Hold if it was subscribed for vehicle
+        playerInVehicleActions.Interact_Hold.performed -= OnInteractHold;
     }
 
     private void OnInteract(InputAction.CallbackContext context)
@@ -91,10 +93,10 @@ public class PlayerPawnManager : MonoBehaviour
         {
             TryEnterVehicle();
         }
-        // If currently controlling Vehicle, Interact does nothing (Exit handles leaving)
+        // If currently controlling Vehicle, Interact does nothing (Interact_Hold handles leaving)
     }
 
-    private void OnExitVehicle(InputAction.CallbackContext context)
+    private void OnInteractHold(InputAction.CallbackContext context)
     {
         // If currently controlling Vehicle, try to exit
         if (currentVehicle != null && currentVehicle.IsControlledByPlayer)
@@ -102,6 +104,8 @@ public class PlayerPawnManager : MonoBehaviour
             ExitVehicle();
         }
     }
+
+    
 
     private void PossessUnit(UnitController unitToPossess)
     {
@@ -119,7 +123,7 @@ public class PlayerPawnManager : MonoBehaviour
         if (currentVehicle != null && currentVehicle.IsControlledByPlayer)
         {
             currentVehicle.DisableControl();
-            playerInVehicleActions.Exit.performed -= OnExitVehicle; // Unsubscribe Exit
+            playerInVehicleActions.Interact_Hold.performed -= OnInteractHold; // Unsubscribe Interact_Hold
             playerInVehicleActions.Disable(); // Disable Vehicle actions
         }
 
@@ -151,11 +155,12 @@ public class PlayerPawnManager : MonoBehaviour
         {
             currentUnit.DisableControl();
             playerOnFootActions.Disable(); // Disable Player actions
+            playerOnFootActions.Interact_Hold.performed -= OnInteractHold; // Unsubscribe Interact_Hold
         }
         if (currentVehicle != null && currentVehicle.IsControlledByPlayer)
         {
             currentVehicle.DisableControl();
-            playerInVehicleActions.Exit.performed -= OnExitVehicle; // Unsubscribe Exit
+            playerInVehicleActions.Interact_Hold.performed -= OnInteractHold; // Unsubscribe Interact_Hold
         }
 
         currentVehicle = vehicleToPossess;
@@ -166,7 +171,7 @@ public class PlayerPawnManager : MonoBehaviour
 
         currentVehicle.EnableControl(); // Enable Vehicle control
         playerInVehicleActions.Enable(); // Enable Vehicle actions
-        playerInVehicleActions.Exit.performed += OnExitVehicle; // Subscribe to Exit
+        playerInVehicleActions.Interact_Hold.performed += OnInteractHold; // Subscribe to Interact_Hold
 
         ActivePlayerTransform = currentVehicle.transform; // Set active transform
 

@@ -49,6 +49,23 @@ public class VehicleController : MonoBehaviour
     private bool isBraking = false;
     private Vector3 currentAimDirection; // For body rotation
 
+    private enum InputDeviceType { None, Gamepad, MouseKeyboard }
+    private InputDeviceType lastUsedInputDevice = InputDeviceType.None;
+
+    // Delegates for input actions to allow proper unsubscribe
+    private System.Action<InputAction.CallbackContext> onMovePerformed;
+    private System.Action<InputAction.CallbackContext> onMoveCanceled;
+    private System.Action<InputAction.CallbackContext> onLookPerformed;
+    private System.Action<InputAction.CallbackContext> onLookCanceled;
+    private System.Action<InputAction.CallbackContext> onMousePositionPerformed;
+    private System.Action<InputAction.CallbackContext> onMousePositionCanceled;
+    private System.Action<InputAction.CallbackContext> onFirePerformed;
+    private System.Action<InputAction.CallbackContext> onFireHoldStarted;
+    private System.Action<InputAction.CallbackContext> onFireHoldCanceled;
+    private System.Action<InputAction.CallbackContext> onBrakeStarted;
+    private System.Action<InputAction.CallbackContext> onBrakeCanceled;
+    private System.Action<InputAction.CallbackContext> onReloadPerformed;
+
     // --- Ammo & Reloading ---
     private int currentAmmo;
     private bool isReloading = false;
@@ -83,6 +100,20 @@ public class VehicleController : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         agent = GetComponent<NavMeshAgent>();
         playerActions = new InputSystem_Actions();
+
+        // Initialize delegates
+        onMovePerformed = ctx => { moveInput = ctx.ReadValue<Vector2>(); if (ctx.control.device is Gamepad) lastUsedInputDevice = InputDeviceType.Gamepad; else lastUsedInputDevice = InputDeviceType.MouseKeyboard; };
+        onMoveCanceled = ctx => moveInput = Vector2.zero;
+        onLookPerformed = ctx => { lookInput = ctx.ReadValue<Vector2>(); if (ctx.control.device is Gamepad) lastUsedInputDevice = InputDeviceType.Gamepad; };
+        onLookCanceled = ctx => lookInput = Vector2.zero;
+        onMousePositionPerformed = ctx => { mousePositionInput = ctx.ReadValue<Vector2>(); if (ctx.control.device is Mouse) lastUsedInputDevice = InputDeviceType.MouseKeyboard; };
+        onMousePositionCanceled = ctx => mousePositionInput = Vector2.zero;
+        onFirePerformed = ctx => { OnFire(ctx); if (ctx.control.device is Gamepad) lastUsedInputDevice = InputDeviceType.Gamepad; else lastUsedInputDevice = InputDeviceType.MouseKeyboard; };
+        onFireHoldStarted = ctx => { OnFireHoldStarted(ctx); if (ctx.control.device is Gamepad) lastUsedInputDevice = InputDeviceType.Gamepad; else lastUsedInputDevice = InputDeviceType.MouseKeyboard; };
+        onFireHoldCanceled = ctx => OnFireHoldCanceled(ctx);
+        onBrakeStarted = ctx => { OnBrakeStarted(ctx); if (ctx.control.device is Gamepad) lastUsedInputDevice = InputDeviceType.Gamepad; else lastUsedInputDevice = InputDeviceType.MouseKeyboard; };
+        onBrakeCanceled = ctx => OnBrakeCanceled(ctx);
+        onReloadPerformed = ctx => { OnReload(ctx); if (ctx.control.device is Gamepad) lastUsedInputDevice = InputDeviceType.Gamepad; else lastUsedInputDevice = InputDeviceType.MouseKeyboard; };
 
         if (radiusVisualizer != null)
         {
@@ -145,18 +176,18 @@ public class VehicleController : MonoBehaviour
         rb.constraints = RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
         
         playerActions.Vehicle.Enable();
-        playerActions.Vehicle.Move.performed += ctx => moveInput = ctx.ReadValue<Vector2>();
-        playerActions.Vehicle.Move.canceled += ctx => moveInput = Vector2.zero;
-        playerActions.Vehicle.Look.performed += ctx => lookInput = ctx.ReadValue<Vector2>();
-        playerActions.Vehicle.Look.canceled += ctx => lookInput = Vector2.zero;
-        playerActions.Vehicle.MousePosition.performed += ctx => mousePositionInput = ctx.ReadValue<Vector2>();
-        playerActions.Vehicle.MousePosition.canceled += ctx => mousePositionInput = Vector2.zero;
-        playerActions.Vehicle.Fire.performed += OnFire;
-        playerActions.Vehicle.Fire_Hold.started += OnFireHoldStarted;
-        playerActions.Vehicle.Fire_Hold.canceled += OnFireHoldCanceled;
-        playerActions.Vehicle.Brake.started += OnBrakeStarted;
-        playerActions.Vehicle.Brake.canceled += OnBrakeCanceled;
-        playerActions.Vehicle.Reload.performed += OnReload;
+        playerActions.Vehicle.Move.performed += onMovePerformed;
+        playerActions.Vehicle.Move.canceled += onMoveCanceled;
+        playerActions.Vehicle.Look.performed += onLookPerformed;
+        playerActions.Vehicle.Look.canceled += onLookCanceled;
+        playerActions.Vehicle.MousePosition.performed += onMousePositionPerformed;
+        playerActions.Vehicle.MousePosition.canceled += onMousePositionCanceled;
+        playerActions.Vehicle.Fire.performed += onFirePerformed;
+        playerActions.Vehicle.Fire_Hold.started += onFireHoldStarted;
+        playerActions.Vehicle.Fire_Hold.canceled += onFireHoldCanceled;
+        playerActions.Vehicle.Brake.started += onBrakeStarted;
+        playerActions.Vehicle.Brake.canceled += onBrakeCanceled;
+        playerActions.Vehicle.Reload.performed += onReloadPerformed;
     }
 
     public void DisableControl()
@@ -175,18 +206,18 @@ public class VehicleController : MonoBehaviour
         if (playerActions != null)
         {
             playerActions.Vehicle.Disable();
-            playerActions.Vehicle.Move.performed -= ctx => moveInput = ctx.ReadValue<Vector2>();
-            playerActions.Vehicle.Move.canceled -= ctx => moveInput = Vector2.zero;
-            playerActions.Vehicle.Look.performed -= ctx => lookInput = ctx.ReadValue<Vector2>();
-            playerActions.Vehicle.Look.canceled -= ctx => lookInput = Vector2.zero;
-            playerActions.Vehicle.MousePosition.performed -= ctx => mousePositionInput = ctx.ReadValue<Vector2>();
-            playerActions.Vehicle.MousePosition.canceled -= ctx => mousePositionInput = Vector2.zero;
-            playerActions.Vehicle.Fire.performed -= OnFire;
-            playerActions.Vehicle.Fire_Hold.started -= OnFireHoldStarted;
-            playerActions.Vehicle.Fire_Hold.canceled -= OnFireHoldCanceled;
-            playerActions.Vehicle.Brake.started -= OnBrakeStarted;
-            playerActions.Vehicle.Brake.canceled -= OnBrakeCanceled;
-            playerActions.Vehicle.Reload.performed -= OnReload;
+            playerActions.Vehicle.Move.performed -= onMovePerformed;
+            playerActions.Vehicle.Move.canceled -= onMoveCanceled;
+            playerActions.Vehicle.Look.performed -= onLookPerformed;
+            playerActions.Vehicle.Look.canceled -= onLookCanceled;
+            playerActions.Vehicle.MousePosition.performed -= onMousePositionPerformed;
+            playerActions.Vehicle.MousePosition.canceled -= onMousePositionCanceled;
+            playerActions.Vehicle.Fire.performed -= onFirePerformed;
+            playerActions.Vehicle.Fire_Hold.started -= onFireHoldStarted;
+            playerActions.Vehicle.Fire_Hold.canceled -= onFireHoldCanceled;
+            playerActions.Vehicle.Brake.started -= onBrakeStarted;
+            playerActions.Vehicle.Brake.canceled -= onBrakeCanceled;
+            playerActions.Vehicle.Reload.performed -= onReloadPerformed;
         }
         rb.linearVelocity = Vector3.zero;
         moveInput = Vector2.zero;
@@ -293,7 +324,7 @@ public class VehicleController : MonoBehaviour
         Vector3 previousAimDirection = currentAimDirection; // Store previous aimDirection to check if it changes
         Vector3 calculatedAimDirection = Vector3.zero;
 
-        if (playerActions.Vehicle.Look.activeControl?.device is Gamepad)
+        if (lastUsedInputDevice == InputDeviceType.Gamepad)
         {
             // Gamepad aiming (right stick)
             if (lookInput.sqrMagnitude > 0.1f * 0.1f) // Deadzone check
@@ -313,8 +344,9 @@ public class VehicleController : MonoBehaviour
                     calculatedAimDirection = lookDirection;
                 }
             }
+            // If gamepad is active but lookInput is not significant, maintain current aimDirection
         }
-        else if (playerActions.Vehicle.MousePosition.activeControl?.device is Mouse)
+        else if (lastUsedInputDevice == InputDeviceType.MouseKeyboard)
         {
             // Mouse aiming
             Ray ray = Camera.main.ScreenPointToRay(mousePositionInput);
@@ -363,6 +395,7 @@ public class VehicleController : MonoBehaviour
         turretTransform.rotation = Quaternion.Slerp(turretTransform.rotation, desiredRotation, turretRotationSpeed * Time.deltaTime);
 
         // If aimDirection changed, reset lookInput to prevent residual gamepad input from interfering
+        // This is less critical now with lastUsedInputDevice, but good for immediate feedback.
         if (calculatedAimDirection.sqrMagnitude > 0.01f)
         {
             lookInput = Vector2.zero;
