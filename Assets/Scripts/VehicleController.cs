@@ -406,44 +406,37 @@ public class VehicleController : MonoBehaviour
     {
         rb.angularVelocity = Vector3.zero;
 
-        // --- Velocity Calculation ---
-        Vector3 cameraRight = Camera.main.transform.right;
-        Vector3 cameraRightFlat = new Vector3(cameraRight.x, 0, cameraRight.z).normalized;
-        Vector3 cameraForwardFlat = Vector3.Cross(Vector3.up, cameraRightFlat);
-        Vector3 moveForward = -cameraForwardFlat;
-        Vector3 moveRight = cameraRightFlat;
-        Vector3 moveVector = (moveForward * moveInput.y + moveRight * moveInput.x);
-
-        // --- Body Rotation (Movement Only) ---
-        if (!isBraking && moveVector.sqrMagnitude > 0.1f)
+        if (isBraking)
         {
-            Quaternion targetRotation = Quaternion.LookRotation(moveVector);
-            rb.rotation = Quaternion.Slerp(rb.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime);
-        }
-        // Note: If braking, the vehicle does not rotate based on movement input.
-        else if (isBraking && moveInput.sqrMagnitude > 0.1f) // New: Rotate in place when braking
-        {
-            // Use moveInput to determine rotation direction
-            // Reuse cameraRightFlat and cameraForwardFlat from outer scope
-            Vector3 moveForwardForRotation = -cameraForwardFlat; // cameraForwardFlat is already defined
-            Vector3 moveRightForRotation = cameraRightFlat; // cameraRightFlat is already defined
+            // --- Braking Logic: Rotate in place to face aim direction ---
+            rb.linearVelocity = Vector3.zero; // Stop movement
 
-            Vector3 rotationVector = (moveForwardForRotation * moveInput.y + moveRightForRotation * moveInput.x);
-            
-            if (rotationVector != Vector3.zero)
+            // Rotate body to face the current aim direction (controlled by look/mouse)
+            if (currentAimDirection.sqrMagnitude > 0.01f)
             {
-                Quaternion targetRotation = Quaternion.LookRotation(rotationVector);
+                Quaternion targetRotation = Quaternion.LookRotation(currentAimDirection);
                 rb.rotation = Quaternion.Slerp(rb.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime);
             }
         }
-
-        // --- Velocity Application (with braking) ---
-        if (isBraking)
-        {
-            rb.linearVelocity = Vector3.zero;
-        }
         else
         {
+            // --- Normal Movement Logic ---
+            // Velocity Calculation
+            Vector3 cameraRight = Camera.main.transform.right;
+            Vector3 cameraRightFlat = new Vector3(cameraRight.x, 0, cameraRight.z).normalized;
+            Vector3 cameraForwardFlat = Vector3.Cross(Vector3.up, cameraRightFlat);
+            Vector3 moveForward = -cameraForwardFlat;
+            Vector3 moveRight = cameraRightFlat;
+            Vector3 moveVector = (moveForward * moveInput.y + moveRight * moveInput.x);
+
+            // Body Rotation (follows movement direction)
+            if (moveVector.sqrMagnitude > 0.1f)
+            {
+                Quaternion targetRotation = Quaternion.LookRotation(moveVector);
+                rb.rotation = Quaternion.Slerp(rb.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime);
+            }
+
+            // Velocity Application
             rb.linearVelocity = moveVector * moveSpeed;
         }
     }
