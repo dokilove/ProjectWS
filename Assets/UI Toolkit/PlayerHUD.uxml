@@ -1,0 +1,20 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/UI%20Toolkit/PlayerHUD.uss?fileID=7433441132597879392&amp;guid=ac713e23ed82a894a802314574c3677e&amp;type=3#PlayerHUD" />
+    <ui:VisualElement name="HUDContainer" class="root">
+        <ui:VisualElement name="TopLeft" class="top-left-container">
+            <ui:VisualElement name="TimeUI" class="hud-element_time">
+                <ui:Label text="00:00" name="time-label" class="hud-text" style="font-size: 24px; background-color: rgba(0, 0, 0, 0.53); padding-right: 4px; padding-left: 4px; border-top-left-radius: 4px; border-top-right-radius: 4px; border-bottom-right-radius: 4px; border-bottom-left-radius: 4px; width: 82px;" />
+            </ui:VisualElement>
+            <ui:VisualElement name="EnemyCounterUI" class="hud-element" style="flex-direction: row;">
+                <ui:Label text="Enemies:" name="enemy-title-label" class="hud-text hud-title" />
+                <ui:Label text="0" name="enemy-count-label" class="hud-text" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="TopRight" class="top-right-container">
+            <ui:VisualElement name="FPSUI" class="hud-element" style="flex-direction: row;">
+                <ui:Label text="FPS:" name="fps-title-label" class="hud-text hud-title" />
+                <ui:Label text="0" name="fps-label" class="hud-text" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
