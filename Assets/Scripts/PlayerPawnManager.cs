@@ -182,6 +182,40 @@ public class PlayerPawnManager : MonoBehaviour
         Debug.Log($"PlayerPawnManager: Possessed Vehicle: {currentVehicle.name}");
     }
 
+    [Header("Exit Collision")]
+    [SerializeField] private LayerMask obstacleLayer; // Walls and other obstacles
+    [SerializeField] private float playerSpawnCheckRadius = 0.5f; // Should match player's collider radius
+
+    private Vector3 FindSafeExitPosition()
+    {
+        Transform vehicleTransform = currentVehicle.transform;
+
+        // Define potential exit points relative to the vehicle (left, right, back)
+        Vector3[] exitOffsets = new Vector3[]
+        {
+            -vehicleTransform.right * 2.5f, // Left side
+            vehicleTransform.right * 2.5f,  // Right side
+            -vehicleTransform.forward * 3f // Back side
+        };
+
+        foreach (var offset in exitOffsets)
+        {
+            // We check a bit above the ground to avoid hitting the floor
+            Vector3 checkPosition = vehicleTransform.position + offset + Vector3.up * (playerSpawnCheckRadius + 0.1f);
+            
+            // Check if the area is clear of obstacles
+            if (!Physics.CheckSphere(checkPosition, playerSpawnCheckRadius, obstacleLayer))
+            {
+                Debug.Log($"[ExitCheck] Found safe exit position near {checkPosition}");
+                return vehicleTransform.position + offset; // Return the position at the vehicle's level
+            }
+        }
+
+        // Fallback: If all else fails, spawn on top of the vehicle
+        Debug.LogWarning("[ExitCheck] No safe exit position found. Spawning on top of vehicle as a fallback.");
+        return vehicleTransform.position + Vector3.up * 2f;
+    }
+
     private void TryEnterVehicle()
     {
         Collider[] hitColliders = Physics.OverlapSphere(currentUnit.transform.position, vehicleDetectionRadius, vehicleLayer);
@@ -213,10 +247,11 @@ public class PlayerPawnManager : MonoBehaviour
     {
         if (currentVehicle != null)
         {
-            // Calculate desired exit position
-            Vector3 desiredExitPosition = currentVehicle.transform.position + currentVehicle.transform.forward * 2f;
-            // Find ground position for the unit
-            unitPawn.transform.position = FindGroundPosition(desiredExitPosition, unitPawn.transform);
+            // Find a safe position that isn't inside a wall
+            Vector3 safeExitPosition = FindSafeExitPosition();
+            
+            // Place the player at the safe position, adjusted to the ground
+            unitPawn.transform.position = FindGroundPosition(safeExitPosition, unitPawn.transform);
             PossessUnit(unitPawn);
         }
     }
