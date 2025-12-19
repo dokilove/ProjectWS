@@ -4,51 +4,71 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-// 각 스포너가 생성할 적의 종류와 비율을 설정할 수 있도록 개선된 스포너
-
-[System.Serializable] // Inspector 창에서 보이고 수정할 수 있도록 설정
+[System.Serializable]
 public struct SpawnableEnemy
 {
-    public GameObject prefab; // 적 프리팹
+    public GameObject prefab;
     [Tooltip("이 값이 높을수록 더 자주 스폰됩니다.")]
-    public float weight;      // 생성 가중치
+    public float weight;
+}
+
+[System.Serializable]
+public struct PhaseSpawnSettings
+{
+    public TimePhase phase;
+    [Tooltip("이 시간대에 한 웨이브에 스폰할 적의 수")]
+    public int enemiesPerWave;
+    [Tooltip("이 시간대에 다음 웨이브까지의 대기 시간 (초)")]
+    public float waveCooldown;
+    [Tooltip("이 시간대에 웨이브 내에서 각 적의 스폰 간격")]
+    public float spawnIntervalInWave;
 }
 
 public class EnemySpawner : MonoBehaviour
 {
-    [Header("Wave Settings")]
-    [SerializeField] private int enemiesPerWave = 10; // 한 웨이브에 스폰할 적의 수
-    [SerializeField] private float waveCooldown = 15f; // 다음 웨이브까지의 대기 시간 (초)
-    [SerializeField] private float spawnIntervalInWave = 0.5f; // 웨이브 내에서 각 적의 스폰 간격
+    [Header("Dependencies")]
+    [SerializeField] private DayNightCycle dayNightCycle;
+
+    [Header("Wave Settings per Phase")]
+    [Tooltip("각 시간 단계별 스폰 설정을 정의합니다.")]
+    [SerializeField] private PhaseSpawnSettings[] phaseSettings;
 
     [Header("Enemy Types & Ratios")]
     [Tooltip("이 스포너가 생성할 적의 목록과 각 적의 생성 가중치를 설정합니다.")]
-    [SerializeField] private List<SpawnableEnemy> spawnableEnemies; // 스폰할 적 목록 (프리팹 + 가중치)
+    [SerializeField] private List<SpawnableEnemy> spawnableEnemies;
 
     [Header("Pooling Settings")]
-    [SerializeField] private int initialPoolSize = 10; // 각 적 종류별 초기 풀 크기
+    [SerializeField] private int initialPoolSize = 10;
 
     private Dictionary<GameObject, List<GameObject>> enemyPool = new Dictionary<GameObject, List<GameObject>>();
     private float totalSpawnWeight;
+    private PhaseSpawnSettings defaultSettings; // Fallback settings
 
     void Awake()
     {
         InitializePool();
         CalculateTotalWeight();
+        // Create a default setting entry as a fallback
+        defaultSettings = new PhaseSpawnSettings { enemiesPerWave = 5, waveCooldown = 20f, spawnIntervalInWave = 1f };
     }
 
     void Start()
     {
+        if (dayNightCycle == null)
+        {
+            Debug.LogError("DayNightCycle reference is not set in the EnemySpawner!", this);
+            // Disable the spawner if the dependency is missing
+            enabled = false;
+            return;
+        }
         StartCoroutine(SpawnEnemiesRoutine());
     }
 
     private void InitializePool()
     {
-        // spawnableEnemies 리스트에 있는 모든 프리팹에 대해 풀을 생성합니다.
         foreach (SpawnableEnemy spawnable in spawnableEnemies)
         {
             if (spawnable.prefab == null) continue;
-
             List<GameObject> pool = new List<GameObject>();
             for (int i = 0; i < initialPoolSize; i++)
             {
@@ -60,75 +80,62 @@ public class EnemySpawner : MonoBehaviour
         }
     }
 
-    // 가중치의 총합을 미리 계산해 둡니다.
     private void CalculateTotalWeight()
     {
-        totalSpawnWeight = 0;
-        foreach (var spawnable in spawnableEnemies)
-        {
-            totalSpawnWeight += spawnable.weight;
-        }
+        totalSpawnWeight = spawnableEnemies.Sum(e => e.weight);
     }
 
     private GameObject GetEnemyFromPool(GameObject prefab)
     {
         if (!enemyPool.ContainsKey(prefab)) return null;
-
-        foreach (GameObject enemy in enemyPool[prefab])
+        GameObject enemy = enemyPool[prefab].FirstOrDefault(e => !e.activeInHierarchy);
+        if (enemy == null)
         {
-            if (!enemy.activeInHierarchy)
-            {
-                return enemy;
-            }
+            enemy = Instantiate(prefab);
+            enemyPool[prefab].Add(enemy);
         }
-        
-        GameObject newEnemy = Instantiate(prefab);
-        enemyPool[prefab].Add(newEnemy);
-        return newEnemy;
+        return enemy;
     }
 
-    // 설정된 가중치에 따라 랜덤하게 적 프리팹을 선택하여 반환합니다.
     private GameObject GetRandomEnemyPrefab()
     {
-        if (spawnableEnemies.Count == 0)
-        {
-            Debug.LogError("Spawnable Enemies list is empty!");
-            return null;
-        }
-
-        Debug.Log($"--- Choosing Random Enemy ---");
-        Debug.Log($"Total spawn weight: {totalSpawnWeight}");
-
+        if (spawnableEnemies.Count == 0) return null;
         float randomValue = Random.Range(0, totalSpawnWeight);
-        Debug.Log($"Initial random value: {randomValue}");
-
         foreach (var spawnable in spawnableEnemies)
         {
-            if (spawnable.prefab == null) continue;
-            Debug.Log($"Checking enemy '{spawnable.prefab.name}' with weight {spawnable.weight}. Current random value: {randomValue}");
-            if (randomValue <= spawnable.weight)
+            if (randomValue <= spawnable.weight) return spawnable.prefab;
+            randomValue -= spawnable.weight;
+        }
+        return spawnableEnemies.Last().prefab;
+    }
+
+    private PhaseSpawnSettings GetCurrentPhaseSettings()
+    {
+        if (dayNightCycle != null)
+        {
+            TimePhase currentPhase = dayNightCycle.CurrentPhase;
+            foreach (var setting in phaseSettings)
             {
-                Debug.Log($"--> Selected '{spawnable.prefab.name}'!");
-                return spawnable.prefab;
-            }
-            else
-            {
-                randomValue -= spawnable.weight;
-                Debug.Log($"Not selected. New random value: {randomValue}");
+                if (setting.phase == currentPhase)
+                {
+                    return setting;
+                }
             }
         }
-
-        Debug.LogWarning("Weighted random selection fell through. This should not happen. Returning last enemy.");
-        return spawnableEnemies.Last().prefab;
+        Debug.LogWarning($"No spawn settings found for phase {dayNightCycle.CurrentPhase}. Using default fallback settings.");
+        return defaultSettings;
     }
 
     private IEnumerator SpawnEnemiesRoutine()
     {
         while (true)
         {
-            for (int i = 0; i < enemiesPerWave; i++)
+            // Get the settings for the current phase at the beginning of each wave
+            PhaseSpawnSettings currentSettings = GetCurrentPhaseSettings();
+
+            for (int i = 0; i < currentSettings.enemiesPerWave; i++)
             {
-                while (EnemyManager.Instance != null && 
+                while (EnemyManager.Instance != null &&
                        EnemyManager.Instance.GetActiveEnemyCount() >= EnemyManager.Instance.MaxActiveEnemies)
                 {
                     yield return new WaitForSeconds(1f);
@@ -143,10 +150,10 @@ public class EnemySpawner : MonoBehaviour
                 enemy.transform.position = transform.position;
                 enemy.SetActive(true);
 
-                yield return new WaitForSeconds(spawnIntervalInWave);
+                yield return new WaitForSeconds(currentSettings.spawnIntervalInWave);
             }
 
-            yield return new WaitForSeconds(waveCooldown);
+            yield return new WaitForSeconds(currentSettings.waveCooldown);
         }
     }
 }

@@ -20,7 +20,7 @@ RenderSettings:
   m_FogDensity: 0.01
   m_LinearFogStart: 0
   m_LinearFogEnd: 300
-  m_AmbientSkyColor: {r: 0.7273356, g: 0.7273356, b: 0.7273356, a: 1}
+  m_AmbientSkyColor: {r: 0.2658506, g: 0.2677533, b: 0.28495103, a: 1}
   m_AmbientEquatorColor: {r: 0.114, g: 0.125, b: 0.133, a: 1}
   m_AmbientGroundColor: {r: 0.047, g: 0.043, b: 0.035, a: 1}
   m_AmbientIntensity: 1
@@ -385,9 +385,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a726359b3a79d614ea0d39dbae594288, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemySpawner
-  enemiesPerWave: 3
-  waveCooldown: 3
-  spawnIntervalInWave: 0.2
+  dayNightCycle: {fileID: 488670102}
+  phaseSettings:
+  - phase: 0
+    enemiesPerWave: 2
+    waveCooldown: 2
+    spawnIntervalInWave: 2
+  - phase: 1
+    enemiesPerWave: 1
+    waveCooldown: 4
+    spawnIntervalInWave: 4
+  - phase: 2
+    enemiesPerWave: 1
+    waveCooldown: 10
+    spawnIntervalInWave: 10
+  - phase: 3
+    enemiesPerWave: 1
+    waveCooldown: 4
+    spawnIntervalInWave: 4
+  - phase: 4
+    enemiesPerWave: 2
+    waveCooldown: 4
+    spawnIntervalInWave: 4
   spawnableEnemies:
   - prefab: {fileID: 7814139772003403061, guid: 5259b48c224a6274f86ae7ae283782bd, type: 3}
     weight: 4
@@ -749,8 +768,8 @@ Light:
   m_Enabled: 1
   serializedVersion: 11
   m_Type: 1
-  m_Color: {r: 1, g: 0.89739925, b: 0.6730324, a: 1}
-  m_Intensity: 0.8858479
+  m_Color: {r: 0.2207848, g: 0.23038866, b: 0.28990287, a: 1}
+  m_Intensity: 0.1595459
   m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -812,7 +831,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 410087039}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.87982684, y: -0.106816456, z: 0.2357489, w: 0.39864445}
+  m_LocalRotation: {x: -0.6127768, y: -0.20006984, z: -0.16419306, w: 0.74667084}
   m_LocalPosition: {x: 0, y: 3, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -892,9 +911,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a726359b3a79d614ea0d39dbae594288, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemySpawner
-  enemiesPerWave: 3
-  waveCooldown: 3
-  spawnIntervalInWave: 0.2
+  dayNightCycle: {fileID: 488670102}
+  phaseSettings:
+  - phase: 0
+    enemiesPerWave: 2
+    waveCooldown: 2
+    spawnIntervalInWave: 2
+  - phase: 1
+    enemiesPerWave: 1
+    waveCooldown: 4
+    spawnIntervalInWave: 4
+  - phase: 2
+    enemiesPerWave: 1
+    waveCooldown: 10
+    spawnIntervalInWave: 10
+  - phase: 3
+    enemiesPerWave: 1
+    waveCooldown: 4
+    spawnIntervalInWave: 4
+  - phase: 4
+    enemiesPerWave: 2
+    waveCooldown: 4
+    spawnIntervalInWave: 4
   spawnableEnemies:
   - prefab: {fileID: 7814139772003403061, guid: 925e72915691fc146ad8aec096a9e9c7, type: 3}
     weight: 1
@@ -932,9 +970,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DayNightCycle
   dayDurationInMinutes: 1
   startTime:
-    hours: 8
+    hours: 0
     minutes: 45
   sun: {fileID: 410087040}
+  sunRotationOffset: -90
   sunColor:
     serializedVersion: 2
     key0: {r: 0.067105725, g: 0.12970889, b: 0.2735849, a: 1}
@@ -947,9 +986,9 @@ MonoBehaviour:
     key7: {r: 0, g: 0, b: 0, a: 0}
     ctime0: 0
     ctime1: 12432
-    ctime2: 30069
-    ctime3: 33731
-    ctime4: 54452
+    ctime2: 23516
+    ctime3: 44140
+    ctime4: 54741
     ctime5: 65535
     ctime6: 0
     ctime7: 0
@@ -1028,7 +1067,8 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  currentTimeOfDay: 0.36458334
+  currentPhase: 0
+  currentTimeOfDay: 0.03125
 --- !u!4 &488670103
 Transform:
   m_ObjectHideFlags: 0
@@ -3602,9 +3642,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a726359b3a79d614ea0d39dbae594288, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemySpawner
-  enemiesPerWave: 3
-  waveCooldown: 3
-  spawnIntervalInWave: 0.2
+  dayNightCycle: {fileID: 488670102}
+  phaseSettings:
+  - phase: 0
+    enemiesPerWave: 2
+    waveCooldown: 2
+    spawnIntervalInWave: 2
+  - phase: 1
+    enemiesPerWave: 1
+    waveCooldown: 4
+    spawnIntervalInWave: 4
+  - phase: 2
+    enemiesPerWave: 1
+    waveCooldown: 10
+    spawnIntervalInWave: 10
+  - phase: 3
+    enemiesPerWave: 1
+    waveCooldown: 4
+    spawnIntervalInWave: 4
+  - phase: 4
+    enemiesPerWave: 2
+    waveCooldown: 4
+    spawnIntervalInWave: 4
   spawnableEnemies:
   - prefab: {fileID: 7814139772003403061, guid: 5259b48c224a6274f86ae7ae283782bd, type: 3}
     weight: 1
