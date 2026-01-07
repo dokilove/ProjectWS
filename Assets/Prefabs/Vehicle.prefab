@@ -488,7 +488,7 @@ GameObject:
   m_Component:
   - component: {fileID: 9185515537383459653}
   - component: {fileID: 2005463206068442692}
-  - component: {fileID: 2635750620242673229}
+  - component: {fileID: 2462820816224075434}
   - component: {fileID: 5858207267981137251}
   - component: {fileID: 1619575887438222292}
   m_Layer: 11
@@ -548,8 +548,8 @@ Rigidbody:
   m_Interpolate: 1
   m_Constraints: 112
   m_CollisionDetection: 2
---- !u!135 &2635750620242673229
-SphereCollider:
+--- !u!65 &2462820816224075434
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -567,8 +567,8 @@ SphereCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Radius: 1.25
-  m_Center: {x: 0, y: 0.8, z: 0}
+  m_Size: {x: 2, y: 1.6, z: 3.74}
+  m_Center: {x: 0, y: 0.3, z: 0}
 --- !u!114 &5858207267981137251
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -615,7 +615,7 @@ NavMeshAgent:
   m_AutoBraking: 1
   m_AutoRepath: 1
   m_Height: 2
-  m_BaseOffset: 0
+  m_BaseOffset: 0.5
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
 --- !u!1 &3315636829676454270
@@ -734,7 +734,7 @@ Transform:
   m_GameObject: {fileID: 4773990823121688182}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
-  m_LocalPosition: {x: -0.85, y: -0.126, z: 0}
+  m_LocalPosition: {x: -0.85, y: -0.18, z: 0}
   m_LocalScale: {x: 0.6, y: 0.2, z: 3.24}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -823,7 +823,7 @@ Transform:
   m_GameObject: {fileID: 5830303470129662388}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
-  m_LocalPosition: {x: 0.85, y: -0.126, z: 0}
+  m_LocalPosition: {x: 0.85, y: -0.18000002, z: 0}
   m_LocalScale: {x: 0.6, y: 0.2, z: 3.24}
   m_ConstrainProportionsScale: 0
   m_Children: []

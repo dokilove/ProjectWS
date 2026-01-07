@@ -3,9 +3,13 @@ using UnityEngine.InputSystem;
 
 public class PlayerPawnManager : MonoBehaviour
 {
-    [Header("Pawn References")]
-    [SerializeField] private UnitController unitPawn; // Assign the player character (Unit) here
-    [SerializeField] private VehicleController vehiclePawn; // Assign the vehicle here
+    [Header("Pawn Prefabs")]
+    [SerializeField] private GameObject unitPawnPrefab; // Assign the player character (Unit) prefab here
+    [SerializeField] private GameObject vehiclePawnPrefab; // Assign the vehicle prefab here
+
+    [Header("Spawning")]
+    [SerializeField] private Transform playerSpawnPoint;
+    [SerializeField] private Transform vehicleSpawnPoint;
 
     [Header("Camera")]
     [SerializeField] private ManualFollowCamera followCamera; // Assign your Main Camera with ManualFollowCamera script here
@@ -14,6 +18,10 @@ public class PlayerPawnManager : MonoBehaviour
     [SerializeField] private float vehicleDetectionRadius = 3f; // 탈것 탐지 반경
     [SerializeField] private LayerMask vehicleLayer; // 탈것 레이어 (Unity Editor에서 설정 필요)
     [SerializeField] private LayerMask groundLayer; // 바닥 레이어 (Unity Editor에서 설정 필요)
+
+    // --- Instantiated References ---
+    private UnitController unitPawn; 
+    private VehicleController vehiclePawn;
 
     private UnitController currentUnit; // Reference to the currently possessed Unit
     private VehicleController currentVehicle; // Reference to the currently possessed Vehicle
@@ -34,33 +42,87 @@ public class PlayerPawnManager : MonoBehaviour
         playerOnFootActions.Interact.performed += OnInteract;
         playerOnFootActions.Interact_Hold.performed += OnInteractHold;
         // The Interact_Hold action will be subscribed/unsubscribed dynamically for vehicle
-
-        // Initially disable all pawns
-        // Pawns will be disabled/enabled by PossessUnit/PossessVehicle in Start()
-        // No need to call DisableControl here, as it might be too early.
     }
 
     private void Start()
     {
-        // Ensure both pawns start in a known, disabled state before placing them.
-        // This prevents physics from interfering with the initial placement.
-        unitPawn?.DisableControl();
-        vehiclePawn?.DisableControl();
-
-        // Adjust initial positions to be on the ground for both player and vehicle.
-        // This loop ensures the exact same logic is applied to both.
-        Transform[] pawnsToPlace = { unitPawn?.transform, vehiclePawn?.transform };
-
-        foreach (Transform pawnTransform in pawnsToPlace)
+        // --- 0. Validate Dependencies ---
+        if (followCamera == null)
         {
-            if (pawnTransform != null)
+            Debug.LogError("PlayerPawnManager: 'Follow Camera' is not assigned in the Inspector! Please assign your main camera.");
+            // Optionally, try to find it automatically
+            followCamera = Camera.main.GetComponent<ManualFollowCamera>();
+            if (followCamera == null)
             {
-                pawnTransform.position = FindGroundPosition(pawnTransform.position, pawnTransform);
+                Debug.LogError("PlayerPawnManager: Could not automatically find ManualFollowCamera on the main camera. Aborting.");
+                return; // Stop execution if camera is critical and not found
+            }
+            else
+            {
+                Debug.LogWarning("PlayerPawnManager: Successfully found ManualFollowCamera on the main camera automatically. Please consider assigning it in the inspector for reliability.");
             }
         }
 
-        // Start by possessing the Unit, which will re-enable it.
+        // --- 1. Spawn Pawns from Prefabs ---
+        SpawnPawns();
+
+        if (unitPawn == null)
+        {
+            Debug.LogError("PlayerPawnManager: Unit Pawn failed to spawn. Aborting Start().");
+            return;
+        }
+
+        // --- 2. Initialize Pawns ---
+        // Ensure both pawns start in a known, disabled state before placing them.
+        unitPawn.DisableControl();
+        vehiclePawn?.DisableControl();
+
+        // Adjust initial positions to be on the ground.
+        unitPawn.transform.position = FindGroundPosition(unitPawn.transform.position, unitPawn.transform);
+        if (vehiclePawn != null)
+        {
+            vehiclePawn.transform.position = FindGroundPosition(vehiclePawn.transform.position, vehiclePawn.transform);
+        }
+
+        // --- 3. Start by possessing the Unit ---
         PossessUnit(unitPawn);
+    }
+
+    private void SpawnPawns()
+    {
+        // Determine spawn positions
+        Vector3 unitSpawnPos = playerSpawnPoint != null ? playerSpawnPoint.position : transform.position;
+        Quaternion unitSpawnRot = playerSpawnPoint != null ? playerSpawnPoint.rotation : transform.rotation;
+
+        // Spawn Unit
+        if (unitPawnPrefab != null)
+        {
+            GameObject unitGO = Instantiate(unitPawnPrefab, unitSpawnPos, unitSpawnRot);
+            unitPawn = unitGO.GetComponent<UnitController>();
+            if (unitPawn == null)
+            {
+                Debug.LogError($"PlayerPawnManager: The prefab '{unitPawnPrefab.name}' does not have a UnitController component.");
+            }
+        }
+        else
+        {
+            Debug.LogError("PlayerPawnManager: Unit Pawn Prefab is not assigned!");
+            return;
+        }
+
+        // Spawn Vehicle (optional)
+        if (vehiclePawnPrefab != null)
+        {
+            Vector3 vehicleSpawnPos = vehicleSpawnPoint != null ? vehicleSpawnPoint.position : transform.position + Vector3.right * 5f; // Default offset
+            Quaternion vehicleSpawnRot = vehicleSpawnPoint != null ? vehicleSpawnPoint.rotation : transform.rotation;
+
+            GameObject vehicleGO = Instantiate(vehiclePawnPrefab, vehicleSpawnPos, vehicleSpawnRot);
+            vehiclePawn = vehicleGO.GetComponent<VehicleController>();
+            if (vehiclePawn == null)
+            {
+                Debug.LogError($"PlayerPawnManager: The prefab '{vehiclePawnPrefab.name}' does not have a VehicleController component.");
+            }
+        }
     }
 
     private void OnEnable()
@@ -138,6 +200,7 @@ public class PlayerPawnManager : MonoBehaviour
         if (followCamera != null)
         {
             followCamera.SetTarget(currentUnit.transform);
+            followCamera.SnapToTarget(); // Instantly move camera to the new target
         }
         Debug.Log($"PlayerPawnManager: Possessed Unit: {currentUnit.name}");
     }
@@ -178,6 +241,7 @@ public class PlayerPawnManager : MonoBehaviour
         if (followCamera != null)
         {
             followCamera.SetTarget(currentVehicle.transform);
+            followCamera.SnapToTarget(); // Instantly move camera to the new target
         }
         Debug.Log($"PlayerPawnManager: Possessed Vehicle: {currentVehicle.name}");
     }

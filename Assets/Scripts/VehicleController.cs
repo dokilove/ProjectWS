@@ -277,14 +277,45 @@ public class VehicleController : MonoBehaviour
 
     private void HandleAIControl()
     {
-        if (agent.isActiveAndEnabled && agent.isOnNavMesh)
+        // --- Agent Movement Control ---
+        // If there's no target to follow or no AI behavior defined, ensure agent is disabled and do nothing.
+        if (PlayerPawnManager.ActivePlayerTransform == null || aiBehaviour == null)
         {
-            if (PlayerPawnManager.ActivePlayerTransform != null)
+            if (agent.enabled)
+            {
+                agent.enabled = false;
+            }
+            return;
+        }
+
+        float distanceToTarget = Vector3.Distance(transform.position, PlayerPawnManager.ActivePlayerTransform.position);
+
+        // Only enable the agent to move if the target is outside the stopping distance.
+        if (distanceToTarget > aiBehaviour.followStopDistance)
+        {
+            if (!agent.enabled)
+            {
+                rb.isKinematic = true; // Ensure rigidbody is kinematic for agent control
+                agent.enabled = true;
+                agent.speed = aiBehaviour.followSpeed;
+                agent.stoppingDistance = aiBehaviour.followStopDistance;
+            }
+            // Update destination every frame while chasing
+            if (agent.isOnNavMesh)
             {
                 agent.SetDestination(PlayerPawnManager.ActivePlayerTransform.position);
             }
         }
+        else // If inside stopping distance, disable the agent to prevent sinking/jittering.
+        {
+            if (agent.enabled)
+            {
+                if(agent.isOnNavMesh) agent.ResetPath(); // Stop current movement
+                agent.enabled = false; // Disable agent to cede position control
+            }
+        }
 
+        // --- Targeting and Firing Logic (runs regardless of movement state) ---
         UpdateAndSelectTargetAI();
         RotateTurretAI(currentTarget);
 
