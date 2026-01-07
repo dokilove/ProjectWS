@@ -252,6 +252,10 @@ public class PlayerPawnManager : MonoBehaviour
             
             // Place the player at the safe position, adjusted to the ground
             unitPawn.transform.position = FindGroundPosition(safeExitPosition, unitPawn.transform);
+
+            // Snap the vehicle to its correct ground position before disabling it
+            currentVehicle.transform.position = FindGroundPosition(currentVehicle.transform.position, currentVehicle.transform);
+
             PossessUnit(unitPawn);
         }
     }

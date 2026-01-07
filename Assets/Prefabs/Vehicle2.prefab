@@ -570,6 +570,7 @@ MonoBehaviour:
   weaponData: {fileID: 11400000, guid: 53feeb4740767c5409944298d8495a1e, type: 2}
   radiusVisualizer: {fileID: 676268260891059190}
   attackRangeVisualizer: {fileID: 8140772709178689091}
+  spreadAngleVisualizer: {fileID: 0}
   targetLineRenderer: {fileID: 3502230382210646506}
   defaultTargetColor: {r: 1, g: 0, b: 0, a: 1}
 --- !u!195 &1619575887438222292

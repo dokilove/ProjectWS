@@ -193,14 +193,18 @@ public class VehicleController : MonoBehaviour
     public void DisableControl()
     {
         IsControlledByPlayer = false;
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
         rb.isKinematic = true;
         rb.constraints = RigidbodyConstraints.FreezeAll;
 
-        agent.enabled = true;
+        // agent.enabled = true; // This was causing the vehicle to sink to the NavMesh height.
+        agent.enabled = false; // Keep agent disabled when idle.
         if (aiBehaviour != null)
         {
-            agent.speed = aiBehaviour.followSpeed;
-            agent.stoppingDistance = aiBehaviour.followStopDistance;
+            // AI logic can enable the agent when it needs to move.
+            // agent.speed = aiBehaviour.followSpeed;
+            // agent.stoppingDistance = aiBehaviour.followStopDistance;
         }
 
         if (playerActions != null)
@@ -219,7 +223,6 @@ public class VehicleController : MonoBehaviour
             playerActions.Vehicle.Brake.canceled -= onBrakeCanceled;
             playerActions.Vehicle.Reload.performed -= onReloadPerformed;
         }
-        rb.linearVelocity = Vector3.zero;
         moveInput = Vector2.zero;
         lookInput = Vector2.zero;
     }
