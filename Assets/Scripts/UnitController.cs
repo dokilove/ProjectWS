@@ -30,6 +30,9 @@ public class UnitController : MonoBehaviour
     [Header("Visual Effects")]
     [SerializeField] private TrailRenderer evadeTrailRenderer;
 
+    // --- Animation ---
+    [SerializeField] private Animator _animator;
+
     private float nextFireTime = 0f;
     private List<GameObject> projectilePool = new List<GameObject>();
     private int poolSize = 20;
@@ -104,6 +107,11 @@ public class UnitController : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         playerActions = new InputSystem_Actions();
         originalLayer = gameObject.layer;
+        _animator = GetComponentInChildren<Animator>(); // Assuming Animator is on a child object
+        if (_animator == null)
+        {
+            Debug.LogWarning("Animator component not found on UnitController or its children.", this);
+        }
 
         // Initialize delegates
         onMovePerformed = ctx => { moveInput = ctx.ReadValue<Vector2>(); if (ctx.control.device is Gamepad) lastUsedInputDevice = InputDeviceType.Gamepad; else lastUsedInputDevice = InputDeviceType.MouseKeyboard; };
@@ -290,6 +298,14 @@ public class UnitController : MonoBehaviour
         Vector3 moveVector = (moveForward * moveInput.y + moveRight * moveInput.x);
         rb.linearVelocity = moveVector * moveSpeed;
 
+        // --- Animation ---
+        if (_animator != null)
+        {
+            float currentSpeed = rb.linearVelocity.magnitude;
+            Debug.Log($"Current Speed: {currentSpeed}");
+            _animator.SetFloat("Speed", currentSpeed);
+        }
+
         // --- Body Rotation (Aiming) ---
         // Body now rotates to face the aim direction, allowing for strafing.
         if (aimDirection.sqrMagnitude > 0.01f)
@@ -380,6 +396,11 @@ public class UnitController : MonoBehaviour
     {
         currentAmmo--;
         Debug.Log($"Unit Fire! Ammo left: {currentAmmo}");
+
+        if (_animator != null)
+        {
+            _animator.SetTrigger("Attack");
+        }
 
         for (int i = 0; i < weaponData.projectilesPerShot; i++)
         {
