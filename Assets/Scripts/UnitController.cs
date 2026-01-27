@@ -301,9 +301,24 @@ public class UnitController : MonoBehaviour
         // --- Animation ---
         if (_animator != null)
         {
-            float currentSpeed = rb.linearVelocity.magnitude;
-            Debug.Log($"Current Speed: {currentSpeed}");
-            _animator.SetFloat("Speed", currentSpeed);
+            // Get the aiming direction as the reference "forward"
+            Vector3 aimForward = aimDirection;
+            aimForward.y = 0;
+            aimForward.Normalize();
+
+            // Get the perpendicular right vector from the aim direction
+            Vector3 aimRight = Vector3.Cross(Vector3.up, aimForward).normalized;
+
+            // Get the raw world-space move direction from input, but use the calculated velocity for accuracy
+            Vector3 currentMoveDirection = rb.linearVelocity.normalized;
+
+            // Project the move direction onto the aim-relative axes
+            float runX = Vector3.Dot(currentMoveDirection, aimRight);
+            float runY = Vector3.Dot(currentMoveDirection, aimForward);
+
+            // Update animator parameters
+            _animator.SetFloat("Run_x", runX);
+            _animator.SetFloat("Run_y", runY);
         }
 
         // --- Body Rotation (Aiming) ---
