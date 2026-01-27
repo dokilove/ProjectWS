@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
-
+using Unity.Cinemachine;
 public class PlayerPawnManager : MonoBehaviour
 {
     [Header("Pawn Prefabs")]
@@ -12,7 +12,8 @@ public class PlayerPawnManager : MonoBehaviour
     [SerializeField] private Transform vehicleSpawnPoint;
 
     [Header("Camera")]
-    [SerializeField] private ManualFollowCamera followCamera; // Assign your Main Camera with ManualFollowCamera script here
+    [SerializeField] private CinemachineCamera playerCam; // Assign your Main Camera with ManualFollowCamera script here
+    [SerializeField] private CinemachineCamera vehicleCam;
 
     [Header("Vehicle Interaction")]
     [SerializeField] private float vehicleDetectionRadius = 3f; // 탈것 탐지 반경
@@ -47,20 +48,13 @@ public class PlayerPawnManager : MonoBehaviour
     private void Start()
     {
         // --- 0. Validate Dependencies ---
-        if (followCamera == null)
+        if (playerCam == null)
         {
-            Debug.LogError("PlayerPawnManager: 'Follow Camera' is not assigned in the Inspector! Please assign your main camera.");
-            // Optionally, try to find it automatically
-            followCamera = Camera.main.GetComponent<ManualFollowCamera>();
-            if (followCamera == null)
-            {
-                Debug.LogError("PlayerPawnManager: Could not automatically find ManualFollowCamera on the main camera. Aborting.");
-                return; // Stop execution if camera is critical and not found
-            }
-            else
-            {
-                Debug.LogWarning("PlayerPawnManager: Successfully found ManualFollowCamera on the main camera automatically. Please consider assigning it in the inspector for reliability.");
-            }
+            Debug.LogError("PlayerPawnManager: 'playerCam' is not assigned in the Inspector! Please assign your main camera.");            
+        }
+        if (vehicleCam == null)
+        {
+            Debug.LogError("PlayerPawnManager: 'vehicleCam' is not assigned in the Inspector! Please assign your main camera.");
         }
 
         // --- 1. Spawn Pawns from Prefabs ---
@@ -187,6 +181,8 @@ public class PlayerPawnManager : MonoBehaviour
             currentVehicle.DisableControl();
             playerInVehicleActions.Interact_Hold.performed -= OnInteractHold; // Unsubscribe Interact_Hold
             playerInVehicleActions.Disable(); // Disable Vehicle actions
+            // 차량에서 내릴 때 플레이어 카메라 위치를 차량 카메라 위치로 옮김
+            playerCam.ForceCameraPosition(vehicleCam.transform.position, vehicleCam.transform.rotation);
         }
 
         currentUnit = unitToPossess;
@@ -197,11 +193,12 @@ public class PlayerPawnManager : MonoBehaviour
 
         ActivePlayerTransform = currentUnit.transform; // Set active transform
 
-        if (followCamera != null)
+        if (playerCam != null)
         {
-            followCamera.SetTarget(currentUnit.transform);
-            followCamera.SnapToTarget(); // Instantly move camera to the new target
+            playerCam.Target.TrackingTarget = currentUnit.transform;
         }
+        playerCam.Priority = 10;
+        vehicleCam.Priority = 5;
         Debug.Log($"PlayerPawnManager: Possessed Unit: {currentUnit.name}");
     }
 
@@ -238,11 +235,13 @@ public class PlayerPawnManager : MonoBehaviour
 
         ActivePlayerTransform = currentVehicle.transform; // Set active transform
 
-        if (followCamera != null)
+        if (vehicleCam != null)
         {
-            followCamera.SetTarget(currentVehicle.transform);
-            followCamera.SnapToTarget(); // Instantly move camera to the new target
+            vehicleCam.Target.TrackingTarget = currentVehicle.transform;
         }
+
+        playerCam.Priority = 5;
+        vehicleCam.Priority = 10;
         Debug.Log($"PlayerPawnManager: Possessed Vehicle: {currentVehicle.name}");
     }
 
