@@ -19,16 +19,26 @@ public class UnitController : MonoBehaviour
     [SerializeField] private float turretRotationSpeed = 20f;
     [SerializeField] private Transform firePoint;
     [SerializeField] private WeaponData weaponData;
+    [SerializeField] private MeleeData meleeData;
+    [SerializeField] private LayerMask enemyLayerMask;
+
 
     [Header("Visuals")]
     [SerializeField] private LineRenderer radiusVisualizer;
     [SerializeField] private FieldOfViewMesh attackRangeVisualizer;
     [SerializeField] private FieldOfViewMesh spreadAngleVisualizer;
+    [SerializeField] private FieldOfViewMesh meleeRangeVisualizer;
     [SerializeField] private LineRenderer targetLineRenderer; // For aiming direction
     [SerializeField] private Color aimLineColor = Color.yellow;
 
     [Header("Visual Effects")]
     [SerializeField] private TrailRenderer evadeTrailRenderer;
+
+    // --- Melee State ---
+    private int comboCounter = 0;
+    private float lastMeleeTime = -1f;
+    private bool isMeleeChargePrimed = false;
+
 
     // --- Animation ---
     [SerializeField] private Animator _animator;
@@ -60,6 +70,9 @@ public class UnitController : MonoBehaviour
     private System.Action<InputAction.CallbackContext> onFireHoldStarted;
     private System.Action<InputAction.CallbackContext> onFireHoldCanceled;
     private System.Action<InputAction.CallbackContext> onReloadPerformed;
+    private System.Action<InputAction.CallbackContext> onMeleeCombo;
+    private System.Action<InputAction.CallbackContext> onMeleeCharge;
+    private System.Action<InputAction.CallbackContext> onMeleeChargeCanceled;
 
     private bool isFireHeld = false;
     private Vector3 aimDirection;
@@ -94,7 +107,6 @@ public class UnitController : MonoBehaviour
                 UpdateRadiusVisualizer();
                 if (attackRangeVisualizer != null)
                 {
-                    // Attack angle is now 360 degrees for the turret, but the visual can still show the data value.
                     attackRangeVisualizer.GenerateMesh(weaponData.attackAngle, weaponData.lockOnRadius);
                 }
             }
@@ -107,7 +119,7 @@ public class UnitController : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         playerActions = new InputSystem_Actions();
         originalLayer = gameObject.layer;
-        _animator = GetComponentInChildren<Animator>(); // Assuming Animator is on a child object
+        _animator = GetComponentInChildren<Animator>(); 
         if (_animator == null)
         {
             Debug.LogWarning("Animator component not found on UnitController or its children.", this);
@@ -126,6 +138,9 @@ public class UnitController : MonoBehaviour
         onFireHoldStarted = ctx => { OnFireHoldStarted(ctx); if (ctx.control.device is Gamepad) lastUsedInputDevice = InputDeviceType.Gamepad; else lastUsedInputDevice = InputDeviceType.MouseKeyboard; };
         onFireHoldCanceled = ctx => OnFireHoldCanceled(ctx);
         onReloadPerformed = ctx => { OnReload(ctx); if (ctx.control.device is Gamepad) lastUsedInputDevice = InputDeviceType.Gamepad; else lastUsedInputDevice = InputDeviceType.MouseKeyboard; };
+        onMeleeCombo = ctx => OnMeleeCombo(ctx);
+        onMeleeCharge = ctx => OnMeleeCharge(ctx);
+        onMeleeChargeCanceled = ctx => OnMeleeChargeCanceled(ctx);
 
         if (radiusVisualizer != null)
         {
@@ -151,30 +166,43 @@ public class UnitController : MonoBehaviour
                 evadeTrailRenderer.time = evadeData.dodgeDuration + evadeData.trailOffset;
             }
         }
+        if (meleeRangeVisualizer != null)
+        {
+            meleeRangeVisualizer.SetActive(false);
+        }
     }
 
     private void Start()
     {
-        if (weaponData == null || weaponData.projectileData == null || weaponData.projectileData.projectilePrefab == null)
+        if (weaponData == null)
         {
-            Debug.LogError("WeaponData, ProjectileData, or ProjectilePrefab is not assigned in the inspector!", this);
-            return;
+            Debug.LogWarning("WeaponData is not assigned in the inspector!", this);
         }
 
-        currentAmmo = weaponData.magazineSize;
-        currentEvadeCharges = evadeData.maxEvadeCharges;
+        if (meleeData == null)
+        {
+            Debug.LogError("MeleeData is not assigned in the inspector!", this);
+        }
+
+
+        currentAmmo = weaponData != null ? weaponData.magazineSize : 0;
+        currentEvadeCharges = evadeData != null ? evadeData.maxEvadeCharges : 0;
         lastEvadeTime = Time.time;
         aimDirection = transform.forward;
 
-        for (int i = 0; i < poolSize; i++)
+        if (weaponData != null && weaponData.projectileData != null && weaponData.projectileData.projectilePrefab != null)
         {
-            GameObject proj = Instantiate(weaponData.projectileData.projectilePrefab);
-            proj.SetActive(false);
-            projectilePool.Add(proj);
+            for (int i = 0; i < poolSize; i++)
+            {
+                GameObject proj = Instantiate(weaponData.projectileData.projectilePrefab);
+                proj.SetActive(false);
+                projectilePool.Add(proj);
+            }
         }
 
+
         UpdateRadiusVisualizer();
-        if (attackRangeVisualizer != null)
+        if (attackRangeVisualizer != null && weaponData != null)
         {
             attackRangeVisualizer.GenerateMesh(weaponData.attackAngle, weaponData.lockOnRadius);
             attackRangeVisualizer.SetActive(true); // Show attack angle visual for player
@@ -182,7 +210,7 @@ public class UnitController : MonoBehaviour
 
         if (spreadAngleVisualizer != null)
         {
-            if (weaponData.spreadAngle > 0)
+            if (weaponData != null && weaponData.spreadAngle > 0)
             {
                 spreadAngleVisualizer.GenerateMesh(weaponData.spreadAngle, weaponData.lockOnRadius);
                 spreadAngleVisualizer.SetColor(new Color(1f, 0.5f, 0f, 0.15f)); // Orange, semi-transparent
@@ -219,6 +247,9 @@ public class UnitController : MonoBehaviour
         playerActions.Player.Fire_Hold.started += onFireHoldStarted;
         playerActions.Player.Fire_Hold.canceled += onFireHoldCanceled;
         playerActions.Player.Reload.performed += onReloadPerformed;
+        playerActions.Player.MeleeAttack.performed += onMeleeCombo;
+        playerActions.Player.MeleeAttack_Hold.performed += onMeleeCharge;
+        playerActions.Player.MeleeAttack_Hold.canceled += onMeleeChargeCanceled;
     }
 
     public void DisableControl()
@@ -237,9 +268,6 @@ public class UnitController : MonoBehaviour
         if (playerActions != null)
         {
             playerActions.Player.Disable();
-            if (playerActions != null)
-        {
-            playerActions.Player.Disable();
             playerActions.Player.Move.performed -= onMovePerformed;
             playerActions.Player.Move.canceled -= onMoveCanceled;
             playerActions.Player.Look.performed -= onLookPerformed;
@@ -252,7 +280,9 @@ public class UnitController : MonoBehaviour
             playerActions.Player.Fire_Hold.started -= onFireHoldStarted;
             playerActions.Player.Fire_Hold.canceled -= onFireHoldCanceled;
             playerActions.Player.Reload.performed -= onReloadPerformed;
-        }
+            playerActions.Player.MeleeAttack.performed -= onMeleeCombo;
+            playerActions.Player.MeleeAttack_Hold.performed -= onMeleeCharge;
+            playerActions.Player.MeleeAttack_Hold.canceled -= onMeleeChargeCanceled;
         }
         rb.linearVelocity = Vector3.zero;
         moveInput = Vector2.zero;
@@ -266,14 +296,33 @@ public class UnitController : MonoBehaviour
 
         HandleAimingAndFiring();
         HandleEvadeChargeRegen();
+        HandleMeleeLogic();
         
-        if (targetLineRenderer != null)
+        if (targetLineRenderer != null && weaponData != null)
         {
             targetLineRenderer.enabled = true;
             targetLineRenderer.startColor = aimLineColor;
             targetLineRenderer.endColor = aimLineColor;
             targetLineRenderer.SetPosition(0, firePoint.position);
             targetLineRenderer.SetPosition(1, firePoint.position + turretTransform.forward * weaponData.lockOnRadius);
+        }
+    }
+
+    private void HandleMeleeLogic()
+    {
+        if (meleeData == null) return;
+
+        if (comboCounter > 0)
+        {
+            int timeIndex = comboCounter - 1;
+            if (timeIndex < meleeData.comboResetTimes.Count)
+            {
+                if (Time.time - lastMeleeTime > meleeData.comboResetTimes[timeIndex])
+                {
+                    comboCounter = 0;
+                    Debug.Log("Melee combo reset due to timeout.");
+                }
+            }
         }
     }
 
@@ -356,33 +405,29 @@ public class UnitController : MonoBehaviour
                     aimDirection = lookDirection;
                 }
             }
-            // If gamepad is active but lookInput is not significant, maintain current aimDirection
         }
         else if (lastUsedInputDevice == InputDeviceType.MouseKeyboard)
         {
             // Mouse aiming
             Ray ray = Camera.main.ScreenPointToRay(mousePositionInput);
-            if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, LayerMask.GetMask("Ground"))) // Assuming a "Ground" layer for raycasting
+            if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, LayerMask.GetMask("Ground"))) 
             {
                 Vector3 targetPoint = hit.point;
                 Vector3 directionToMouse = targetPoint - transform.position;
-                directionToMouse.y = 0; // Flatten the direction to aim on the XZ plane
-                if (directionToMouse.sqrMagnitude > 0.01f) // Avoid zero vector
+                directionToMouse.y = 0; 
+                if (directionToMouse.sqrMagnitude > 0.01f) 
                 {
                     aimDirection = directionToMouse.normalized;
                 }
             }
         }
 
-        // Rotate turret to face the aim direction
-        if (aimDirection.sqrMagnitude > 0.01f)
+        if (turretTransform != null && aimDirection.sqrMagnitude > 0.01f)
         {
             Quaternion targetRotation = Quaternion.LookRotation(aimDirection);
             turretTransform.rotation = Quaternion.Slerp(turretTransform.rotation, targetRotation, turretRotationSpeed * Time.deltaTime);
         }
 
-        // If aimDirection changed, reset lookInput to prevent residual gamepad input from interfering
-        // This is less critical now with lastUsedInputDevice, but good for immediate feedback.
         if (currentAimDirection != aimDirection)
         {
             lookInput = Vector2.zero;
@@ -403,7 +448,7 @@ public class UnitController : MonoBehaviour
 
     private bool CanFire()
     {
-        // No longer checks angle, as firing is always aligned with the turret
+        if (weaponData == null) return false;
         return Time.time >= nextFireTime && !isReloading && currentAmmo > 0;
     }
 
@@ -424,7 +469,6 @@ public class UnitController : MonoBehaviour
             {
                 projectileGO.transform.position = firePoint.position;
 
-                // Calculate spread
                 Vector3 fireDirection = turretTransform.forward;
                 if (weaponData.spreadAngle > 0)
                 {
@@ -456,9 +500,10 @@ public class UnitController : MonoBehaviour
 
     private GameObject GetPooledProjectile()
     {
+        if (projectilePool == null) return null;
         foreach (var proj in projectilePool)
         {
-            if (!proj.activeInHierarchy)
+            if (proj != null && !proj.activeInHierarchy)
             {
                 return proj;
             }
@@ -468,6 +513,7 @@ public class UnitController : MonoBehaviour
 
     private void HandleEvadeChargeRegen()
     {
+        if (evadeData == null) return;
         if (currentEvadeCharges < evadeData.maxEvadeCharges)
         {
             float timeSinceLastEvade = Time.time - lastEvadeTime;
@@ -514,7 +560,7 @@ public class UnitController : MonoBehaviour
 
     private void OnEvade(InputAction.CallbackContext context)
     {
-        if (gameObject.layer == evadeData.dodgingPlayerLayer || currentEvadeCharges <= 0) return;
+        if (evadeData == null || gameObject.layer == evadeData.dodgingPlayerLayer || currentEvadeCharges <= 0) return;
 
         currentEvadeCharges--;
         lastEvadeTime = Time.time;
@@ -564,6 +610,120 @@ public class UnitController : MonoBehaviour
     {
         Debug.Log("Unit Interact button pressed!");
     }
+
+    private void OnMeleeCombo(InputAction.CallbackContext context)
+    {
+        if (meleeData == null) return;
+        if (isMeleeChargePrimed) return;
+
+        // HandleMeleeLogic in Update will reset the combo if the window expires.
+        // This method just continues or starts a combo.
+
+        comboCounter++;
+        
+        if (comboCounter > meleeData.comboDamages.Count)
+        {
+            Debug.LogWarning($"Melee combo step {comboCounter} is out of bounds. Resetting to 1.");
+            comboCounter = 1;
+        }
+
+        Debug.Log($"Perform Melee Combo {comboCounter}");
+
+        if (_animator != null)
+        {
+            _animator.SetTrigger("Melee" + comboCounter);
+        }
+
+        int comboIndex = comboCounter - 1;
+        StartCoroutine(ShowMeleeVisualizer(
+            meleeData.comboAttackRadii[comboIndex],
+            meleeData.comboAttackAngles[comboIndex]
+        ));
+        PerformMeleeAttack(
+            meleeData.comboAttackRadii[comboIndex],
+            meleeData.comboAttackAngles[comboIndex],
+            meleeData.comboDamages[comboIndex]
+        );
+
+        lastMeleeTime = Time.time;
+
+        if (comboCounter >= meleeData.comboDamages.Count)
+        {
+            comboCounter = 0;
+        }
+    }
+
+    private void OnMeleeCharge(InputAction.CallbackContext context)
+    {
+        if (meleeData == null) return;
+        Debug.Log("Melee Charge Primed!");
+        isMeleeChargePrimed = true;
+        comboCounter = 0; 
+    }
+
+    private void OnMeleeChargeCanceled(InputAction.CallbackContext context)
+    {
+        if (meleeData == null) return;
+        if (isMeleeChargePrimed)
+        {
+            Debug.Log("Perform Charged Melee Attack! (On Release)");
+            if (_animator != null)
+            {
+                // _animator.SetTrigger("MeleeChargeAttack");
+            }
+
+            StartCoroutine(ShowMeleeVisualizer(
+                meleeData.chargeAttackRadius,
+                meleeData.chargeAttackAngle
+            ));
+            PerformMeleeAttack(
+                meleeData.chargeAttackRadius,
+                meleeData.chargeAttackAngle,
+                meleeData.chargeAttackDamage
+            );
+            
+            isMeleeChargePrimed = false;
+            comboCounter = 0;
+            lastMeleeTime = -1f; 
+        }
+    }
+
+    private void PerformMeleeAttack(float radius, float angle, float damage)
+    {
+        Collider[] hits = Physics.OverlapSphere(transform.position, radius, enemyLayerMask);
+        Vector3 forward = transform.forward;
+        int hitCount = 0;
+
+        foreach (Collider hit in hits)
+        {
+            Vector3 directionToTarget = (hit.transform.position - transform.position).normalized;
+            float angleToTarget = Vector3.Angle(forward, directionToTarget);
+
+            if (angleToTarget < angle / 2)
+            {
+                if (hit.TryGetComponent<EnemyHealth>(out EnemyHealth enemyHealth))
+                {
+                    enemyHealth.TakeDamage(damage);
+                    hitCount++;
+                }
+            }
+        }
+        if (hitCount > 0)
+        {
+            Debug.Log($"Melee attack hit {hitCount} enemies.");
+        }
+    }
+
+    private IEnumerator ShowMeleeVisualizer(float radius, float angle)
+    {
+        if (meleeRangeVisualizer == null) yield break;
+
+        meleeRangeVisualizer.GenerateMesh(angle, radius);
+        meleeRangeVisualizer.SetActive(true);
+        yield return new WaitForSeconds(0.2f); 
+        meleeRangeVisualizer.SetActive(false);
+    }
+
 
     private IEnumerator SmoothPushEnemy(NavMeshAgent agentToPush, Vector3 pushVector, float duration)
     {
