@@ -25,6 +25,11 @@ public class EnemyHealth : MonoBehaviour
         currentHealth -= damage;
         Debug.Log($"{gameObject.name} took {damage} damage. Current health: {currentHealth}");
 
+        if (DamageIndicatorManager.Instance != null)
+        {
+            DamageIndicatorManager.Instance.ShowDamage(transform.position, (int)damage);
+        }
+
         if (currentHealth <= 0)
         {
             Die();

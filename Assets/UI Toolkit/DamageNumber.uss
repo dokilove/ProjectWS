@@ -1,0 +1,12 @@
+.damage-text {
+    -unity-font-style: bold;
+    font-size: 40px;
+    color: white;
+    -unity-text-outline-width: 2px;
+    -unity-text-outline-color: black;
+    position: absolute;
+    transform: translate(-50%, -50%);
+    transition-property: transform, opacity;
+    transition-duration: 0.5s, 0.5s;
+    transition-timing-function: ease-in-out, ease-in;
+}

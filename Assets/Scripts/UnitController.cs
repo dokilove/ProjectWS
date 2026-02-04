@@ -579,7 +579,7 @@ public class UnitController : MonoBehaviour
         }
         else
         {
-            evadeDirection = -transform.forward;
+            evadeDirection = transform.forward;
         }
 
         rb.AddForce(evadeDirection * evadeData.evadeForce, ForceMode.Impulse);

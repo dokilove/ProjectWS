@@ -5,6 +5,7 @@ using System.Collections.Generic;
 public class MeleeData : ScriptableObject
 {
     [Header("콤보 공격 설정")]
+    [Header("▼▼ 아래 3개 리스트의 개수는 항상 일치시켜야 합니다! ▼▼")]
     [Tooltip("콤보 각 단계별 공격력입니다. 리스트의 크기가 최대 콤보 횟수가 됩니다.")]
     public List<float> comboDamages;
 
@@ -25,6 +26,7 @@ public class MeleeData : ScriptableObject
     public float chargeAttackAngle;
 
     [Header("타이밍 설정")]
+    [Header("▼▼ 콤보 관련 리스트들과 개수를 일치시켜야 합니다! ▼▼")]
     [Tooltip("콤보 각 단계 이후 다음 콤보로 넘어가기 위한 대기 시간입니다. 이 시간을 초과하면 콤보가 초기화됩니다.")]
     public List<float> comboResetTimes;
 

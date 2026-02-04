@@ -557,7 +557,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                 {
                     ""name"": """",
                     ""id"": ""97346c7e-a1b0-4d09-a401-d732e6a34957"",
-                    ""path"": ""<Gamepad>/leftShoulder"",
+                    ""path"": ""<Gamepad>/rightShoulder"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
@@ -611,17 +611,6 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                 },
                 {
                     ""name"": """",
-                    ""id"": ""a7ac056e-bd38-41f8-becb-b22e69432834"",
-                    ""path"": ""<Gamepad>/leftTrigger"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""MeleeAttack"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
                     ""id"": ""96693160-9b33-4797-990e-6ecced82db06"",
                     ""path"": ""<Keyboard>/e"",
                     ""interactions"": ""Hold"",
@@ -636,17 +625,6 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""id"": ""ccc93ffc-6e3f-45e8-892d-035ba4980646"",
                     ""path"": ""<Gamepad>/buttonWest"",
                     ""interactions"": ""Hold"",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""MeleeAttack_Hold"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
-                    ""id"": ""b0200407-b416-40c6-a717-8b4b80a987fc"",
-                    ""path"": ""<Gamepad>/leftTrigger"",
-                    ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
                     ""action"": ""MeleeAttack_Hold"",
@@ -906,7 +884,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                 {
                     ""name"": """",
                     ""id"": ""012da3a0-f18b-4719-aa57-ada5d38292e8"",
-                    ""path"": ""<Gamepad>/leftShoulder"",
+                    ""path"": ""<Gamepad>/rightShoulder"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
