@@ -611,6 +611,17 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                 },
                 {
                     ""name"": """",
+                    ""id"": ""fc00eabc-d654-4925-b034-e4dc5d44d2dc"",
+                    ""path"": ""<Gamepad>/leftTrigger"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""MeleeAttack"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
                     ""id"": ""96693160-9b33-4797-990e-6ecced82db06"",
                     ""path"": ""<Keyboard>/e"",
                     ""interactions"": ""Hold"",
