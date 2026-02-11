@@ -492,6 +492,10 @@ public class UnitController : MonoBehaviour
     private IEnumerator Reload()
     {
         isReloading = true;
+        if (_animator != null)
+        {
+            _animator.SetTrigger("Reload");
+        }
         Debug.Log("Reloading...");
         yield return new WaitForSeconds(weaponData.reloadTime);
         currentAmmo = weaponData.magazineSize;
@@ -563,6 +567,11 @@ public class UnitController : MonoBehaviour
     {
         if (evadeData == null || gameObject.layer == evadeData.dodgingPlayerLayer || currentEvadeCharges <= 0) return;
 
+        if (_animator != null)
+        {
+            _animator.SetTrigger("Evade");
+        }
+
         currentEvadeCharges--;
         lastEvadeTime = Time.time;
 
@@ -590,6 +599,8 @@ public class UnitController : MonoBehaviour
             evadeTrailRenderer.Clear();
             evadeTrailRenderer.enabled = true;
         }
+        
+        Invoke(nameof(ForceIdleAnimation), evadeData.dodgeDuration / 2f);
         Invoke(nameof(ResetPlayerLayer), evadeData.dodgeDuration);
 
         Collider[] hitColliders = Physics.OverlapSphere(transform.position, evadeData.pushRadius);
@@ -670,7 +681,7 @@ public class UnitController : MonoBehaviour
             Debug.Log("Perform Charged Melee Attack! (On Release)");
             if (_animator != null)
             {
-                // _animator.SetTrigger("MeleeChargeAttack");
+                _animator.SetTrigger("MeleeChargeAttack");
             }
 
             StartCoroutine(ShowMeleeVisualizer(
@@ -761,6 +772,14 @@ public class UnitController : MonoBehaviour
         if (agentToPush.isActiveAndEnabled)
         {
             agentToPush.isStopped = false;
+        }
+    }
+
+    private void ForceIdleAnimation()
+    {
+        if (_animator != null)
+        {
+            _animator.SetTrigger("ForceIdle");
         }
     }
 

@@ -185,5 +185,5 @@ AvatarMask:
     m_Weight: 1
   - m_Path: Body001
     m_Weight: 1
-  - m_Path: Hair001
+  - m_Path: Hair
     m_Weight: 1
