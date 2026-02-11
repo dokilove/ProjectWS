@@ -715,6 +715,7 @@ MonoBehaviour:
   attackRangeVisualizer: {fileID: 6255458938232293775}
   spreadAngleVisualizer: {fileID: 5280977291566128888}
   meleeRangeVisualizer: {fileID: 6889197255672689263}
+  chargeAttackMaterial: {fileID: 2100000, guid: 778e6fcf7f6bf7e4db641774074a5edd, type: 2}
   targetLineRenderer: {fileID: 8203341390165887986}
   aimLineColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   evadeTrailRenderer: {fileID: 942299507975720265}

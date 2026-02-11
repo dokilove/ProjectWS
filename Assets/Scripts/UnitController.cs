@@ -28,6 +28,7 @@ public class UnitController : MonoBehaviour
     [SerializeField] private FieldOfViewMesh attackRangeVisualizer;
     [SerializeField] private FieldOfViewMesh spreadAngleVisualizer;
     [SerializeField] private FieldOfViewMesh meleeRangeVisualizer;
+    [SerializeField] private Material chargeAttackMaterial;
     [SerializeField] private LineRenderer targetLineRenderer; // For aiming direction
     [SerializeField] private Color aimLineColor = Color.yellow;
 
@@ -674,7 +675,8 @@ public class UnitController : MonoBehaviour
 
             StartCoroutine(ShowMeleeVisualizer(
                 meleeData.chargeAttackRadius,
-                meleeData.chargeAttackAngle
+                meleeData.chargeAttackAngle,
+                chargeAttackMaterial
             ));
             PerformMeleeAttack(
                 meleeData.chargeAttackRadius,
@@ -714,14 +716,24 @@ public class UnitController : MonoBehaviour
         }
     }
 
-    private IEnumerator ShowMeleeVisualizer(float radius, float angle)
+    private IEnumerator ShowMeleeVisualizer(float radius, float angle, Material overrideMaterial = null)
     {
         if (meleeRangeVisualizer == null) yield break;
+
+        if (overrideMaterial != null)
+        {
+            meleeRangeVisualizer.SetMaterial(overrideMaterial);
+        }
 
         meleeRangeVisualizer.GenerateMesh(angle, radius);
         meleeRangeVisualizer.SetActive(true);
         yield return new WaitForSeconds(0.2f); 
         meleeRangeVisualizer.SetActive(false);
+
+        if (overrideMaterial != null)
+        {
+            meleeRangeVisualizer.RevertMaterial();
+        }
     }
 
 

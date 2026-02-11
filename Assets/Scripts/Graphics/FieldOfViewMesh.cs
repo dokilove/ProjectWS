@@ -10,6 +10,7 @@ public class FieldOfViewMesh : MonoBehaviour
     private MeshFilter meshFilter;
     private MeshRenderer meshRenderer;
     private Mesh fovMesh;
+    private Material originalMaterial;
 
     private void Awake()
     {
@@ -21,7 +22,7 @@ public class FieldOfViewMesh : MonoBehaviour
 
         if (fovMaterial != null)
         {
-            meshRenderer.sharedMaterial = fovMaterial;
+            meshRenderer.material = fovMaterial;
         }
         else
         {
@@ -31,6 +32,7 @@ public class FieldOfViewMesh : MonoBehaviour
             defaultMaterial.SetFloat("_Surface", 1); // Set to transparent
             meshRenderer.material = defaultMaterial;
         }
+        originalMaterial = meshRenderer.material; // Store the initial material instance
         
         meshRenderer.enabled = false;
     }
@@ -87,6 +89,22 @@ public class FieldOfViewMesh : MonoBehaviour
         if (fovMaterial == null && meshRenderer != null && meshRenderer.material != null)
         {
             meshRenderer.material.SetColor("_BaseColor", fovColor);
+        }
+    }
+
+    public void SetMaterial(Material newMaterial)
+    {
+        if (meshRenderer != null && newMaterial != null)
+        {
+            meshRenderer.material = newMaterial;
+        }
+    }
+
+    public void RevertMaterial()
+    {
+        if (meshRenderer != null && originalMaterial != null)
+        {
+            meshRenderer.material = originalMaterial;
         }
     }
 }
