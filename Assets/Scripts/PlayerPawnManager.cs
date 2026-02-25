@@ -22,10 +22,10 @@ public class PlayerPawnManager : MonoBehaviour
 
     // --- Instantiated References ---
     private UnitController unitPawn; 
-    private VehicleController vehiclePawn;
+    private IVehicle vehiclePawn;
 
     private UnitController currentUnit; // Reference to the currently possessed Unit
-    private VehicleController currentVehicle; // Reference to the currently possessed Vehicle
+    private IVehicle currentVehicle; // Reference to the currently possessed Vehicle
 
     private InputSystem_Actions playerActions;
     private InputSystem_Actions.PlayerActions playerOnFootActions; // For Unit control
@@ -111,10 +111,10 @@ public class PlayerPawnManager : MonoBehaviour
             Quaternion vehicleSpawnRot = vehicleSpawnPoint != null ? vehicleSpawnPoint.rotation : transform.rotation;
 
             GameObject vehicleGO = Instantiate(vehiclePawnPrefab, vehicleSpawnPos, vehicleSpawnRot);
-            vehiclePawn = vehicleGO.GetComponent<VehicleController>();
+            vehiclePawn = vehicleGO.GetComponent<IVehicle>();
             if (vehiclePawn == null)
             {
-                Debug.LogError($"PlayerPawnManager: The prefab '{vehiclePawnPrefab.name}' does not have a VehicleController component.");
+                Debug.LogError($"PlayerPawnManager: The prefab '{vehiclePawnPrefab.name}' does not have a component that implements IVehicle.");
             }
         }
     }
@@ -202,7 +202,7 @@ public class PlayerPawnManager : MonoBehaviour
         Debug.Log($"PlayerPawnManager: Possessed Unit: {currentUnit.name}");
     }
 
-    private void PossessVehicle(VehicleController vehicleToPossess)
+    private void PossessVehicle(IVehicle vehicleToPossess)
     {
         if (vehicleToPossess == null)
         {
@@ -242,7 +242,7 @@ public class PlayerPawnManager : MonoBehaviour
 
         playerCam.Priority = 5;
         vehicleCam.Priority = 10;
-        Debug.Log($"PlayerPawnManager: Possessed Vehicle: {currentVehicle.name}");
+        Debug.Log($"PlayerPawnManager: Possessed Vehicle: {currentVehicle.gameObject.name}");
     }
 
     [Header("Exit Collision")]
@@ -282,12 +282,12 @@ public class PlayerPawnManager : MonoBehaviour
     private void TryEnterVehicle()
     {
         Collider[] hitColliders = Physics.OverlapSphere(currentUnit.transform.position, vehicleDetectionRadius, vehicleLayer);
-        VehicleController nearestVehicle = null;
+        IVehicle nearestVehicle = null;
         float minDistance = Mathf.Infinity;
 
         foreach (Collider hitCollider in hitColliders)
         {
-            if (hitCollider.TryGetComponent<VehicleController>(out VehicleController vehicle))
+            if (hitCollider.TryGetComponent<IVehicle>(out IVehicle vehicle))
             {
                 float distance = Vector3.Distance(currentUnit.transform.position, vehicle.transform.position);
                 if (distance < minDistance)
