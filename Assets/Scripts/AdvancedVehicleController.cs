@@ -40,7 +40,8 @@ public class AdvancedVehicleController : MonoBehaviour, IVehicle
     // --- Targeting Fields ---
     private Transform currentTarget; // For AI only
     private List<Transform> potentialTargets = new List<Transform>(); // For AI only
-    private RaycastHit[] hitResults = new RaycastHit[10]; // GC 최적화를 위한 배열
+    private RaycastHit[] hitResults = new RaycastHit[10]; // GC 최적화를 위한 배열 (Player용)
+    private Collider[] aiTargetColliders = new Collider[20]; // GC 최적화를 위한 배열 (AI용)
 
     private Rigidbody rb;
     private NavMeshAgent agent;
@@ -49,7 +50,7 @@ public class AdvancedVehicleController : MonoBehaviour, IVehicle
     private Vector2 lookInput; // For Player Control
     private Vector2 mousePositionInput; // For mouse aiming
     private bool isFireHeld = false;
-    private bool isBraking = false;
+    private bool isBraking = false; // L트리거(Brake) 상태 겸용
     private Vector3 currentAimDirection; // For body rotation
 
     // --- Physics State ---
@@ -75,6 +76,7 @@ public class AdvancedVehicleController : MonoBehaviour, IVehicle
     // --- Ammo & Reloading ---
     private int currentAmmo;
     private bool isReloading = false;
+    private Coroutine reloadCoroutine; // 코루틴 누수 방지용 참조
 
     public bool IsControlledByPlayer { get; private set; } = false;
 
@@ -228,6 +230,15 @@ public class AdvancedVehicleController : MonoBehaviour, IVehicle
             playerActions.Vehicle.Brake.canceled -= onBrakeCanceled;
             playerActions.Vehicle.Reload.performed -= onReloadPerformed;
         }
+
+        // 코루틴 및 입력 상태 초기화
+        if (reloadCoroutine != null)
+        {
+            StopCoroutine(reloadCoroutine);
+            reloadCoroutine = null;
+            isReloading = false;
+        }
+
         moveInput = Vector2.zero;
         lookInput = Vector2.zero;
         isBraking = false;
@@ -243,7 +254,7 @@ public class AdvancedVehicleController : MonoBehaviour, IVehicle
         {
             HandleAIControl();
 
-            // ★ AI의 길찾기 위치를 실제 물리(Rigidbody) 위치로 계속 동기화
+            // AI의 길찾기 위치를 실제 물리(Rigidbody) 위치로 계속 동기화
             if (agent.enabled)
             {
                 agent.nextPosition = transform.position;
@@ -253,7 +264,6 @@ public class AdvancedVehicleController : MonoBehaviour, IVehicle
 
     private void FixedUpdate()
     {
-        // 이제 플레이어와 AI 모두 동일한 물리 법칙을 따름
         HandleVehiclePhysics();
     }
 
@@ -262,24 +272,9 @@ public class AdvancedVehicleController : MonoBehaviour, IVehicle
         Vector3 targetDirection = Vector3.zero;
         float inputMagnitude = 0f;
 
-        // 1. 방향 입력 결정 (플레이어 or AI)
         if (IsControlledByPlayer)
         {
-            if (isBraking)
-            {
-                // 브레이크 중일 때: 제자리에서 포신 방향으로 차체 회전 (원래 로직 유지)
-                currentSpeed = Mathf.Lerp(currentSpeed, 0, deceleration * 2f * Time.fixedDeltaTime);
-
-                if (currentAimDirection.sqrMagnitude > 0.01f && currentSpeed < 1f)
-                {
-                    Quaternion targetRot = Quaternion.LookRotation(currentAimDirection);
-                    rb.rotation = Quaternion.Slerp(rb.rotation, targetRot, rotationSpeed * Time.fixedDeltaTime);
-                }
-
-                rb.linearVelocity = transform.forward * currentSpeed;
-                return;
-            }
-
+            // 1. 카메라 기준 이동 방향(스틱 입력) 먼저 계산
             Vector3 cameraRight = Camera.main.transform.right;
             Vector3 cameraRightFlat = new Vector3(cameraRight.x, 0, cameraRight.z).normalized;
             Vector3 cameraForwardFlat = Vector3.Cross(Vector3.up, cameraRightFlat);
@@ -289,6 +284,22 @@ public class AdvancedVehicleController : MonoBehaviour, IVehicle
 
             targetDirection = moveVector.normalized;
             inputMagnitude = Mathf.Clamp01(moveVector.magnitude);
+
+            // 2. [제자리 브레이크 모드] L트리거(Brake)를 누른 상태이고, 스틱 입력이 없을 때
+            if (isBraking && targetDirection.sqrMagnitude < 0.01f)
+            {
+                currentSpeed = Mathf.Lerp(currentSpeed, 0, deceleration * 2f * Time.fixedDeltaTime);
+
+                if (currentAimDirection.sqrMagnitude > 0.01f && currentSpeed < 1f)
+                {
+                    Quaternion targetRot = Quaternion.LookRotation(currentAimDirection);
+                    rb.rotation = Quaternion.Slerp(rb.rotation, targetRot, rotationSpeed * Time.fixedDeltaTime);
+                }
+
+                rb.linearVelocity = transform.forward * currentSpeed;
+                rb.angularVelocity = Vector3.zero;
+                return; // 스틱 입력이 없으므로 여기서 종료
+            }
         }
         else
         {
@@ -300,15 +311,32 @@ public class AdvancedVehicleController : MonoBehaviour, IVehicle
             }
         }
 
-        // 2. 물리 적용 (회전 후 전진)
+        // --- ★ 통합된 Arc 물리 및 스마트 후진 적용 로직 ---
+        float finalSpeedTarget = moveSpeed * inputMagnitude; // 기본 목표 속도 (전진)
+        Vector3 finalSteerDirection = targetDirection;       // 기본 조향 방향 (입력 방향)
+
+        // [스마트 후진 모드] L트리거(Brake)를 누른 상태이고, 스틱 입력이 있을 때
+        if (IsControlledByPlayer && isBraking && targetDirection.sqrMagnitude > 0.01f)
+        {
+            float dot = Vector3.Dot(transform.forward, targetDirection);
+
+            // 입력 방향이 차체 기준 뒤쪽(-0.1f 이하)일 경우 후진 모드로 전환
+            if (dot < -0.1f)
+            {
+                finalSpeedTarget = -moveSpeed * inputMagnitude; // 목표 속도를 음수(후진)로 뒤집음
+                finalSteerDirection = -targetDirection;         // 엉덩이가 타겟을 향하게 하려면, 앞부분은 타겟의 반대를 봐야 함
+            }
+        }
+
+        // [조향 및 가속 적용] (스마트 후진이든 일반 주행이든 동일한 Arc 로직 사용)
         if (targetDirection.sqrMagnitude > 0.01f)
         {
-            // [조향] 입력 방향으로 부드럽게 회전 (Arc 궤적 생성)
-            Quaternion targetRotation = Quaternion.LookRotation(targetDirection);
+            // finalSteerDirection으로 부드럽게 회전
+            Quaternion targetRotation = Quaternion.LookRotation(finalSteerDirection);
             rb.rotation = Quaternion.Slerp(rb.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime);
 
-            // [가속]
-            currentSpeed = Mathf.Lerp(currentSpeed, moveSpeed * inputMagnitude, acceleration * Time.fixedDeltaTime);
+            // finalSpeedTarget으로 가속 (후진일 경우 자연스럽게 마이너스로 Lerp됨)
+            currentSpeed = Mathf.Lerp(currentSpeed, finalSpeedTarget, acceleration * Time.fixedDeltaTime);
         }
         else
         {
@@ -316,7 +344,7 @@ public class AdvancedVehicleController : MonoBehaviour, IVehicle
             currentSpeed = Mathf.Lerp(currentSpeed, 0, deceleration * Time.fixedDeltaTime);
         }
 
-        // [이동] 목표 방향이 아닌, "차체가 바라보는 방향(forward)"으로 전진
+        // [이동] 계산된 속도로 차체 앞방향(forward) 이동
         rb.linearVelocity = transform.forward * currentSpeed;
 
         // 회전 관성 초기화
@@ -334,7 +362,7 @@ public class AdvancedVehicleController : MonoBehaviour, IVehicle
         }
         if (isFireHeld && currentAmmo <= 0 && !isReloading)
         {
-            StartCoroutine(Reload());
+            reloadCoroutine = StartCoroutine(Reload());
         }
 
         if (targetLineRenderer != null)
@@ -375,7 +403,7 @@ public class AdvancedVehicleController : MonoBehaviour, IVehicle
             if (agent.enabled)
             {
                 if (agent.isOnNavMesh) agent.ResetPath();
-                agent.enabled = false; // 물리 엔진 감속을 위해 길찾기 끔
+                agent.enabled = false;
             }
         }
 
@@ -410,7 +438,7 @@ public class AdvancedVehicleController : MonoBehaviour, IVehicle
         }
         else if (currentAmmo <= 0 && !isReloading)
         {
-            StartCoroutine(Reload());
+            reloadCoroutine = StartCoroutine(Reload());
         }
     }
 
@@ -451,19 +479,12 @@ public class AdvancedVehicleController : MonoBehaviour, IVehicle
             currentAimDirection = calculatedAimDirection;
         }
 
-        // ★개선된 포탑 클램핑 로직 (0/360도 경계에서 튀는 현상 방지)
         if (currentAimDirection.sqrMagnitude > 0.01f)
         {
-            // 월드 방향을 차체 기준 로컬 방향으로 변환
             Vector3 localTargetDir = transform.InverseTransformDirection(currentAimDirection);
-
-            // 로컬 Y축 회전 각도 계산 (Atan2 사용)
             float targetAngle = Mathf.Atan2(localTargetDir.x, localTargetDir.z) * Mathf.Rad2Deg;
-
-            // 각도 제한 적용
             float clampedAngle = Mathf.Clamp(targetAngle, -weaponData.attackAngle / 2f, weaponData.attackAngle / 2f);
 
-            // 최종 로컬 로테이션 적용
             Quaternion desiredLocalRotation = Quaternion.Euler(0, clampedAngle, 0);
             turretTransform.localRotation = Quaternion.Slerp(turretTransform.localRotation, desiredLocalRotation, turretRotationSpeed * Time.deltaTime);
 
@@ -500,18 +521,17 @@ public class AdvancedVehicleController : MonoBehaviour, IVehicle
         yield return new WaitForSeconds(weaponData.reloadTime);
         currentAmmo = weaponData.magazineSize;
         isReloading = false;
+        reloadCoroutine = null;
     }
 
     private void UpdateAndSelectTargetAI()
     {
-        // 최적화를 위해 OverlapSphereNonAlloc 사용 고려 (일단 기존 로직 유지)
-        List<Transform> allTargetsInRadius = Physics.OverlapSphere(transform.position, weaponData.lockOnRadius, enemyLayer)
-                                .Select(col => col.transform)
-                                .ToList();
+        int hitCount = Physics.OverlapSphereNonAlloc(transform.position, weaponData.lockOnRadius, aiTargetColliders, enemyLayer);
 
         potentialTargets.Clear();
-        foreach (Transform target in allTargetsInRadius)
+        for (int i = 0; i < hitCount; i++)
         {
+            Transform target = aiTargetColliders[i].transform;
             Vector3 directionToTarget = (target.position - turretTransform.position).normalized;
             float angleToTarget = Vector3.Angle(turretTransform.forward, directionToTarget);
 
@@ -539,20 +559,24 @@ public class AdvancedVehicleController : MonoBehaviour, IVehicle
         }
         else if (IsControlledByPlayer && currentAmmo <= 0 && !isReloading)
         {
-            StartCoroutine(Reload());
+            reloadCoroutine = StartCoroutine(Reload());
         }
     }
 
     private void OnFireHoldStarted(InputAction.CallbackContext context) { isFireHeld = true; }
     private void OnFireHoldCanceled(InputAction.CallbackContext context) { isFireHeld = false; }
-    private void OnBrakeStarted(InputAction.CallbackContext context) { isBraking = true; }
+    private void OnBrakeStarted(InputAction.CallbackContext context)
+    {
+        isBraking = true;
+        currentAimDirection = transform.forward; // 브레이크 시작 시 조준 방향을 현재 차체 방향으로 초기화
+    }
     private void OnBrakeCanceled(InputAction.CallbackContext context) { isBraking = false; }
 
     private void OnReload(InputAction.CallbackContext context)
     {
         if (IsControlledByPlayer && !isReloading && currentAmmo < weaponData.magazineSize)
         {
-            StartCoroutine(Reload());
+            reloadCoroutine = StartCoroutine(Reload());
         }
     }
 
@@ -565,7 +589,6 @@ public class AdvancedVehicleController : MonoBehaviour, IVehicle
             Vector3 direction = target.position - turretTransform.position;
             direction.y = 0;
 
-            // AI 포탑도 InverseTransformDirection으로 클램핑 최적화
             Vector3 localTargetDir = transform.InverseTransformDirection(direction.normalized);
             float targetAngle = Mathf.Atan2(localTargetDir.x, localTargetDir.z) * Mathf.Rad2Deg;
             float clampedAngle = Mathf.Clamp(targetAngle, -weaponData.attackAngle / 2f, weaponData.attackAngle / 2f);
@@ -583,7 +606,6 @@ public class AdvancedVehicleController : MonoBehaviour, IVehicle
 
         if (IsControlledByPlayer)
         {
-            // ★최적화: GC Alloc 발생을 막기 위해 NonAlloc 사용
             int hitCount = Physics.SphereCastNonAlloc(firePoint.position, 1f, turretTransform.forward, hitResults, weaponData.lockOnRadius, enemyLayer);
 
             Transform closestEnemy = null;
