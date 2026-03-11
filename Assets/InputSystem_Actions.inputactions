@@ -637,6 +637,15 @@
                     "initialStateCheck": false
                 },
                 {
+                    "name": "NeutralTurn",
+                    "type": "Button",
+                    "id": "5ee0fb67-9d40-47c9-94b6-8f8e74d92003",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
                     "name": "Fire",
                     "type": "Button",
                     "id": "82cb722e-7c87-465e-8754-609c8d64e1e1",
@@ -880,6 +889,28 @@
                     "processors": "",
                     "groups": "",
                     "action": "Brake",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "afbe5146-965a-4728-8557-1dd2996c0793",
+                    "path": "<Gamepad>/leftTrigger",
+                    "interactions": "Hold",
+                    "processors": "",
+                    "groups": "",
+                    "action": "NeutralTurn",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "73fefe60-8b7c-46e7-a882-c4907d6698de",
+                    "path": "<Keyboard>/shift",
+                    "interactions": "Hold",
+                    "processors": "",
+                    "groups": "",
+                    "action": "NeutralTurn",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },

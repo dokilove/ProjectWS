@@ -2392,7 +2392,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerPawnManager
   unitPawnPrefab: {fileID: 7233607023411274857, guid: 48965314f2979f741a090bc948ee281e, type: 3}
-  vehiclePawnPrefab: {fileID: 2557076716787556367, guid: a0c02022fb602484b885998afb15cbc6, type: 3}
+  vehiclePawnPrefab: {fileID: 2557076716787556367, guid: b5a6ef93c94edbe49abb78d440cb2ffb, type: 3}
   playerSpawnPoint: {fileID: 2056785463}
   vehicleSpawnPoint: {fileID: 2020458929}
   playerCam: {fileID: 1958903312}
@@ -4074,7 +4074,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: -0.5, z: 0}
-  m_LocalScale: {x: 100, y: 1, z: 100}
+  m_LocalScale: {x: 500, y: 1, z: 500}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}

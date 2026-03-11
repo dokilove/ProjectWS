@@ -723,6 +723,15 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""initialStateCheck"": false
                 },
                 {
+                    ""name"": ""NeutralTurn"",
+                    ""type"": ""Button"",
+                    ""id"": ""5ee0fb67-9d40-47c9-94b6-8f8e74d92003"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
                     ""name"": ""Fire"",
                     ""type"": ""Button"",
                     ""id"": ""82cb722e-7c87-465e-8754-609c8d64e1e1"",
@@ -966,6 +975,28 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""groups"": """",
                     ""action"": ""Brake"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""afbe5146-965a-4728-8557-1dd2996c0793"",
+                    ""path"": ""<Gamepad>/leftTrigger"",
+                    ""interactions"": ""Hold"",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""NeutralTurn"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""73fefe60-8b7c-46e7-a882-c4907d6698de"",
+                    ""path"": ""<Keyboard>/shift"",
+                    ""interactions"": ""Hold"",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""NeutralTurn"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -1853,6 +1884,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         m_Vehicle_Evade = m_Vehicle.FindAction("Evade", throwIfNotFound: true);
         m_Vehicle_Exit = m_Vehicle.FindAction("Exit", throwIfNotFound: true);
         m_Vehicle_Brake = m_Vehicle.FindAction("Brake", throwIfNotFound: true);
+        m_Vehicle_NeutralTurn = m_Vehicle.FindAction("NeutralTurn", throwIfNotFound: true);
         m_Vehicle_Fire = m_Vehicle.FindAction("Fire", throwIfNotFound: true);
         m_Vehicle_Fire_Hold = m_Vehicle.FindAction("Fire_Hold", throwIfNotFound: true);
         m_Vehicle_Reload = m_Vehicle.FindAction("Reload", throwIfNotFound: true);
@@ -2180,6 +2212,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
     private readonly InputAction m_Vehicle_Evade;
     private readonly InputAction m_Vehicle_Exit;
     private readonly InputAction m_Vehicle_Brake;
+    private readonly InputAction m_Vehicle_NeutralTurn;
     private readonly InputAction m_Vehicle_Fire;
     private readonly InputAction m_Vehicle_Fire_Hold;
     private readonly InputAction m_Vehicle_Reload;
@@ -2223,6 +2256,10 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// Provides access to the underlying input action "Vehicle/Brake".
         /// </summary>
         public InputAction @Brake => m_Wrapper.m_Vehicle_Brake;
+        /// <summary>
+        /// Provides access to the underlying input action "Vehicle/NeutralTurn".
+        /// </summary>
+        public InputAction @NeutralTurn => m_Wrapper.m_Vehicle_NeutralTurn;
         /// <summary>
         /// Provides access to the underlying input action "Vehicle/Fire".
         /// </summary>
@@ -2286,6 +2323,9 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
             @Brake.started += instance.OnBrake;
             @Brake.performed += instance.OnBrake;
             @Brake.canceled += instance.OnBrake;
+            @NeutralTurn.started += instance.OnNeutralTurn;
+            @NeutralTurn.performed += instance.OnNeutralTurn;
+            @NeutralTurn.canceled += instance.OnNeutralTurn;
             @Fire.started += instance.OnFire;
             @Fire.performed += instance.OnFire;
             @Fire.canceled += instance.OnFire;
@@ -2330,6 +2370,9 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
             @Brake.started -= instance.OnBrake;
             @Brake.performed -= instance.OnBrake;
             @Brake.canceled -= instance.OnBrake;
+            @NeutralTurn.started -= instance.OnNeutralTurn;
+            @NeutralTurn.performed -= instance.OnNeutralTurn;
+            @NeutralTurn.canceled -= instance.OnNeutralTurn;
             @Fire.started -= instance.OnFire;
             @Fire.performed -= instance.OnFire;
             @Fire.canceled -= instance.OnFire;
@@ -2890,6 +2933,13 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnBrake(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "NeutralTurn" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnNeutralTurn(InputAction.CallbackContext context);
         /// <summary>
         /// Method invoked when associated input action "Fire" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>
