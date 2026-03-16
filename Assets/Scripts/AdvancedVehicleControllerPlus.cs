@@ -68,6 +68,7 @@ public class AdvancedVehicleControllerPlus : MonoBehaviour, IVehicle
     private bool isFireHeld = false;
     private bool isNeutralTurning = false; // NeutralTurn 입력 상태 겸용
     private Vector3 currentAimDirection; // For body rotation
+    private bool isReverseMode = false; // 현재 후진 모드인지 저장하는 변수
 
     // --- Physics State ---
     private float currentSpeed = 0f; // 현재 속도 캐싱
@@ -336,17 +337,28 @@ public class AdvancedVehicleControllerPlus : MonoBehaviour, IVehicle
         float finalSpeedTarget = moveSpeed * inputMagnitude; // 기본 목표 속도 (전진)
         Vector3 finalSteerDirection = targetDirection;       // 기본 조향 방향 (입력 방향)
 
+
         // [스마트 후진/전진 모드] 스틱 입력이 있을 때 항상 적용
         if (IsControlledByPlayer && targetDirection.sqrMagnitude > 0.01f)
         {
-            float dot = Vector3.Dot(transform.forward, targetDirection);
+            float dot = Vector3.Dot(transform.forward, targetDirection.normalized);
 
-            // 입력 방향이 차체 기준 뒤쪽(-0.1f 이하)일 경우 후진 모드로 전환
-            if (dot < -0.1f)
+            // 입력 방향이 차체 기준 뒤쪽(-0.6f 이하)일 경우 후진 모드로 전환
+            // 후진 중 방향이 앞쪽(-0.2f 이하)보다 클 경우에만 전진 모드로 전환(후진 중 조향이 튀지 않게 하기 위함)
+            if (!isReverseMode && dot < -0.6f) isReverseMode = true;
+            else if (isReverseMode && dot > -0.2f) isReverseMode = false;
+
+            if (isReverseMode)
             {
-                finalSpeedTarget = -moveSpeed * inputMagnitude; // 목표 속도를 음수(후진)로 뒤집음
-                finalSteerDirection = -targetDirection;         // 엉덩이가 타겟을 향하게 하려면, 앞부분은 타겟의 반대를 봐야 함
+                finalSpeedTarget = -moveSpeed * inputMagnitude;// 목표 속도를 음수(후진)로 뒤집음
+                finalSteerDirection = -targetDirection; // 엉덩이가 타겟을 향하게 하려면, 앞부분은 타겟의 반대를 봐야 함
             }
+            else
+            {
+                finalSpeedTarget = moveSpeed * inputMagnitude;
+                finalSteerDirection = targetDirection;
+            }
+
         }
 
         // [조향 및 가속 적용] (스마트 후진이든 일반 주행이든 동일한 Arc 로직 사용)
