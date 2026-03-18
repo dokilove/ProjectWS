@@ -6,14 +6,13 @@ public class WorldspaceUIController : MonoBehaviour
     private Label ammoLabel;
     private Label reloadStatusLabel;
 
-    private VehicleController vehicleController;
+    private Vehicle vehicle; // Use the new coordinator
 
     private Camera mainCamera;
 
     private void Awake()
     {
-        // Attempt to get both controller types. Only one should be active.
-        vehicleController = GetComponentInParent<VehicleController>();
+        vehicle = GetComponentInParent<Vehicle>();
         mainCamera = Camera.main;
     }
 
@@ -31,7 +30,7 @@ public class WorldspaceUIController : MonoBehaviour
         // Make the UI always face the camera's forward direction
         transform.rotation = Quaternion.LookRotation(mainCamera.transform.forward);
 
-        if (vehicleController != null && (vehicleController.IsControlledByPlayer || !vehicleController.IsControlledByPlayer)) // Show for both player and AI vehicle
+        if (vehicle != null)
         {
             UpdateVehicleUI();
         }
@@ -45,12 +44,18 @@ public class WorldspaceUIController : MonoBehaviour
 
     private void UpdateVehicleUI()
     {
-        if (vehicleController.WeaponData == null) return;
+        var weaponSystem = vehicle.VehicleWeaponSystem;
+        if (weaponSystem == null || weaponSystem.WeaponData == null)
+        {
+            if (ammoLabel != null) ammoLabel.style.display = DisplayStyle.None;
+            if (reloadStatusLabel != null) reloadStatusLabel.style.display = DisplayStyle.None;
+            return;
+        }
 
         ammoLabel.style.display = DisplayStyle.Flex;
-        ammoLabel.text = $"{vehicleController.CurrentAmmo}/{vehicleController.WeaponData.magazineSize}";
+        ammoLabel.text = $"{weaponSystem.CurrentAmmo}/{weaponSystem.WeaponData.magazineSize}";
 
-        bool isReloading = vehicleController.IsReloading;
+        bool isReloading = weaponSystem.IsReloading;
         reloadStatusLabel.style.display = isReloading ? DisplayStyle.Flex : DisplayStyle.None;
     }
 }

@@ -1,0 +1,68 @@
+using UnityEngine;
+
+// This script acts as the central coordinator for all Unit components.
+// It holds references to the other components and handles the high-level logic
+// of enabling/disabling the unit.
+[RequireComponent(typeof(UnitInput))]
+[RequireComponent(typeof(UnitMove))]
+[RequireComponent(typeof(UnitAnimator))]
+[RequireComponent(typeof(UnitWeaponSystem))]
+[RequireComponent(typeof(UnitMeleeSystem))]
+[RequireComponent(typeof(UnitVisuals))]
+public class Unit : MonoBehaviour
+{
+    // --- Public Component References ---
+    // Other systems can get references to components through this central script
+    public UnitInput UnitInput { get; private set; }
+    public UnitMove UnitMove { get; private set; }
+    public UnitAnimator UnitAnimator { get; private set; }
+    public UnitWeaponSystem UnitWeaponSystem { get; private set; }
+    public UnitMeleeSystem UnitMeleeSystem { get; private set; }
+    public UnitVisuals UnitVisuals { get; private set; }
+
+    public bool IsControlledByPlayer { get; private set; } = false;
+
+    private void Awake()
+    {
+        // Get all the components on this GameObject
+        UnitInput = GetComponent<UnitInput>();
+        UnitMove = GetComponent<UnitMove>();
+        UnitAnimator = GetComponent<UnitAnimator>();
+        UnitWeaponSystem = GetComponent<UnitWeaponSystem>();
+        UnitMeleeSystem = GetComponent<UnitMeleeSystem>();
+        UnitVisuals = GetComponent<UnitVisuals>();
+
+        // Initialize components that need a reference to the coordinator
+        UnitInput.Init(this);
+        UnitMove.Init(this);
+        UnitWeaponSystem.Init(this);
+        UnitMeleeSystem.Init(this);
+        UnitVisuals.Init(this);
+    }
+
+    public void EnableControl()
+    {
+        IsControlledByPlayer = true;
+        this.enabled = true;
+        gameObject.SetActive(true);
+
+        // Enable input
+        if (UnitInput != null)
+        {
+            UnitInput.EnableInput();
+        }
+    }
+
+    public void DisableControl()
+    {
+        IsControlledByPlayer = false;
+        this.enabled = false;
+        gameObject.SetActive(false);
+
+        // Disable input
+        if (UnitInput != null)
+        {
+            UnitInput.DisableInput();
+        }
+    }
+}

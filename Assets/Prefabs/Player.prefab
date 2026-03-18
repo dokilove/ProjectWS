@@ -604,9 +604,15 @@ GameObject:
   - component: {fileID: 1861158880881925691}
   - component: {fileID: 6988497974824472418}
   - component: {fileID: 3753935237665742070}
-  - component: {fileID: 3415072103383455700}
   - component: {fileID: 942299507975720265}
   - component: {fileID: 4788464822237375258}
+  - component: {fileID: 3420903347350566459}
+  - component: {fileID: 2616555391959735963}
+  - component: {fileID: 6802634923805532497}
+  - component: {fileID: -293771285759116830}
+  - component: {fileID: -5857386033766748763}
+  - component: {fileID: 2132108540016254688}
+  - component: {fileID: -2151625754475845643}
   m_Layer: 8
   m_Name: Player
   m_TagString: Player
@@ -688,38 +694,6 @@ Rigidbody:
   m_Interpolate: 1
   m_Constraints: 112
   m_CollisionDetection: 2
---- !u!114 &3415072103383455700
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7233607023411274857}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fc73a9f4b4d5c13468b3d3da7961c485, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UnitController
-  moveSpeed: 5
-  rotationSpeed: 15
-  evadeData: {fileID: 11400000, guid: 30457d724aa3f904996c68251f2f2a32, type: 2}
-  turretTransform: {fileID: 8119486018014156151}
-  turretRotationSpeed: 10
-  firePoint: {fileID: 3147461973573372184}
-  weaponData: {fileID: 11400000, guid: 3f863e2be28fa32469bc853300811ebd, type: 2}
-  meleeData: {fileID: 11400000, guid: 7b67eb697b7dc434a84a981bdce1030e, type: 2}
-  enemyLayerMask:
-    serializedVersion: 2
-    m_Bits: 1024
-  radiusVisualizer: {fileID: 8041515074156234456}
-  attackRangeVisualizer: {fileID: 6255458938232293775}
-  spreadAngleVisualizer: {fileID: 5280977291566128888}
-  meleeRangeVisualizer: {fileID: 6889197255672689263}
-  chargeAttackMaterial: {fileID: 2100000, guid: 778e6fcf7f6bf7e4db641774074a5edd, type: 2}
-  targetLineRenderer: {fileID: 8203341390165887986}
-  aimLineColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  evadeTrailRenderer: {fileID: 942299507975720265}
-  _animator: {fileID: 4788464822237375258}
 --- !u!96 &942299507975720265
 TrailRenderer:
   serializedVersion: 3
@@ -852,6 +826,108 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &3420903347350566459
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7233607023411274857}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 35ee8e209fdf1364a8f3b4ba9742d741, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unit
+--- !u!114 &2616555391959735963
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7233607023411274857}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3908affcec5ba3c4dbda061f9bef238b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnitAnimator
+--- !u!114 &6802634923805532497
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7233607023411274857}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c43ef86a679c70545aba8f5825d524db, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnitWeaponSystem
+  turretTransform: {fileID: 8119486018014156151}
+  firePoint: {fileID: 3147461973573372184}
+  weaponData: {fileID: 11400000, guid: 3f863e2be28fa32469bc853300811ebd, type: 2}
+--- !u!114 &-293771285759116830
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7233607023411274857}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 45019d19354c3b941ad900b72b052565, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnitMeleeSystem
+  meleeData: {fileID: 11400000, guid: 7b67eb697b7dc434a84a981bdce1030e, type: 2}
+  enemyLayerMask:
+    serializedVersion: 2
+    m_Bits: 1024
+  chargeAttackMaterial: {fileID: 2100000, guid: 778e6fcf7f6bf7e4db641774074a5edd, type: 2}
+--- !u!114 &-5857386033766748763
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7233607023411274857}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 273f9839e5644144d95cd7466b7df636, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnitVisuals
+  radiusVisualizer: {fileID: 8041515074156234456}
+  attackRangeVisualizer: {fileID: 6255458938232293775}
+  spreadAngleVisualizer: {fileID: 5280977291566128888}
+  targetLineRenderer: {fileID: 8203341390165887986}
+  aimLineColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  meleeRangeVisualizer: {fileID: 6889197255672689263}
+  evadeTrailRenderer: {fileID: 942299507975720265}
+--- !u!114 &2132108540016254688
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7233607023411274857}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d319d03ccb356de429391d1148258ecb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnitMove
+  moveSpeed: 5
+  rotationSpeed: 15
+  evadeData: {fileID: 11400000, guid: 30457d724aa3f904996c68251f2f2a32, type: 2}
+--- !u!114 &-2151625754475845643
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7233607023411274857}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d7844a9b785c0c04792f8b2a699cfa0e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnitInput
 --- !u!1 &7392096247342573764
 GameObject:
   m_ObjectHideFlags: 0

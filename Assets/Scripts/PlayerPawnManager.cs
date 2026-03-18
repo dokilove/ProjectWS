@@ -21,10 +21,10 @@ public class PlayerPawnManager : MonoBehaviour
     [SerializeField] private LayerMask groundLayer; // 바닥 레이어 (Unity Editor에서 설정 필요)
 
     // --- Instantiated References ---
-    private UnitController unitPawn; 
+    private Unit unitPawn; 
     private IVehicle vehiclePawn;
 
-    private UnitController currentUnit; // Reference to the currently possessed Unit
+    private Unit currentUnit; // Reference to the currently possessed Unit
     private IVehicle currentVehicle; // Reference to the currently possessed Vehicle
 
     private InputSystem_Actions playerActions;
@@ -92,10 +92,10 @@ public class PlayerPawnManager : MonoBehaviour
         if (unitPawnPrefab != null)
         {
             GameObject unitGO = Instantiate(unitPawnPrefab, unitSpawnPos, unitSpawnRot);
-            unitPawn = unitGO.GetComponent<UnitController>();
+            unitPawn = unitGO.GetComponent<Unit>();
             if (unitPawn == null)
             {
-                Debug.LogError($"PlayerPawnManager: The prefab '{unitPawnPrefab.name}' does not have a UnitController component.");
+                Debug.LogError($"PlayerPawnManager: The prefab '{unitPawnPrefab.name}' does not have a Unit component.");
             }
         }
         else
@@ -163,7 +163,7 @@ public class PlayerPawnManager : MonoBehaviour
 
     
 
-    private void PossessUnit(UnitController unitToPossess)
+    private void PossessUnit(Unit unitToPossess)
     {
         if (unitToPossess == null)
         {

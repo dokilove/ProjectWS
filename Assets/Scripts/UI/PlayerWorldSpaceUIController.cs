@@ -8,7 +8,7 @@ public class PlayerWorldSpaceUIController : MonoBehaviour
     [SerializeField] private UIDocument uiDocument;
 
     // Player Unit and Data
-    private UnitController playerUnit;
+    private Unit playerUnit;
     private EvadeData evadeData;
 
     // Ammo UI Elements
@@ -44,10 +44,10 @@ public class PlayerWorldSpaceUIController : MonoBehaviour
         evadeRechargeProgressBar = root.Q<ProgressBar>("evade-recharge-progressbar");
 
         // Find the player unit and evade data
-        playerUnit = GetComponentInParent<UnitController>(); // Assuming this UI is a child of the player unit
-        if (playerUnit != null)
+        playerUnit = GetComponentInParent<Unit>(); // Assuming this UI is a child of the player unit
+        if (playerUnit != null && playerUnit.UnitMove != null)
         {
-            evadeData = playerUnit.EvadeData;
+            evadeData = playerUnit.UnitMove.EvadeData;
         }
 
         if (evadeData == null)
@@ -75,13 +75,16 @@ public class PlayerWorldSpaceUIController : MonoBehaviour
 
     private void UpdateUI()
     {
+        var weaponSystem = playerUnit.UnitWeaponSystem;
+        var moveSystem = playerUnit.UnitMove;
+
         // --- Update Ammo UI ---
-        if (playerUnit.WeaponData != null)
+        if (weaponSystem != null && weaponSystem.WeaponData != null)
         {
             ammoLabel.style.display = DisplayStyle.Flex;
-            ammoLabel.text = $"{playerUnit.CurrentAmmo}/{playerUnit.WeaponData.magazineSize}";
+            ammoLabel.text = $"{weaponSystem.CurrentAmmo}/{weaponSystem.WeaponData.magazineSize}";
 
-            bool isReloading = playerUnit.IsReloading;
+            bool isReloading = weaponSystem.IsReloading;
             reloadStatusLabel.style.display = isReloading ? DisplayStyle.Flex : DisplayStyle.None;
         }
         else
@@ -92,39 +95,42 @@ public class PlayerWorldSpaceUIController : MonoBehaviour
 
 
         // --- Update Evade UI ---
-        // Update charge icons
-        for (int i = 0; i < evadeData.maxEvadeCharges; i++)
+        if (moveSystem != null && evadeData != null)
         {
-            if (i < chargeIcons.Count)
+            // Update charge icons
+            for (int i = 0; i < evadeData.maxEvadeCharges; i++)
             {
-                if (i < playerUnit.CurrentEvadeCharges)
+                if (i < chargeIcons.Count)
                 {
-                    chargeIcons[i].AddToClassList("available");
-                }
-                else
-                {
-                    chargeIcons[i].RemoveFromClassList("available");
+                    if (i < moveSystem.CurrentEvadeCharges)
+                    {
+                        chargeIcons[i].AddToClassList("available");
+                    }
+                    else
+                    {
+                        chargeIcons[i].RemoveFromClassList("available");
+                    }
                 }
             }
-        }
 
-        // Update progress bar for regeneration
-        if (playerUnit.CurrentEvadeCharges < evadeData.maxEvadeCharges)
-        {
-            evadeRechargeProgressBar.style.display = DisplayStyle.Flex;
+            // Update progress bar for regeneration
+            if (moveSystem.CurrentEvadeCharges < evadeData.maxEvadeCharges)
+            {
+                evadeRechargeProgressBar.style.display = DisplayStyle.Flex;
 
-            float timeSinceLastEvade = Time.time - playerUnit.LastEvadeTime;
-            float progress = (timeSinceLastEvade % evadeData.evadeChargeRegenTime) / evadeData.evadeChargeRegenTime;
-            
-            // Ensure progress is always between 0 and 1
-            progress = Mathf.Clamp01(progress);
+                float timeSinceLastEvade = Time.time - moveSystem.LastEvadeTime;
+                float progress = (timeSinceLastEvade % evadeData.evadeChargeRegenTime) / evadeData.evadeChargeRegenTime;
+                
+                // Ensure progress is always between 0 and 1
+                progress = Mathf.Clamp01(progress);
 
-            evadeRechargeProgressBar.value = progress;
-            evadeRechargeProgressBar.title = $"Recharging ({Mathf.CeilToInt(evadeData.evadeChargeRegenTime - (timeSinceLastEvade % evadeData.evadeChargeRegenTime))}s)";
-        }
-        else
-        {
-            evadeRechargeProgressBar.style.display = DisplayStyle.None;
+                evadeRechargeProgressBar.value = progress;
+                evadeRechargeProgressBar.title = $"Recharging ({Mathf.CeilToInt(evadeData.evadeChargeRegenTime - (timeSinceLastEvade % evadeData.evadeChargeRegenTime))}s)";
+            }
+            else
+            {
+                evadeRechargeProgressBar.style.display = DisplayStyle.None;
+            }
         }
     }
 

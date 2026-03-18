@@ -603,6 +603,8 @@ MonoBehaviour:
   pitchSensitivity: 0.3
   rollSensitivity: 0.15
   tiltSmoothTime: 0.15
+  shakeIntensity: 1.2
+  shakeSpeed: 45
 --- !u!1 &3315636829676454270
 GameObject:
   m_ObjectHideFlags: 0
