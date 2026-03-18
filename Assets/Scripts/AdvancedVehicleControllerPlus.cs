@@ -40,6 +40,10 @@ public class AdvancedVehicleControllerPlus : MonoBehaviour, IVehicle
     [SerializeField] private float rollSensitivity = 0.15f;  // 회전 민감도 (좌우)
     [SerializeField] private float tiltSmoothTime = 0.15f;  // 복원 속도
 
+    // --- 추가된 진동 설정 ---
+    [SerializeField] private float shakeIntensity = 3.0f; // 진동 강도 (각도)
+    [SerializeField] private float shakeSpeed = 45f;     // 진동 속도
+
     // 상태 저장용 변수
     private float currentPitch;
     private float currentRoll;
@@ -405,10 +409,19 @@ public class AdvancedVehicleControllerPlus : MonoBehaviour, IVehicle
             // 우회전(yawRate > 0) 시 차체는 왼쪽으로 쏠림(+Z 회전)
             float targetRoll = yawRate * rollSensitivity;
 
-            // [추가 구현] NeutralTurn을 밟고 있을 때는 회전 쏠림 효과를 1.5배 극대화 (드리프트 느낌)
+            // --- ★ 제자리 회전 시 처리 ---
+            float currentShake = 0f;
+            // isNeutralTurning 버튼을 누르고 있고, 
+            // yawRate(회전 속도)의 절대값이 아주 작은 임계값(예: 0.1f)보다 클 때만 진동
             if (isNeutralTurning)
             {
-                targetRoll *= 1.5f;
+                targetRoll = 0f; // 제자리 회전 중에는 쏠림 제거 (공통)
+
+                if (Mathf.Abs(yawRate) > 0.1f)
+                {
+                    // 실제로 회전 중일 때만 진동 발생
+                    currentShake = Mathf.Sin(Time.time * shakeSpeed) * shakeIntensity;
+                }
             }
 
             // --- 3. 제한 및 부드러운 적용 ---
@@ -418,8 +431,8 @@ public class AdvancedVehicleControllerPlus : MonoBehaviour, IVehicle
             currentPitch = Mathf.SmoothDampAngle(currentPitch, targetPitch, ref pitchVelocity, tiltSmoothTime);
             currentRoll = Mathf.SmoothDampAngle(currentRoll, targetRoll, ref rollVelocity, tiltSmoothTime);
 
-            // 최종적으로 X축(앞뒤)과 Z축(좌우)에 회전 적용
-            modelRoot.localRotation = Quaternion.Euler(currentPitch, 0, currentRoll);
+            // 최종 회전 적용: Roll 값에 진동(currentShake)을 더해줍니다.
+            modelRoot.localRotation = Quaternion.Euler(currentPitch, 0, currentRoll + currentShake);
 
             // --- 4. 다음 프레임을 위한 데이터 저장 ---
             lastVelocity = currentMoveVelocity;
