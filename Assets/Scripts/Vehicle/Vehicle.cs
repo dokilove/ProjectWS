@@ -44,6 +44,13 @@ public class Vehicle : MonoBehaviour, IVehicle
         if (VehicleInput != null) VehicleInput.EnableInput();
         if (VehicleAI != null) VehicleAI.enabled = false;
         if (VehicleMove != null) VehicleMove.EnableControl();
+
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.isKinematic = false;
+            rb.constraints = RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+        }
     }
 
     public void DisableControl()
@@ -51,5 +58,26 @@ public class Vehicle : MonoBehaviour, IVehicle
         IsControlledByPlayer = false;
         if (VehicleInput != null) VehicleInput.DisableInput();
         if (VehicleMove != null) VehicleMove.DisableControl();
+
+        Rigidbody rb = GetComponent<Rigidbody>(); // Get Rigidbody reference here
+
+        // If AI exists, enable it and ensure Rigidbody is dynamic for AI control
+        if (VehicleAI != null)
+        {
+            VehicleAI.enabled = true;
+            if (rb != null)
+            {
+                rb.isKinematic = false;
+                rb.constraints = RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+            }
+        }
+        else // If no AI, then the vehicle should be frozen (kinematic)
+        {
+            if (rb != null)
+            {
+                rb.isKinematic = true;
+                rb.constraints = RigidbodyConstraints.FreezeAll;
+            }
+        }
     }
 }

@@ -45,8 +45,6 @@ public class VehicleMove : MonoBehaviour
     {
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
-        rb.isKinematic = true;
-        rb.constraints = RigidbodyConstraints.FreezeAll;
         agent.enabled = false;
         playerMoveInput = Vector2.zero;
         isNeutralTurning = false;

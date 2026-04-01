@@ -5,4 +5,5 @@ public class VehicleAIBehaviour : ScriptableObject
 {
     public float followSpeed = 3f;
     public float followStopDistance = 5f;
+    public float followCoolTime = 2f; // Added cooldown
 }

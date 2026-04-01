@@ -17,6 +17,7 @@ public class VehicleAI : MonoBehaviour
     private Transform currentTarget;
     private List<Transform> potentialTargets = new List<Transform>();
     private Collider[] aiTargetColliders = new Collider[20];
+    private float lastFollowStopTime = -Mathf.Infinity; // Added for cooldown
 
     // --- Public Properties ---
     public Transform CurrentTarget => currentTarget;
@@ -41,7 +42,10 @@ public class VehicleAI : MonoBehaviour
     {
         if (agent != null && agent.enabled)
         {
-            agent.ResetPath();
+            if (agent.isOnNavMesh)
+            {
+                agent.ResetPath();
+            }
             agent.enabled = false;
         }
     }
@@ -67,29 +71,44 @@ public class VehicleAI : MonoBehaviour
             return;
         }
 
+        // Ensure the agent is enabled if AI is running
+        if (!agent.enabled)
+        {
+            agent.enabled = true;
+            agent.speed = aiBehaviour.followSpeed;
+            agent.stoppingDistance = aiBehaviour.followStopDistance;
+        }
+
         float distanceToTarget = Vector3.Distance(transform.position, PlayerPawnManager.ActivePlayerTransform.position);
 
         // --- Movement ---
         if (distanceToTarget > aiBehaviour.followStopDistance)
         {
-            if (!agent.enabled)
+            // Only resume following if cooldown has passed
+            if (Time.time >= lastFollowStopTime + aiBehaviour.followCoolTime)
             {
-                agent.enabled = true;
-                agent.speed = aiBehaviour.followSpeed;
-                agent.stoppingDistance = aiBehaviour.followStopDistance;
+                if (agent.isOnNavMesh)
+                {
+                    agent.SetDestination(PlayerPawnManager.ActivePlayerTransform.position);
+                }
             }
-            if (agent.isOnNavMesh)
+            else
             {
-                agent.SetDestination(PlayerPawnManager.ActivePlayerTransform.position);
+                // Still in cooldown, so ensure agent is stopped
+                if (agent.isOnNavMesh && agent.hasPath)
+                {
+                    agent.ResetPath();
+                }
             }
         }
-        else
+        else // Player is within stop distance
         {
-            if (agent.enabled)
+            // Just reset the path to stop movement. Do NOT disable the agent.
+            if (agent.isOnNavMesh && agent.hasPath)
             {
-                if (agent.isOnNavMesh) agent.ResetPath();
-                agent.enabled = false;
+                agent.ResetPath();
             }
+            lastFollowStopTime = Time.time; // Update last stop time
         }
 
         // --- Targeting & Weapons ---

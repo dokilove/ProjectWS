@@ -2373,7 +2373,7 @@ GameObject:
   - component: {fileID: 1557858748}
   - component: {fileID: 1557858747}
   m_Layer: 0
-  m_Name: PlayerManager
+  m_Name: __PlayerManager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4115,6 +4115,7 @@ MonoBehaviour:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
+  - {fileID: 1557858748}
   - {fileID: 330585546}
   - {fileID: 410087041}
   - {fileID: 832575519}
@@ -4122,7 +4123,6 @@ SceneRoots:
   - {fileID: 2113770865}
   - {fileID: 1817649857}
   - {fileID: 1978331450}
-  - {fileID: 1557858748}
   - {fileID: 612718182}
   - {fileID: 1818555249}
   - {fileID: 488670103}

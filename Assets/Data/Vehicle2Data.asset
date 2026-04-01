@@ -12,5 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 738a5cb4954aeef4d94e3a66e2fb43d5, type: 3}
   m_Name: Vehicle2Data
   m_EditorClassIdentifier: Assembly-CSharp::VehicleAIBehaviour
-  followSpeed: 7
-  followStopDistance: 5
+  followSpeed: 1
+  followStopDistance: 12
