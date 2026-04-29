@@ -1,6 +1,13 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
-    <ui:VisualElement style="flex-direction: row; align-items: center; justify-content: center;">
-        <ui:Label name="ammo-label" text="30/30" style="-unity-font-style: bold; color: white; font-size: 64px; background-color: rgba(0, 0, 0, 0.56);" />
-        <ui:Label name="reload-status" text=" (Reloading...)" style="-unity-font-style: italic; color: yellow; display: none; font-size: 64px; background-color: rgba(0, 0, 0, 0.65);" />
+    <Style src="project://database/Assets/UI/PlayerHealthUI.uss?fileID=2100000&amp;guid=YOUR_NEW_GUID_HERE&amp;type=3#PlayerHealthUI" />
+    <ui:VisualElement style="flex-direction: column; align-items: center; justify-content: center;">
+        <ui:VisualElement name="health-display-container" class="health-bar-container">
+            <ui:ProgressBar name="health-progressbar" low-value="0" high-value="1" class="health-progressbar-style" />
+            <ui:Label name="health-label" text="100/100" class="health-label" />
+        </ui:VisualElement>
+        <ui:VisualElement style="flex-direction: row; align-items: center; justify-content: center;">
+            <ui:Label name="ammo-label" text="30/30" style="-unity-font-style: bold; color: white; font-size: 64px; background-color: rgba(0, 0, 0, 0.56);" />
+            <ui:Label name="reload-status" text=" (Reloading...)" style="-unity-font-style: italic; color: yellow; display: none; font-size: 64px; background-color: rgba(0, 0, 0, 0.65);" />
+        </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

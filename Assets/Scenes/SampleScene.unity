@@ -519,7 +519,7 @@ MonoBehaviour:
     CustomLookAtTarget: 0
   Lens:
     FieldOfView: 60
-    OrthographicSize: 12
+    OrthographicSize: 16
     NearClipPlane: 0.01
     FarClipPlane: 1000
     Dutch: 0
@@ -726,7 +726,7 @@ Camera:
   far clip plane: 1000
   field of view: 60
   orthographic: 1
-  orthographic size: 6
+  orthographic size: 10
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -2392,7 +2392,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerPawnManager
   unitPawnPrefab: {fileID: 7233607023411274857, guid: 48965314f2979f741a090bc948ee281e, type: 3}
-  vehiclePawnPrefab: {fileID: 2557076716787556367, guid: cd916af5794faf240ab7fbbac932836d, type: 3}
+  vehiclePawnPrefab: {fileID: 2557076716787556367, guid: b9bec3f6ff61ad547beeb87a615e767b, type: 3}
   playerSpawnPoint: {fileID: 2056785463}
   vehicleSpawnPoint: {fileID: 2020458929}
   playerCam: {fileID: 1958903312}
@@ -3372,7 +3372,7 @@ MonoBehaviour:
     CustomLookAtTarget: 0
   Lens:
     FieldOfView: 60
-    OrthographicSize: 6
+    OrthographicSize: 10
     NearClipPlane: 0.01
     FarClipPlane: 1000
     Dutch: 0

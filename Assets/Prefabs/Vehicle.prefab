@@ -588,6 +588,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c9706d569fc71e34db7efe451f3b357e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Vehicle
+  vehicleHealthData: {fileID: 11400000, guid: 382e4ccf30f615d419cce51212168214, type: 2}
 --- !u!114 &6677295194255248165
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -929,6 +929,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35ee8e209fdf1364a8f3b4ba9742d741, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Unit
+  playerHealthData: {fileID: 11400000, guid: 42a825921c356d244910a0b01dd97c8b, type: 2}
 --- !u!1 &7392096247342573764
 GameObject:
   m_ObjectHideFlags: 0
@@ -1276,6 +1277,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4422059915226684, guid: b7404df331435d74c9a05d16233ca5bd, type: 3}
       propertyPath: m_ConstrainProportionsScale
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 137270317379086916, guid: b7404df331435d74c9a05d16233ca5bd, type: 3}
+      propertyPath: m_StaticShadowCaster
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents:

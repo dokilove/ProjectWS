@@ -3,10 +3,15 @@ using UnityEngine.UIElements;
 
 public class WorldspaceUIController : MonoBehaviour
 {
+    // Health UI Elements
+    private ProgressBar healthProgressBar;
+    private Label healthLabel;
+
     private Label ammoLabel;
     private Label reloadStatusLabel;
 
     private Vehicle vehicle; // Use the new coordinator
+    private VehicleHealthData vehicleHealthData;
 
     private Camera mainCamera;
 
@@ -19,8 +24,26 @@ public class WorldspaceUIController : MonoBehaviour
     private void OnEnable()
     {
         var root = GetComponent<UIDocument>().rootVisualElement;
+
+        // Query Health UI Elements
+        healthProgressBar = root.Q<ProgressBar>("health-progressbar");
+        healthLabel = root.Q<Label>("health-label");
+
+        if (healthProgressBar == null) Debug.LogError("health-progressbar not found in UXML for WorldspaceUIController.");
+        if (healthLabel == null) Debug.LogError("health-label not found in UXML for WorldspaceUIController.");
+
         ammoLabel = root.Q<Label>("ammo-label");
         reloadStatusLabel = root.Q<Label>("reload-status");
+
+        if (vehicle != null)
+        {
+            vehicleHealthData = vehicle.vehicleHealthData;
+        }
+
+        if (vehicleHealthData == null)
+        {
+            Debug.LogError("VehicleHealthData not found or assigned to vehicle. Health UI will not function correctly.");
+        }
     }
 
     private void LateUpdate()
@@ -44,6 +67,22 @@ public class WorldspaceUIController : MonoBehaviour
 
     private void UpdateVehicleUI()
     {
+        // --- Update Health UI ---
+        if (vehicleHealthData != null && healthProgressBar != null && healthLabel != null)
+        {
+            healthProgressBar.style.display = DisplayStyle.Flex;
+            healthLabel.style.display = DisplayStyle.Flex;
+
+            float healthPercentage = vehicle.CurrentHealth / vehicleHealthData.maxHealth;
+            healthProgressBar.value = healthPercentage;
+            healthLabel.text = $"{Mathf.CeilToInt(vehicle.CurrentHealth)}/{Mathf.CeilToInt(vehicleHealthData.maxHealth)}";
+        }
+        else if (healthProgressBar != null && healthLabel != null)
+        {
+            healthProgressBar.style.display = DisplayStyle.None;
+            healthLabel.style.display = DisplayStyle.None;
+        }
+
         var weaponSystem = vehicle.VehicleWeaponSystem;
         if (weaponSystem == null || weaponSystem.WeaponData == null)
         {

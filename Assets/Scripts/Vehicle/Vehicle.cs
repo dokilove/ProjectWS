@@ -14,6 +14,9 @@ public class Vehicle : MonoBehaviour, IVehicle
     public VehicleVisuals VehicleVisuals { get; private set; }
     public VehicleAI VehicleAI { get; private set; }
 
+    public VehicleHealthData vehicleHealthData;
+    public float CurrentHealth { get; private set; }
+
     public bool IsControlledByPlayer { get; private set; } = false;
 
     // IVehicle properties
@@ -28,6 +31,16 @@ public class Vehicle : MonoBehaviour, IVehicle
         VehicleWeaponSystem = GetComponent<VehicleWeaponSystem>();
         VehicleVisuals = GetComponent<VehicleVisuals>();
         VehicleAI = GetComponent<VehicleAI>(); // This can be null
+
+        if (vehicleHealthData != null)
+        {
+            CurrentHealth = vehicleHealthData.maxHealth;
+        }
+        else
+        {
+            Debug.LogWarning("VehicleHealthData is not assigned to Vehicle. CurrentHealth will not be initialized.");
+            CurrentHealth = 200f; // Default if not assigned
+        }
 
         // Initialize components
         if(VehicleInput != null) VehicleInput.Init(this);

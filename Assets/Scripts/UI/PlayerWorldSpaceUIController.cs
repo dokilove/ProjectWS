@@ -10,6 +10,11 @@ public class PlayerWorldSpaceUIController : MonoBehaviour
     // Player Unit and Data
     private Unit playerUnit;
     private EvadeData evadeData;
+    private PlayerHealthData playerHealthData;
+
+    // Health UI Elements
+    private ProgressBar healthProgressBar;
+    private Label healthLabel;
 
     // Ammo UI Elements
     private Label ammoLabel;
@@ -35,6 +40,10 @@ public class PlayerWorldSpaceUIController : MonoBehaviour
     {
         var root = uiDocument.rootVisualElement;
 
+        // Query Health UI Elements
+        healthProgressBar = root.Q<ProgressBar>("health-progressbar");
+        healthLabel = root.Q<Label>("health-label");
+
         // Query Ammo UI Elements
         ammoLabel = root.Q<Label>("ammo-label");
         reloadStatusLabel = root.Q<Label>("reload-status");
@@ -45,15 +54,24 @@ public class PlayerWorldSpaceUIController : MonoBehaviour
 
         // Find the player unit and evade data
         playerUnit = GetComponentInParent<Unit>(); // Assuming this UI is a child of the player unit
-        if (playerUnit != null && playerUnit.UnitMove != null)
+        if (playerUnit != null)
         {
-            evadeData = playerUnit.UnitMove.EvadeData;
+            if (playerUnit.UnitMove != null)
+            {
+                evadeData = playerUnit.UnitMove.EvadeData;
+            }
+            playerHealthData = playerUnit.playerHealthData;
         }
 
         if (evadeData == null)
         {
             Debug.LogError("EvadeData not found or assigned to playerUnit. Evade UI will not function correctly.");
-            return;
+            // return; // Don't return, as health UI might still work
+        }
+        if (playerHealthData == null)
+        {
+            Debug.LogError("PlayerHealthData not found or assigned to playerUnit. Health UI will not function correctly.");
+            // return; // Don't return, as other UIs might still work
         }
 
         // Initialize evade charge icons
@@ -77,6 +95,22 @@ public class PlayerWorldSpaceUIController : MonoBehaviour
     {
         var weaponSystem = playerUnit.UnitWeaponSystem;
         var moveSystem = playerUnit.UnitMove;
+
+        // --- Update Health UI ---
+        if (playerHealthData != null)
+        {
+            healthProgressBar.style.display = DisplayStyle.Flex;
+            healthLabel.style.display = DisplayStyle.Flex;
+
+            float healthPercentage = playerUnit.CurrentHealth / playerHealthData.maxHealth;
+            healthProgressBar.value = healthPercentage;
+            healthLabel.text = $"{Mathf.CeilToInt(playerUnit.CurrentHealth)}/{Mathf.CeilToInt(playerHealthData.maxHealth)}";
+        }
+        else
+        {
+            healthProgressBar.style.display = DisplayStyle.None;
+            healthLabel.style.display = DisplayStyle.None;
+        }
 
         // --- Update Ammo UI ---
         if (weaponSystem != null && weaponSystem.WeaponData != null)

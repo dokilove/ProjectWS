@@ -20,6 +20,9 @@ public class Unit : MonoBehaviour
     public UnitMeleeSystem UnitMeleeSystem { get; private set; }
     public UnitVisuals UnitVisuals { get; private set; }
 
+    public PlayerHealthData playerHealthData;
+    public float CurrentHealth { get; private set; }
+
     public bool IsControlledByPlayer { get; private set; } = false;
 
     private void Awake()
@@ -31,6 +34,16 @@ public class Unit : MonoBehaviour
         UnitWeaponSystem = GetComponent<UnitWeaponSystem>();
         UnitMeleeSystem = GetComponent<UnitMeleeSystem>();
         UnitVisuals = GetComponent<UnitVisuals>();
+
+        if (playerHealthData != null)
+        {
+            CurrentHealth = playerHealthData.maxHealth;
+        }
+        else
+        {
+            Debug.LogWarning("PlayerHealthData is not assigned to Unit. CurrentHealth will not be initialized.");
+            CurrentHealth = 100f; // Default if not assigned
+        }
 
         // Initialize components that need a reference to the coordinator
         UnitInput.Init(this);
