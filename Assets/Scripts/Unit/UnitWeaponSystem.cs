@@ -148,7 +148,7 @@ public class UnitWeaponSystem : MonoBehaviour
                 Projectile projectile = projectileGO.GetComponent<Projectile>();
                 if (projectile != null)
                 {
-                    projectile.Initialize(fireDirection);
+                    projectile.Init(weaponData.projectileData, fireDirection, _unit.gameObject.layer);
                 }
             }
         }

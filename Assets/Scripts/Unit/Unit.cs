@@ -22,6 +22,7 @@ public class Unit : MonoBehaviour
 
     public PlayerHealthData playerHealthData;
     public float CurrentHealth { get; private set; }
+    public bool IsDead => CurrentHealth <= 0;
 
     public bool IsControlledByPlayer { get; private set; } = false;
 
@@ -51,6 +52,28 @@ public class Unit : MonoBehaviour
         UnitWeaponSystem.Init(this);
         UnitMeleeSystem.Init(this);
         UnitVisuals.Init(this);
+    }
+
+    public void TakeDamage(float amount)
+    {
+        if (IsDead) return;
+
+        CurrentHealth -= amount;
+        CurrentHealth = Mathf.Max(CurrentHealth, 0); // Ensure health doesn't go below 0
+
+        if (IsDead)
+        {
+            Debug.Log($"{gameObject.name} has been defeated!");
+            // TODO: Add death logic (e.g., disable unit, play death animation)
+        }
+    }
+
+    public void Heal(float amount)
+    {
+        if (IsDead) return;
+
+        CurrentHealth += amount;
+        CurrentHealth = Mathf.Min(CurrentHealth, playerHealthData.maxHealth); // Ensure health doesn't exceed maxHealth
     }
 
     public void EnableControl()

@@ -16,6 +16,7 @@ public class Vehicle : MonoBehaviour, IVehicle
 
     public VehicleHealthData vehicleHealthData;
     public float CurrentHealth { get; private set; }
+    public bool IsDead => CurrentHealth <= 0;
 
     public bool IsControlledByPlayer { get; private set; } = false;
 
@@ -49,6 +50,28 @@ public class Vehicle : MonoBehaviour, IVehicle
         if(VehicleVisuals != null) VehicleVisuals.Init(this);
         if(VehicleAI != null) VehicleAI.Init(this);
         // Other inits will go here
+    }
+
+    public void TakeDamage(float amount)
+    {
+        if (IsDead) return;
+
+        CurrentHealth -= amount;
+        CurrentHealth = Mathf.Max(CurrentHealth, 0); // Ensure health doesn't go below 0
+
+        if (IsDead)
+        {
+            Debug.Log($"{gameObject.name} has been destroyed!");
+            // TODO: Add destruction logic (e.g., disable vehicle, play explosion effect)
+        }
+    }
+
+    public void Heal(float amount)
+    {
+        if (IsDead) return;
+
+        CurrentHealth += amount;
+        CurrentHealth = Mathf.Min(CurrentHealth, vehicleHealthData.maxHealth); // Ensure health doesn't exceed maxHealth
     }
 
     public void EnableControl()
