@@ -21,7 +21,10 @@ public class Unit : MonoBehaviour
     public UnitVisuals UnitVisuals { get; private set; }
 
     public PlayerHealthData playerHealthData;
+    public string hitEffectPoolTag;
+    public string guardEffectPoolTag; // New field for guard effect
     public float CurrentHealth { get; private set; }
+    public bool IsInvincible { get; set; } = false; // New field for invincibility
     public bool IsDead => CurrentHealth <= 0;
 
     public bool IsControlledByPlayer { get; private set; } = false;
@@ -57,9 +60,25 @@ public class Unit : MonoBehaviour
     public void TakeDamage(float amount)
     {
         if (IsDead) return;
+        if (IsInvincible) return; // If invincible, do not take damage
+
+        Debug.Log($"TakeDamage called on {gameObject.name} for {amount} damage.");
 
         CurrentHealth -= amount;
         CurrentHealth = Mathf.Max(CurrentHealth, 0); // Ensure health doesn't go below 0
+
+        if (hitEffectPoolTag != null && EffectPoolManager.Instance != null)
+        {
+            EffectPoolManager.Instance.GetPooledObject(hitEffectPoolTag, transform.position, Quaternion.identity);
+        }
+        else if (hitEffectPoolTag == null)
+        {
+            Debug.LogWarning("hitEffectPoolTag is NOT assigned.");
+        }
+        else if (EffectPoolManager.Instance == null)
+        {
+            Debug.LogError("EffectPoolManager.Instance is NULL. Cannot get pooled object.");
+        }
 
         if (IsDead)
         {

@@ -96,6 +96,8 @@ public class UnitMove : MonoBehaviour
         currentEvadeCharges--;
         lastEvadeTime = Time.time;
 
+        _unit.IsInvincible = true; // Set invincibility at the start of evade
+
         // --- Animation ---
         _unit.UnitAnimator.TriggerEvade();
 
@@ -119,6 +121,7 @@ public class UnitMove : MonoBehaviour
 
         // --- Physics ---
         rb.AddForce(evadeDirection * evadeData.evadeForce, ForceMode.Impulse);
+        gameObject.layer = evadeData.dodgingPlayerLayer;
         gameObject.layer = evadeData.dodgingPlayerLayer;
 
         // --- Visuals ---
@@ -163,8 +166,9 @@ public class UnitMove : MonoBehaviour
     private void ResetPlayerState()
     {
         isEvading = false;
-        gameObject.layer = originalLayer;
+        gameObject.layer = originalLayer; // Reverted: Set layer back to original
         _unit.UnitVisuals.SetEvadeTrail(false);
+        _unit.IsInvincible = false; // Reset invincibility at the end of evade
     }
 
     private void ForceIdleAnimation()

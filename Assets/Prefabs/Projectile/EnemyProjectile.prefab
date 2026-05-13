@@ -71,6 +71,9 @@ MonoBehaviour:
   targetLayer:
     serializedVersion: 2
     m_Bits: 2304
+  playerLayers:
+    serializedVersion: 2
+    m_Bits: 2816
 --- !u!1 &3159758419127099811
 GameObject:
   m_ObjectHideFlags: 0

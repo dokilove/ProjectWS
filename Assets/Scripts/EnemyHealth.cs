@@ -4,6 +4,7 @@ using UnityEngine;
 public class EnemyHealth : MonoBehaviour
 {
     [SerializeField] private EnemyData enemyData;
+    public string hitEffectPoolTag;
     private float currentHealth;
 
     private void OnEnable()
@@ -24,6 +25,19 @@ public class EnemyHealth : MonoBehaviour
     {
         currentHealth -= damage;
         Debug.Log($"{gameObject.name} took {damage} damage. Current health: {currentHealth}");
+
+        if (hitEffectPoolTag != null && EffectPoolManager.Instance != null)
+        {
+            EffectPoolManager.Instance.GetPooledObject(hitEffectPoolTag, transform.position, Quaternion.identity);
+        }
+        else if (hitEffectPoolTag == null)
+        {
+            Debug.LogWarning("hitEffectPoolTag is NOT assigned.");
+        }
+        else if (EffectPoolManager.Instance == null)
+        {
+            Debug.LogError("EffectPoolManager.Instance is NULL. Cannot get pooled object.");
+        }
 
         if (DamageIndicatorManager.Instance != null)
         {

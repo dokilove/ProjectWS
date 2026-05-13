@@ -664,7 +664,7 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.5
+  m_Radius: 0.8
   m_Height: 1.6
   m_Direction: 1
   m_Center: {x: 0, y: -0.2, z: 0}
@@ -930,6 +930,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Unit
   playerHealthData: {fileID: 11400000, guid: 42a825921c356d244910a0b01dd97c8b, type: 2}
+  hitEffectPoolTag: hit03
+  guardEffectPoolTag: guard
 --- !u!1 &7392096247342573764
 GameObject:
   m_ObjectHideFlags: 0

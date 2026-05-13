@@ -5,6 +5,7 @@ public class Projectile : MonoBehaviour
 {
     [SerializeField] private ProjectileData data;
     [SerializeField] private LayerMask targetLayer; // Inspector에서 Target 레이어를 지정해줘야 합니다.
+    [SerializeField] private LayerMask playerLayers; // New: Layers that belong to the player (Unit or Vehicle)
 
     private Vector3 moveDirection;
     private float currentLifespan;
@@ -37,7 +38,7 @@ public class Projectile : MonoBehaviour
 
         // 이동하기 전에 해당 경로에 적이 있는지 Raycast로 확인
         // Raycast should ignore the shooter's layer
-        LayerMask raycastLayerMask = targetLayer;
+        LayerMask raycastLayerMask = targetLayer | playerLayers;
         // If shooterLayer is valid, remove it from the raycastLayerMask
         // This is a bit tricky with LayerMask, often easier to manage with Physics.IgnoreLayerCollision
         // For now, we'll rely on the targetLayer to define what it hits.
@@ -63,7 +64,20 @@ public class Projectile : MonoBehaviour
             Unit unit = hit.collider.GetComponent<Unit>();
             if (unit != null)
             {
-                unit.TakeDamage(data.damage);
+                if (unit.IsInvincible)
+                {
+                    // Play guard effect if unit is invincible
+                    if (!string.IsNullOrEmpty(unit.guardEffectPoolTag) && EffectPoolManager.Instance != null)
+                    {
+                        EffectPoolManager.Instance.GetPooledObject(unit.guardEffectPoolTag, hit.point, Quaternion.identity);
+                    }
+                    gameObject.SetActive(false); // Deactivate projectile
+                    return; // Do not proceed with damage
+                }
+                else
+                {
+                    unit.TakeDamage(data.damage);
+                }
             }
             else
             {

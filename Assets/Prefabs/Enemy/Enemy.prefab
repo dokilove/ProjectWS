@@ -287,3 +287,4 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyHealth
   enemyData: {fileID: 11400000, guid: baac7701bbea29d4b835d93edd013659, type: 2}
+  hitEffectPoolTag: hit02

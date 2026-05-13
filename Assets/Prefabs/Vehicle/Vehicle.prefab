@@ -589,6 +589,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Vehicle
   vehicleHealthData: {fileID: 11400000, guid: 382e4ccf30f615d419cce51212168214, type: 2}
+  hitEffectPoolTag: hit01
 --- !u!114 &6677295194255248165
 MonoBehaviour:
   m_ObjectHideFlags: 0

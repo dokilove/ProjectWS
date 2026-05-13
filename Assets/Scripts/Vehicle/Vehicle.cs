@@ -15,6 +15,7 @@ public class Vehicle : MonoBehaviour, IVehicle
     public VehicleAI VehicleAI { get; private set; }
 
     public VehicleHealthData vehicleHealthData;
+    public string hitEffectPoolTag;
     public float CurrentHealth { get; private set; }
     public bool IsDead => CurrentHealth <= 0;
 
@@ -56,8 +57,23 @@ public class Vehicle : MonoBehaviour, IVehicle
     {
         if (IsDead) return;
 
+        Debug.Log($"TakeDamage called on {gameObject.name} for {amount} damage.");
+
         CurrentHealth -= amount;
         CurrentHealth = Mathf.Max(CurrentHealth, 0); // Ensure health doesn't go below 0
+
+        if (hitEffectPoolTag != null && EffectPoolManager.Instance != null)
+        {
+            EffectPoolManager.Instance.GetPooledObject(hitEffectPoolTag, transform.position, Quaternion.identity);
+        }
+        else if (hitEffectPoolTag == null)
+        {
+            Debug.LogWarning("hitEffectPoolTag is NOT assigned.");
+        }
+        else if (EffectPoolManager.Instance == null)
+        {
+            Debug.LogError("EffectPoolManager.Instance is NULL. Cannot get pooled object.");
+        }
 
         if (IsDead)
         {
