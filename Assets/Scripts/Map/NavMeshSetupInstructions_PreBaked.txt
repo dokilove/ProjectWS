@@ -1,0 +1,39 @@
+## Unity 3x3 정형 청크 동적 로딩 및 사전 베이킹(Static) 이벤트 시스템 설정 가이드
+
+이전의 동적 런타임 NavMesh 베이킹 방식 대신, 각 청크 프리팹에 NavMesh를 미리 베이킹하는 방식으로 시스템을 변경했습니다. `ChunkManager.cs` 및 `EnemyAI.cs` 스크립트도 이에 맞춰 수정되었습니다.
+
+**다음 단계를 따라 시스템을 설정해 주세요:**
+
+1.  **청크 프리팹(Chunk Prefab) 설정 (매우 중요):**
+    *   **각 청크 프리팹을 Prefab Mode에서 엽니다.** (프로젝트 창에서 청크 프리팹 파일을 더블 클릭)
+    *   **`NavMeshSurface` 컴포넌트 추가**: 청크 프리팹의 루트 GameObject(또는 보행 가능한 영역을 포함하는 자식 GameObject)에 `NavMeshSurface` 컴포넌트를 추가합니다.
+    *   **이 `NavMeshSurface`를 구성합니다**:
+        *   `Agent Type`: AI 에이전트가 사용하는 `Agent Type`과 일치하는지 확인하세요.
+        *   `Collect Objects`: `All` 또는 `Children` (프리팹 구조에 따라 적절히 선택).
+        *   `Use Geometry`: `Physics Colliders`로 설정하세요.
+        *   `Layer Mask`: *이 특정 청크* 내의 지면 및 장애물 콜라이더가 있는 레이어를 포함하도록 설정하세요.
+        *   **`Bake` 버튼 클릭**: 이 `NavMeshSurface` 컴포넌트에서 **`Bake` 버튼을 클릭하여 NavMesh를 프리팹에 직접 베이킹합니다.**
+    *   **GameObject `Static` 설정**: 프리팹 내의 모든 지면 및 장애물 GameObject가 Inspector 창 오른쪽 상단에서 `Static`으로 표시되어 있는지 확인하세요. (특히 `Navigation Static`도 체크되어 있는지 확인)
+    *   **`Physics Colliders` 확인**: 모든 지면 및 장애물 GameObject에 `Physics Colliders` (예: `Box Collider`, `Mesh Collider` (Convex 체크), `Capsule Collider` 등)가 부착되어 있고 활성화되어 있는지 확인하세요. `Is Trigger`는 체크되어 있지 않아야 합니다.
+    *   **프리팹 변경 사항 적용**: 프리팹 편집을 마친 후, 반드시 Inspector 하단의 `Apply` 버튼을 눌러 변경 사항을 프리팹에 적용하세요.
+2.  **`MapManager` GameObject 설정:**
+    *   **`NavMeshSurface` 컴포넌트 제거**: `MapManager` GameObject에 부착된 `NavMeshSurface` 컴포넌트는 더 이상 전역 베이킹에 필요하지 않으므로 **제거하세요.**
+    *   `ChunkManager` 컴포넌트는 그대로 유지합니다.
+3.  **`ChunkManager` 컴포넌트 설정:**
+    *   `Chunk Prefab`: 사전 베이킹된 NavMesh가 포함된 청크 프리팹을 할당합니다.
+    *   `Nav Mesh Surface`: 이 필드는 `ChunkManager`에서 제거되었습니다.
+    *   `Chunk Size`: `80`으로 설정되었는지 확인하세요.
+    *   `Active Chunk Grid Size`: `3`으로 설정되었는지 확인하세요.
+4.  **AI `NavMeshAgent` 설정:**
+    *   AI 유닛에 부착된 `NavMeshAgent` 컴포넌트의 `Speed`, `Angular Speed`, `Acceleration`, `Obstacle Avoidance Quality` 등의 설정을 게임의 요구사항에 맞게 조정하세요.
+5.  **`PlayerPawnManager` GameObject의 `Ground Layer` 설정:**
+    *   `PlayerPawnManager` 컴포넌트의 Inspector에서 `Ground Layer` 필드에 **청크 프리팹의 지면 콜라이더가 있는 레이어**가 올바르게 할당되어 있는지 확인하세요.
+
+**테스트 및 확인:**
+
+*   Unity 씬을 실행하고 플레이어를 이동시켜 보세요.
+*   플레이어가 이동함에 따라 3x3 청크 그리드가 동적으로 로드/언로드되는지 확인하세요.
+*   AI 유닛이 청크 경계를 넘어갈 때 주춤거리지 않고 플레이어를 끊김 없이 추적하는지 확인하세요.
+*   콘솔 창에 `ArgumentException` (EffectPoolManager 관련) 오류가 여전히 발생한다면, 해당 풀에 할당되지 않은 프리팹이 있는지 다시 한번 확인해 주세요.
+
+이 단계를 진행하시면서 궁금한 점이나 문제가 발생하면 언제든지 알려주세요.

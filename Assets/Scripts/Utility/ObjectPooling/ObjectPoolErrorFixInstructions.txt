@@ -1,0 +1,16 @@
+이 오류는 `ObjectPool`이 인스턴스화하려는 프리팹(Prefab)이 할당되지 않아 `null` 상태일 때 발생합니다. `ChunkManager`나 NavMesh 시스템과는 별개의 문제입니다.
+
+스택 트레이스를 보면 `EffectPoolManager`가 `ObjectPool`들을 초기화하는 과정에서 문제가 발생했음을 알 수 있습니다.
+
+**해결 방법:**
+
+1.  **`EffectPoolManager` GameObject 찾기**: Unity 씬에서 `EffectPoolManager` 스크립트가 부착된 GameObject를 찾으세요.
+2.  **`EffectPoolManager` 스크립트 확인**: `EffectPoolManager` 컴포넌트의 Inspector 창을 확인하세요. 이 스크립트에는 아마도 여러 `ObjectPool` 인스턴스나, `ObjectPool`이 사용할 프리팹들을 직접 참조하는 필드들이 있을 것입니다.
+3.  **`ObjectPool` 스크립트 확인**: `Assets/Scripts/Utility/ObjectPooling/ObjectPool.cs` 파일을 열어 `ObjectPool` 스크립트가 어떤 필드를 통해 인스턴스화할 원본 객체(프리팹)를 참조하는지 확인하세요. 일반적으로 `[SerializeField] private GameObject originalPrefab;` 또는 이와 유사한 이름의 필드가 있을 것입니다.
+4.  **누락된 프리팹 할당**:
+    *   `EffectPoolManager` GameObject의 Inspector에서 `EffectPoolManager` 컴포넌트를 확인하세요.
+    *   `EffectPoolManager`가 참조하는 모든 `ObjectPool` 컴포넌트(또는 `EffectPoolManager` 내부에 직접 프리팹을 참조하는 필드)를 찾아보세요.
+    *   이들 중 `Original` 또는 `Prefab` 등 인스턴스화할 객체를 할당하는 필드가 **비어있는지(None)** 확인하세요.
+    *   비어있는 필드가 있다면, 해당 `ObjectPool`이 관리해야 할 **프리팹을 프로젝트 창에서 Inspector의 해당 필드로 드래그하여 할당**해 주세요.
+
+이 오류는 코드 문제가 아니라 Unity Editor에서 참조가 누락된 설정 문제입니다. 모든 `ObjectPool`에 필요한 프리팹이 할당되었는지 꼼꼼히 확인해 주시면 해결될 것입니다.

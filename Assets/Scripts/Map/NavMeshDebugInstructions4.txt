@@ -1,0 +1,15 @@
+`NavMeshSurface`의 `Collect Objects`와 `Layer Mask` 설정은 올바른 것으로 보입니다.
+
+이제 다음 정보들을 알려주세요:
+
+1.  **청크 프리팹(Chunk Prefab)의 콜라이더 및 레이어 설정:**
+    *   **청크 프리팹을 열고, 지면 역할을 하는 GameObject를 선택하세요.** (예: Plane, Cube, Custom Mesh 등)
+    *   이 GameObject에 **`Physics Collider` (예: `Box Collider`, `Mesh Collider`, `Capsule Collider`)가 부착되어 있습니까?**
+        *   부착되어 있다면, 어떤 타입의 콜라이더입니까?
+        *   `Mesh Collider`인 경우, `Convex` 옵션이 **체크되어 있습니까?**
+        *   콜라이더가 **활성화(Enabled) 상태**입니까?
+    *   이 GameObject의 **`Layer`는 무엇으로 설정되어 있습니까?** (예: "Default", "Ground" 등)
+2.  **`PlayerPawnManager` GameObject의 `Ground Layer` 설정:**
+    *   `PlayerPawnManager` 컴포넌트의 Inspector에서 `Ground Layer` 필드에 **현재 어떤 레이어가 할당되어 있습니까?** (예: "Ground", "Default" 등)
+
+그리고 게임을 다시 실행했을 때 콘솔에 출력되는 `Processing chunk: [청크 이름], Layer: [청크 레이어]` 로그와 `Collected [숫자] NavMeshBuildSource objects.` 로그도 함께 알려주세요. 이 정보들을 종합하여 문제의 원인을 파악하겠습니다.

@@ -1,0 +1,52 @@
+## Unity 동적 청크 및 비동기 NavMesh 베이킹 시스템 문제 요약
+
+**1. 원래 목표:**
+플레이어의 이동에 따라 5x5 청크 그리드를 동적으로 로드/언로드하고, 이 활성 영역에 대해 비동기적으로 NavMesh를 베이킹하여 AI 유닛이 끊김 없이 이동할 수 있도록 하는 시스템 구현.
+
+**2. 현재 상태:**
+*   청크는 플레이어 이동에 따라 동적으로 생성/재배치되는 것이 확인되었습니다.
+*   **그러나 NavMesh가 올바르게 베이킹되지 않고 있습니다.**
+
+**3. 현재 발생 중인 주요 증상 및 오류:**
+
+*   **`Collected 2 NavMeshBuildSource objects.` (가장 핵심적인 문제):**
+    *   `ChunkManager`가 여러 청크를 `Processing chunk: Chunk_0_0(Clone), Layer: Ground`와 같이 올바르게 순회하고 있음을 로그를 통해 확인했습니다.
+    *   하지만 `NavMeshBuilder.CollectSources`는 여전히 전체 활성 청크 영역에서 단 2개의 빌드 소스만 수집하고 있다고 보고합니다. 이는 NavMesh가 유효한 지오메트리를 기반으로 생성되지 못하고 있음을 의미합니다.
+*   **`Failed to create agent because there is no valid NavMesh` (AI 에이전트 관련):**
+    *   `PlayerPawnManager`가 플레이어/차량 폰을 생성할 때, 그리고 `EnemySpawner`가 `ChunkManager.OnNavMeshBaked` 이벤트 수신 후 적을 인스턴스화할 때 이 오류가 발생합니다. 이는 NavMesh가 비어 있거나 유효하지 않기 때문에 `NavMeshAgent`가 초기화에 실패하는 것입니다.
+*   **`[GroundCheck] Failed! FindGroundPosition did not find ground for 'Player_SDTest(Clone)'.` (플레이어/차량 지면 감지 실패):**
+    *   `PlayerPawnManager`가 플레이어/차량의 지면을 찾지 못하고 있습니다. 이는 NavMesh 문제와 동일하게 지면 콜라이더가 제대로 감지되지 않고 있음을 시사합니다.
+*   **`ArgumentException: The Object you want to instantiate is null.` (EffectPoolManager 관련):**
+    *   `EffectPoolManager`의 오브젝트 풀 초기화 과정에서 발생하는 오류입니다. 이는 `EffectPoolManager` 컴포넌트의 Inspector에서 특정 프리팹 참조가 할당되지 않아 발생하는 별개의 설정 문제입니다.
+
+**4. 지금까지 취한 조치:**
+
+*   `ChunkManager.cs` 스크립트 구현 (동적 청크 관리, 비동기 NavMesh 베이킹 로직 포함).
+*   Unity 6.2 / AI Navigation 2.0.9 버전에 맞춰 컴파일 오류 수정 (`navMeshSurface.GetBuildSettings()`, `NavMeshBuilder.CollectSources` 오버로드).
+*   `ChunkManager`가 `PlayerPawnManager.ActivePlayerTransform`을 통해 활성 플레이어의 `Transform`을 동적으로 가져오도록 수정.
+*   `EnemySpawner`가 `ChunkManager.OnNavMeshBaked` 이벤트 수신 후 초기화를 시작하도록 수정하여 NavMesh 베이킹 순서 문제 해결.
+*   `NavMeshBuilder.CollectSources` 호출 시 `chunkBounds`의 높이를 20에서 100으로 증가.
+*   `NavMeshBuilder.UpdateNavMeshDataAsync` 호출 시 전체 베이킹 영역(`bounds`)의 높이를 20에서 100으로 증가.
+*   문제 진단을 위해 `ChunkManager.cs`에 상세한 디버그 로그 추가.
+*   사용자에게 Unity Editor 설정(특히 `NavMeshSurface` 및 청크 프리팹)에 대한 상세한 가이드 및 확인 요청.
+
+**5. 현재 가설 (NavMesh가 베이킹되지 않는 가장 유력한 원인):**
+
+`Collected 2 NavMeshBuildSource objects.` 로그가 지속되는 것으로 보아, `NavMeshBuilder.CollectSources`가 청크 내의 콜라이더를 NavMesh 빌드 소스로 수집하지 못하고 있습니다. 이는 다음 중 하나 또는 여러 가지 원인 때문일 가능성이 높습니다.
+
+*   **청크 프리팹 내부 GameObject의 `Static` 설정 누락:** `NavMesh` 베이킹은 기본적으로 `Static`으로 표시된 GameObject만 고려합니다. 청크 프리팹의 루트뿐만 아니라, 그 자식 GameObject들 중 콜라이더를 가진 모든 GameObject가 `Static`으로 체크되어 있지 않을 수 있습니다.
+*   **`NavMeshSurface`의 `Agent Type` 설정이 너무 제한적:** `NavMeshSurface` 컴포넌트의 `Agent Type`에 설정된 `Agent Radius`, `Agent Height`, `Max Slope`, `Step Height` 값들이 현재 지오메트리에 비해 너무 크거나 작아서 NavMesh를 생성할 수 있는 공간이 없다고 판단될 수 있습니다.
+
+**6. 현재 요청하는 정보:**
+
+정확한 문제 진단을 위해 다음 정보들을 Unity Editor에서 확인하시고 알려주세요.
+
+1.  **청크 프리팹(Chunk Prefab) 내부의 GameObject `Static` 설정:**
+    *   **청크 프리팹을 열고, 지면 및 벽 역할을 하는 모든 GameObject를 선택하세요.** (프리팹의 루트 GameObject뿐만 아니라, 그 자식 GameObject들 중 콜라이더를 가진 모든 GameObject를 확인해야 합니다.)
+    *   Inspector 창의 오른쪽 상단에 있는 `Static` 체크박스가 **모두 체크되어 있습니까?**
+2.  **`MapManager` GameObject의 `NavMeshSurface` 컴포넌트 설정:**
+    *   **`Agent Type` 설정**: `NavMeshSurface` 컴포넌트의 `Agent Type` 드롭다운에서 선택된 에이전트 타입의 `Agent Radius`, `Agent Height`, `Max Slope`, `Step Height` 값은 각각 얼마입니까?
+3.  **`PlayerPawnManager` GameObject의 `Ground Layer` 설정:**
+    *   `PlayerPawnManager` 컴포넌트의 Inspector에서 `Ground Layer` 필드에 **현재 어떤 레이어가 할당되어 있습니까?**
+
+이 정보들을 정확히 알려주시면 문제의 원인을 명확히 파악하고 해결책을 제시할 수 있을 것입니다.

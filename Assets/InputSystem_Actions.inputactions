@@ -610,7 +610,7 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "Evade",
+                    "name": "Accel",
                     "type": "Button",
                     "id": "4f87ad5a-3f6d-48be-96bc-49a4d13cf4b0",
                     "expectedControlType": "",
@@ -998,7 +998,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "Evade",
+                    "action": "Accel",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -1009,7 +1009,18 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "Evade",
+                    "action": "Accel",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "5f908bfe-b207-4624-9f92-010616addf92",
+                    "path": "<Keyboard>/leftShift",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Accel",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },

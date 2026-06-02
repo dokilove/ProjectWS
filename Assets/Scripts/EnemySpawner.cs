@@ -46,7 +46,7 @@ public class EnemySpawner : MonoBehaviour
 
     void Awake()
     {
-        InitializePool();
+        InitializePool(); // Moved back to Awake
         CalculateTotalWeight();
         // Create a default setting entry as a fallback
         defaultSettings = new PhaseSpawnSettings { enemiesPerWave = 5, waveCooldown = 20f, spawnIntervalInWave = 1f };
@@ -61,7 +61,7 @@ public class EnemySpawner : MonoBehaviour
             enabled = false;
             return;
         }
-        StartCoroutine(SpawnEnemiesRoutine());
+        StartCoroutine(SpawnEnemiesRoutine()); // Moved back to Start
     }
 
     private void InitializePool()

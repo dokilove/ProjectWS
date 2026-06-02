@@ -1,0 +1,39 @@
+**1. Unity Scene Setup (Updated):**
+
+*   **Create `MapManager` GameObject**: In your Unity scene, create an empty GameObject and name it `MapManager`.
+*   **Add `NavMeshSurface` Component**: To the `MapManager` GameObject, add a `NavMeshSurface` component (from `Unity.AI.Navigation`).
+    *   **Configure `NavMeshSurface`**:
+        *   `Agent Type`: Ensure this matches the agent type used by your AI `NavMeshAgent`s.
+        *   `Collect Objects`: Set this to `Volume`. This ensures only colliders within the defined bounds are collected.
+        *   `Layer Mask`: Set this to include only the layers that contain your static obstacles (walls, buildings, etc.) that should contribute to the NavMesh.
+        *   `Default Area`: Keep as `Walkable` or as appropriate.
+        *   **Do NOT click the `Bake` button on the `NavMeshSurface` component.** The baking will be handled dynamically by the `ChunkManager`.
+*   **Add `ChunkManager` Component**: To the `MapManager` GameObject, add the `ChunkManager.cs` script.
+    *   **Assign References in `ChunkManager`**:
+        *   `Chunk Prefab`: Create a prefab for your chunks. Each chunk prefab should be a GameObject containing your static environment elements (walls, buildings) with `Physics Colliders` (Box Collider, Capsule Collider, Mesh Collider set to Convex, etc.). Ensure these colliders are on the layer specified in your `NavMeshSurface`'s `Layer Mask`.
+        *   `Nav Mesh Surface`: Drag the `NavMeshSurface` component from the `MapManager` GameObject itself to this field.
+        *   **Player Transform**: This field has been removed from `ChunkManager`. The `ChunkManager` will now automatically get the currently controlled player or vehicle's `Transform` from the `PlayerPawnManager.ActivePlayerTransform` static property.
+*   **Ensure `PlayerPawnManager` is active and correctly configured**: Make sure your `PlayerPawnManager` GameObject is active in the scene and its `Unit Pawn Prefab` and `Vehicle Pawn Prefab` fields are correctly assigned. The `PlayerPawnManager` is responsible for setting `PlayerPawnManager.ActivePlayerTransform`.
+*   **Chunk Prefab Requirements**:
+    *   Each chunk prefab should be exactly `50x50` units in X and Z dimensions.
+    *   All static obstacles within the chunk must have `Physics Colliders`.
+    *   Ensure the chunk prefab's root transform is at `(0,0,0)` relative to its content, so it can be correctly positioned by the `ChunkManager`.
+
+**2. AI `NavMeshAgent` Configuration Tips:**
+
+For fast-paced, subculture-style enemy units with high acceleration and rotation speed, consider tuning the `NavMeshAgent` component settings as follows:
+
+*   **`Speed`**: Set this to the desired maximum movement speed of your AI.
+*   **`Angular Speed`**: Increase this value significantly (e.g., 360, 720, or even higher) to allow agents to turn quickly and smoothly without appearing to "slide" or hesitate at corners.
+*   **`Acceleration`**: Set this to a high value (e.g., 100, 500, or `Mathf.Infinity`) to allow agents to reach their `Speed` quickly. This prevents them from slowly ramping up to speed, which can look unnatural for fast-moving units.
+*   **`Stopping Distance`**: Keep this small (e.g., 0.1-0.5) if you want agents to get very close to their target.
+*   **`Auto Braking`**: You might want to disable this if you want agents to overshoot their target slightly or maintain momentum, especially if `Angular Speed` is high. However, for precise stopping, keep it enabled.
+*   **`Obstacle Avoidance Quality`**:
+    *   `None`: No avoidance. Agents will pass through each other.
+    *   `Low Quality`, `Medium Quality`, `High Quality`, `Good Quality`: Higher quality settings provide better avoidance but are more CPU intensive. For many fast-moving agents, `Medium Quality` or `High Quality` might be a good balance. Experiment to find what works best for your game's performance and visual fidelity.
+    *   **`Radius`**: Ensure this matches the actual physical radius of your agent's collider to prevent agents from getting stuck or overlapping.
+    *   **`Height`**: Ensure this matches the actual physical height of your agent.
+
+By following these steps, you should have a dynamic 5x5 chunk system with global asynchronous NavMesh baking and optimized AI navigation.
+
+Let me know if you have any further questions or need adjustments!

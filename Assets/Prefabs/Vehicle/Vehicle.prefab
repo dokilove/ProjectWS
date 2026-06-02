@@ -618,6 +618,8 @@ MonoBehaviour:
   rotationSpeed: 3
   acceleration: 5
   deceleration: 8
+  acceleratedMaxSpeed: 30
+  acceleratedTurnMultiplier: 0.5
 --- !u!114 &2675498684682467458
 MonoBehaviour:
   m_ObjectHideFlags: 0

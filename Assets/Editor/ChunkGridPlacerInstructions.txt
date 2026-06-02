@@ -1,0 +1,30 @@
+## Unity 에디터 청크 그리드 배치 도구 사용 가이드
+
+`Assets/Editor/ChunkGridPlacer.cs` 스크립트가 성공적으로 생성되었습니다. 이 스크립트는 Unity 에디터에서 청크 프리팹을 N x N 그리드로 배치하는 데 도움을 주는 도구입니다.
+
+**사용 방법:**
+
+1.  **Unity 에디터 재시작**: 에디터 스크립트가 인식되도록 Unity 에디터를 한번 재시작하는 것이 좋습니다.
+2.  **도구 열기**: Unity 메뉴에서 `Tools/Chunk/Chunk Grid Placer`를 선택하여 도구 창을 엽니다.
+3.  **설정 구성**: 도구 창에서 다음 필드들을 설정합니다.
+    *   **Chunk Prefab**: 씬에 배치할 청크 프리팹을 여기에 드래그하여 할당합니다. (예: `Chunk_Root` 프리팹)
+    *   **Grid Size (N)**: 그리드의 크기를 N x N으로 설정합니다. (예: `3`을 입력하면 3x3 그리드가 됩니다.)
+    *   **Chunk Size**: 청크의 실제 월드 유닛 크기를 입력합니다. (요구사항에 따라 `80`으로 설정하세요.)
+    *   **Parent Transform**: (선택 사항) 생성된 청크들을 특정 GameObject의 자식으로 만들고 싶다면 해당 GameObject를 여기에 드래그하여 할당합니다.
+    *   **Chunk Root Tag**: 청크 루트 GameObject에 할당할 태그를 입력합니다. (요구사항에 따라 `Chunk_Root`로 설정하세요.)
+    *   **Clear Existing Chunks**: `Place Chunks` 버튼을 누르기 전에 기존 청크들을 지울지 여부를 선택합니다.
+4.  **청크 배치**:
+    *   `Place Chunks` 버튼을 클릭하면 설정된 그리드 크기와 간격에 따라 청크 프리팹들이 씬에 배치됩니다.
+    *   **중요**: 배치된 청크들은 `Chunk_Root` 태그를 가지게 됩니다.
+5.  **기존 청크 지우기**:
+    *   `Clear All Chunks (by Tag)` 버튼을 클릭하면 `Chunk Root Tag`에 해당하는 모든 GameObject들이 씬에서 제거됩니다.
+
+**이 도구를 사용하여 씬에 청크들을 배치한 후, 이전 지침(`NavMeshSetupInstructions_StaticCulling.txt`)에 따라 다음 사항들을 설정해 주세요:**
+
+*   **청크 프리팹 내부 계층 구조 및 `Static` 설정, `Physics Colliders` 확인.**
+*   **`MapManager` GameObject에 `NavMeshSurface` 컴포넌트 추가 및 씬 전체 NavMesh 베이킹.**
+*   **`ChunkManager` 컴포넌트 설정 (특히 `Player Transform`은 런타임에 `PlayerPawnManager`에서 가져오므로 Inspector에서 할당할 필요 없습니다.)**
+*   **AI `NavMeshAgent` 설정.**
+*   **`PlayerPawnManager` `Ground Layer` 설정.**
+
+이 도구를 사용하면 에디터에서 청크 배치를 훨씬 쉽게 할 수 있을 것입니다. 궁금한 점이나 문제가 발생하면 언제든지 알려주세요."

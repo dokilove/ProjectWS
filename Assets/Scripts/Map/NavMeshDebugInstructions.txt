@@ -1,0 +1,22 @@
+디버그 로그를 `ChunkManager.cs`에 추가했습니다.
+
+이제 Unity 씬을 실행하고 콘솔 창에 출력되는 로그 메시지를 확인해 주세요. 특히 다음 정보들을 주의 깊게 살펴봐 주세요:
+
+*   `NavMeshSurface assigned: True/False` (True여야 합니다)
+*   `NavMesh Build Settings Agent Type ID: [숫자]` (유효한 Agent Type ID여야 합니다)
+*   `Baking Bounds Center: [Vector3 값], Size: [Vector3 값]` (청크 그리드 전체를 포함하는 합리적인 값이어야 합니다)
+*   `Collected [숫자] NavMeshBuildSource objects.` (0보다 커야 합니다. 0이라면 경고 메시지가 출력될 것입니다.)
+*   `Created new NavMeshData asset for dynamic baking.` 또는 `Using existing NavMeshData: [이름]`
+*   `NavMeshBuilder.UpdateNavMeshDataAsync completed. Operation status: True` (True여야 합니다)
+
+**로그를 확인하는 동안 다음 사항들도 다시 한번 꼼꼼히 확인해 주세요:**
+
+1.  **`MapManager` GameObject의 `NavMeshSurface` 컴포넌트 설정:**
+    *   `Agent Type`이 AI 에이전트와 일치하는지.
+    *   `Collect Objects`가 `Volume`으로 설정되어 있는지.
+    *   `Layer Mask`가 청크 프리팹의 콜라이더가 있는 레이어를 포함하고 있는지.
+2.  **청크 프리팹 설정:**
+    *   각 청크 프리팹에 `Physics Colliders` (Box Collider, Capsule Collider 등)가 부착되어 있는지.
+    *   이 콜라이더들이 `NavMeshSurface`의 `Layer Mask`에 포함된 **올바른 레이어**에 할당되어 있는지. (예: "Default" 레이어에 콜라이더가 있고 `NavMeshSurface`의 `Layer Mask`가 "Default"를 포함하는지)
+
+콘솔 로그와 함께 이 설정들을 다시 확인해 주시면 문제의 원인을 파악하는 데 큰 도움이 될 것입니다.

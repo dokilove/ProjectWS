@@ -11,6 +11,13 @@ public class VehicleMove : MonoBehaviour
     [SerializeField] private float acceleration = 5f;
     [SerializeField] private float deceleration = 8f;
 
+    [Header("Acceleration")]
+    [SerializeField] private float acceleratedMaxSpeed = 20f;
+    [SerializeField] private float acceleratedTurnMultiplier = 0.5f;
+
+    // --- Public State ---
+    public bool IsAccelerating { get; set; }
+
     // --- Dependencies ---
     private Vehicle _vehicle;
     private Rigidbody rb;
@@ -48,6 +55,7 @@ public class VehicleMove : MonoBehaviour
         agent.enabled = false;
         playerMoveInput = Vector2.zero;
         isNeutralTurning = false;
+        IsAccelerating = false;
     }
 
     private void Update()
@@ -76,6 +84,10 @@ public class VehicleMove : MonoBehaviour
         Vector3 targetDirection = Vector3.zero;
         float inputMagnitude = 0f;
 
+        // Determine current speed and turn settings based on acceleration state
+        float currentMaxSpeed = IsAccelerating ? acceleratedMaxSpeed : moveSpeed;
+        float currentTurnSpeed = IsAccelerating ? rotationSpeed * acceleratedTurnMultiplier : rotationSpeed;
+
         if (_vehicle.IsControlledByPlayer)
         {
             Vector3 cameraRight = Camera.main.transform.right;
@@ -96,6 +108,7 @@ public class VehicleMove : MonoBehaviour
                 if (targetDirection.sqrMagnitude > 0.1f)
                 {
                     Quaternion targetRot = Quaternion.LookRotation(targetDirection);
+                    // Neutral turn should not be affected by acceleration turn multiplier
                     rb.rotation = Quaternion.Slerp(rb.rotation, targetRot, rotationSpeed * Time.fixedDeltaTime);
                 }
                 
@@ -112,7 +125,7 @@ public class VehicleMove : MonoBehaviour
             }
         }
 
-        float finalSpeedTarget = moveSpeed * inputMagnitude;
+        float finalSpeedTarget = currentMaxSpeed * inputMagnitude;
         Vector3 finalSteerDirection = targetDirection;
 
         if (_vehicle.IsControlledByPlayer && targetDirection.sqrMagnitude > 0.01f)
@@ -123,6 +136,7 @@ public class VehicleMove : MonoBehaviour
 
             if (isReverseMode)
             {
+                // Use the base moveSpeed for reverse, not the accelerated speed
                 finalSpeedTarget = -moveSpeed * inputMagnitude;
                 finalSteerDirection = -targetDirection;
             }
@@ -131,7 +145,7 @@ public class VehicleMove : MonoBehaviour
         if (targetDirection.sqrMagnitude > 0.01f)
         {
             Quaternion targetRotation = Quaternion.LookRotation(finalSteerDirection);
-            rb.rotation = Quaternion.Slerp(rb.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime);
+            rb.rotation = Quaternion.Slerp(rb.rotation, targetRotation, currentTurnSpeed * Time.fixedDeltaTime);
             currentSpeed = Mathf.Lerp(currentSpeed, finalSpeedTarget, acceleration * Time.fixedDeltaTime);
         }
         else

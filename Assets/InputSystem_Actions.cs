@@ -696,7 +696,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""initialStateCheck"": false
                 },
                 {
-                    ""name"": ""Evade"",
+                    ""name"": ""Accel"",
                     ""type"": ""Button"",
                     ""id"": ""4f87ad5a-3f6d-48be-96bc-49a4d13cf4b0"",
                     ""expectedControlType"": """",
@@ -1084,7 +1084,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
-                    ""action"": ""Evade"",
+                    ""action"": ""Accel"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -1095,7 +1095,18 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
-                    ""action"": ""Evade"",
+                    ""action"": ""Accel"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""5f908bfe-b207-4624-9f92-010616addf92"",
+                    ""path"": ""<Keyboard>/leftShift"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Accel"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -1881,7 +1892,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         m_Vehicle_Look = m_Vehicle.FindAction("Look", throwIfNotFound: true);
         m_Vehicle_Interact = m_Vehicle.FindAction("Interact", throwIfNotFound: true);
         m_Vehicle_Interact_Hold = m_Vehicle.FindAction("Interact_Hold", throwIfNotFound: true);
-        m_Vehicle_Evade = m_Vehicle.FindAction("Evade", throwIfNotFound: true);
+        m_Vehicle_Accel = m_Vehicle.FindAction("Accel", throwIfNotFound: true);
         m_Vehicle_Exit = m_Vehicle.FindAction("Exit", throwIfNotFound: true);
         m_Vehicle_Brake = m_Vehicle.FindAction("Brake", throwIfNotFound: true);
         m_Vehicle_NeutralTurn = m_Vehicle.FindAction("NeutralTurn", throwIfNotFound: true);
@@ -2209,7 +2220,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
     private readonly InputAction m_Vehicle_Look;
     private readonly InputAction m_Vehicle_Interact;
     private readonly InputAction m_Vehicle_Interact_Hold;
-    private readonly InputAction m_Vehicle_Evade;
+    private readonly InputAction m_Vehicle_Accel;
     private readonly InputAction m_Vehicle_Exit;
     private readonly InputAction m_Vehicle_Brake;
     private readonly InputAction m_Vehicle_NeutralTurn;
@@ -2245,9 +2256,9 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// </summary>
         public InputAction @Interact_Hold => m_Wrapper.m_Vehicle_Interact_Hold;
         /// <summary>
-        /// Provides access to the underlying input action "Vehicle/Evade".
+        /// Provides access to the underlying input action "Vehicle/Accel".
         /// </summary>
-        public InputAction @Evade => m_Wrapper.m_Vehicle_Evade;
+        public InputAction @Accel => m_Wrapper.m_Vehicle_Accel;
         /// <summary>
         /// Provides access to the underlying input action "Vehicle/Exit".
         /// </summary>
@@ -2314,9 +2325,9 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
             @Interact_Hold.started += instance.OnInteract_Hold;
             @Interact_Hold.performed += instance.OnInteract_Hold;
             @Interact_Hold.canceled += instance.OnInteract_Hold;
-            @Evade.started += instance.OnEvade;
-            @Evade.performed += instance.OnEvade;
-            @Evade.canceled += instance.OnEvade;
+            @Accel.started += instance.OnAccel;
+            @Accel.performed += instance.OnAccel;
+            @Accel.canceled += instance.OnAccel;
             @Exit.started += instance.OnExit;
             @Exit.performed += instance.OnExit;
             @Exit.canceled += instance.OnExit;
@@ -2361,9 +2372,9 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
             @Interact_Hold.started -= instance.OnInteract_Hold;
             @Interact_Hold.performed -= instance.OnInteract_Hold;
             @Interact_Hold.canceled -= instance.OnInteract_Hold;
-            @Evade.started -= instance.OnEvade;
-            @Evade.performed -= instance.OnEvade;
-            @Evade.canceled -= instance.OnEvade;
+            @Accel.started -= instance.OnAccel;
+            @Accel.performed -= instance.OnAccel;
+            @Accel.canceled -= instance.OnAccel;
             @Exit.started -= instance.OnExit;
             @Exit.performed -= instance.OnExit;
             @Exit.canceled -= instance.OnExit;
@@ -2913,12 +2924,12 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnInteract_Hold(InputAction.CallbackContext context);
         /// <summary>
-        /// Method invoked when associated input action "Evade" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// Method invoked when associated input action "Accel" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>
         /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
-        void OnEvade(InputAction.CallbackContext context);
+        void OnAccel(InputAction.CallbackContext context);
         /// <summary>
         /// Method invoked when associated input action "Exit" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>

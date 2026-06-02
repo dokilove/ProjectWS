@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.AI; // Required for NavMeshAgent
+using System.Collections; // Required for IEnumerator
 
 public class EnemyAI : MonoBehaviour
 {
@@ -19,6 +20,8 @@ public class EnemyAI : MonoBehaviour
         }
         lastFireTime = -weaponData.fireRate; // Allow immediate firing
     }
+
+    
 
     void Update()
     {
