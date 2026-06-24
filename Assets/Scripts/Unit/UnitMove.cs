@@ -11,6 +11,7 @@ public class UnitMove : MonoBehaviour
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 5f;
     [SerializeField] private float rotationSpeed = 15f;
+    [SerializeField] private float rangedMoveSpeedPenalty = 0.5f; // e.g., 0.5 means 50% speed
 
     [Header("Evade")]
     [SerializeField] private EvadeData evadeData;
@@ -18,14 +19,13 @@ public class UnitMove : MonoBehaviour
     // --- Dependencies ---
     private Unit _unit;
 
-    [Header("Component References")]
-
     // --- State ---
     private Rigidbody rb;
     private int originalLayer;
     private int currentEvadeCharges;
     private float lastEvadeTime;
     private bool isEvading = false;
+    private bool isStrafeMovementEnabled = false; // New state for strafe movement
 
     // --- Public Properties ---
     public EvadeData EvadeData => evadeData;
@@ -54,6 +54,23 @@ public class UnitMove : MonoBehaviour
         HandleEvadeChargeRegen();
     }
 
+    // --- Attack Mode Callbacks ---
+    public void OnEnterRangedMode()
+    {
+        // Apply movement speed penalty
+        moveSpeed *= rangedMoveSpeedPenalty;
+        isStrafeMovementEnabled = true;
+        Debug.Log("UnitMove: Entering Ranged Mode. Speed reduced, strafe enabled.");
+    }
+
+    public void OnEnterMeleeMode()
+    {
+        // Normalize movement speed
+        moveSpeed /= rangedMoveSpeedPenalty; // Revert penalty
+        isStrafeMovementEnabled = false;
+        Debug.Log("UnitMove: Entering Melee Mode. Speed normalized, strafe disabled.");
+    }
+
     /// <summary>
     /// Handles the physics-based movement and rotation of the unit.
     /// This is intended to be called from FixedUpdate.
@@ -67,14 +84,25 @@ public class UnitMove : MonoBehaviour
         rb.angularVelocity = Vector3.zero;
 
         // --- Velocity Calculation ---
-        Vector3 cameraRight = Camera.main.transform.right;
-        Vector3 cameraRightFlat = new Vector3(cameraRight.x, 0, cameraRight.z).normalized;
-        Vector3 cameraForwardFlat = Vector3.Cross(Vector3.up, cameraRightFlat);
-        Vector3 moveForward = -cameraForwardFlat;
-        Vector3 moveRight = cameraRightFlat;
+        Vector3 moveVector;
+        if (isStrafeMovementEnabled)
+        {
+            // Strafe movement: forward/backward relative to aimDirection, strafe left/right relative to aimDirection
+            Vector3 aimRight = Vector3.Cross(Vector3.up, aimDirection).normalized;
+            moveVector = (aimDirection * moveInput.y + aimRight * moveInput.x);
+        }
+        else
+        {
+            // Normal movement: forward/backward relative to camera, strafe left/right relative to camera
+            Vector3 cameraRight = Camera.main.transform.right;
+            Vector3 cameraRightFlat = new Vector3(cameraRight.x, 0, cameraRight.z).normalized;
+            Vector3 cameraForwardFlat = Vector3.Cross(Vector3.up, cameraRightFlat);
+            Vector3 moveForward = -cameraForwardFlat; // Assuming camera is behind, so forward is negative camera forward
+            Vector3 moveRight = cameraRightFlat;
 
-        Vector3 moveVector = (moveForward * moveInput.y + moveRight * moveInput.x);
-        rb.linearVelocity = moveVector * moveSpeed;
+            moveVector = (moveForward * moveInput.y + moveRight * moveInput.x);
+        }
+        rb.linearVelocity = moveVector.normalized * moveSpeed; // Normalize to prevent faster diagonal movement
 
         // --- Body Rotation (Aiming) ---
         if (aimDirection.sqrMagnitude > 0.01f)

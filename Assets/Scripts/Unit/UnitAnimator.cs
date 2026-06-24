@@ -13,6 +13,29 @@ public class UnitAnimator : MonoBehaviour
         _rigidbody = GetComponentInParent<Rigidbody>();
     }
 
+    // --- Attack Mode Callbacks ---
+    public void OnEnterRangedMode()
+    {
+        SetRangedAttackState(true); // Enable shooting animation
+        // TODO: Set animator parameters for ranged movement (e.g., strafing blend tree)
+        Debug.Log("UnitAnimator: Entering Ranged Mode");
+    }
+
+    public void OnEnterMeleeMode()
+    {
+        SetRangedAttackState(false); // Disable shooting animation
+        // TODO: Set animator parameters for melee movement (e.g., normal blend tree)
+        Debug.Log("UnitAnimator: Entering Melee Mode");
+    }
+
+    public void SetRangedAttackState(bool isRanged)
+    {
+        if (_animator != null)
+        {
+            _animator.SetBool("IsRangedAttacking", isRanged);
+        }
+    }
+
     /// <summary>
     /// Sets the movement parameters (Run_x, Run_y) on the Animator.
     /// Should be called from FixedUpdate to align with physics.

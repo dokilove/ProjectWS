@@ -32,6 +32,9 @@ public class UnitInput : MonoBehaviour
     private System.Action<InputAction.CallbackContext> onReloadPerformed;
     private System.Action<InputAction.CallbackContext> onMeleeChargeStarted;
     private System.Action<InputAction.CallbackContext> onMeleeChargeCanceled;
+    private System.Action<InputAction.CallbackContext> onSwitchAttackModeStarted;
+    private System.Action<InputAction.CallbackContext> onSwitchAttackModeCanceled;
+    private System.Action<InputAction.CallbackContext> onMeleeAttackPerformed; // For forced melee switch
 
     /// <summary>
     /// Initializes the Input component with a reference to the central Unit coordinator.
@@ -53,13 +56,30 @@ public class UnitInput : MonoBehaviour
         onEvadePerformed = ctx => _unit.UnitMove.PerformEvade(moveInput);
         onInteractPerformed = ctx => OnInteract(ctx); // Placeholder for now
 
-        onFirePerformed = ctx => _unit.UnitWeaponSystem.HandleFireInput();
-        onFireHoldStarted = ctx => isFireHeld = true;
-        onFireHoldCanceled = ctx => isFireHeld = false;
-        onReloadPerformed = ctx => _unit.UnitWeaponSystem.HandleReloadInput();
+        // Attack Mode specific delegates
+        onFirePerformed = ctx => { if (_unit.CurrentAttackMode == AttackMode.Ranged) _unit.UnitWeaponSystem.HandleFireInput(); };
+        onFireHoldStarted = ctx => { if (_unit.CurrentAttackMode == AttackMode.Ranged) isFireHeld = true; };
+        onFireHoldCanceled = ctx => { if (_unit.CurrentAttackMode == AttackMode.Ranged) isFireHeld = false; };
+        onReloadPerformed = ctx => { _unit.UnitWeaponSystem.HandleReloadInput(); };
 
-        onMeleeChargeStarted = ctx => _unit.UnitMeleeSystem.HandleMeleeChargeInput();
-        onMeleeChargeCanceled = ctx => _unit.UnitMeleeSystem.HandleMeleeChargeReleaseInput();
+        onMeleeChargeStarted = ctx => { if (_unit.CurrentAttackMode == AttackMode.Melee) _unit.UnitMeleeSystem.HandleMeleeChargeInput(); };
+        onMeleeChargeCanceled = ctx => { if (_unit.CurrentAttackMode == AttackMode.Melee) _unit.UnitMeleeSystem.HandleMeleeChargeReleaseInput(); };
+
+        // Mode switching delegates
+        onSwitchAttackModeStarted = ctx => { if (lastUsedInputDevice == InputDeviceType.MouseKeyboard) _unit.SetAttackMode(AttackMode.Ranged); };
+        onSwitchAttackModeCanceled = ctx => { if (lastUsedInputDevice == InputDeviceType.MouseKeyboard) _unit.SetAttackMode(AttackMode.Melee); };
+        onMeleeAttackPerformed = ctx => {
+            // Only allow forced melee switch if Ranged mode input is NOT actively held.
+            if (!_unit.UnitInput.IsRangedModeInputActive)
+            {
+                _unit.SetAttackMode(AttackMode.Melee);
+                _unit.UnitMeleeSystem.HandleMeleeComboInput();
+            }
+            else
+            {
+                Debug.Log("MeleeAttack ignored because Ranged mode input is actively held.");
+            }
+        };
     }
 
     private void UpdateInputDevice(InputControl device)
@@ -85,6 +105,9 @@ public class UnitInput : MonoBehaviour
         playerActions.Player.Reload.performed += onReloadPerformed;
         playerActions.Player.MeleeAttack_Hold.started += onMeleeChargeStarted;
         playerActions.Player.MeleeAttack_Hold.canceled += onMeleeChargeCanceled;
+        playerActions.Player.SwitchAttackMode.started += onSwitchAttackModeStarted;
+        playerActions.Player.SwitchAttackMode.canceled += onSwitchAttackModeCanceled;
+        playerActions.Player.MeleeAttack.performed += onMeleeAttackPerformed;
     }
 
     public void DisableInput()
@@ -105,6 +128,9 @@ public class UnitInput : MonoBehaviour
         playerActions.Player.Reload.performed -= onReloadPerformed;
         playerActions.Player.MeleeAttack_Hold.started -= onMeleeChargeStarted;
         playerActions.Player.MeleeAttack_Hold.canceled -= onMeleeChargeCanceled;
+        playerActions.Player.SwitchAttackMode.started -= onSwitchAttackModeStarted;
+        playerActions.Player.SwitchAttackMode.canceled -= onSwitchAttackModeCanceled;
+        playerActions.Player.MeleeAttack.performed -= onMeleeAttackPerformed;
 
         // Reset state
         moveInput = Vector2.zero;
@@ -118,6 +144,19 @@ public class UnitInput : MonoBehaviour
 
         HandleAiming();
         _unit.UnitWeaponSystem.HandleFireHold(isFireHeld);
+
+        // Gamepad Ranged Mode Switching
+        if (lastUsedInputDevice == InputDeviceType.Gamepad)
+        {
+            if (lookInput.sqrMagnitude > 0.1f * 0.1f) // Deadzone check
+            {
+                _unit.SetAttackMode(AttackMode.Ranged);
+            }
+            else
+            {
+                _unit.SetAttackMode(AttackMode.Melee);
+            }
+        }
     }
 
     private void FixedUpdate()
@@ -166,5 +205,34 @@ public class UnitInput : MonoBehaviour
     {
         // This can be expanded to find the closest interactable object
         Debug.Log("Unit Interact button pressed!");
+    }
+
+    /// <summary>
+    /// Checks if the input for Ranged Mode (SwitchAttackMode or Look stick) is currently active.
+    /// </summary>
+    public bool IsRangedModeInputActive
+    {
+        get
+        {
+            if (lastUsedInputDevice == InputDeviceType.MouseKeyboard)
+            {
+                return playerActions.Player.SwitchAttackMode.IsPressed();
+            }
+            else if (lastUsedInputDevice == InputDeviceType.Gamepad)
+            {
+                return playerActions.Player.Look.ReadValue<Vector2>().sqrMagnitude > 0.1f * 0.1f;
+            }
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Resets any active hold states for fire and melee charge.
+    /// Called by Unit when the attack mode changes.
+    /// </summary>
+    public void ResetHoldStates()
+    {
+        isFireHeld = false;
+        _unit.UnitMeleeSystem.CancelCharge();
     }
 }

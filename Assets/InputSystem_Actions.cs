@@ -199,6 +199,15 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""SwitchAttackMode"",
+                    ""type"": ""Button"",
+                    ""id"": ""bf947a3f-0ebc-4789-ac4b-9a0b535b278a"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -446,17 +455,6 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                 },
                 {
                     ""name"": """",
-                    ""id"": ""58e1b631-eb86-4ef1-819d-ebc10bacd1a1"",
-                    ""path"": ""<Mouse>/rightButton"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""Evade"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
                     ""id"": ""04eea73d-1e8a-46bf-b8c4-d705a0840432"",
                     ""path"": ""<Keyboard>/leftShift"",
                     ""interactions"": """",
@@ -589,17 +587,6 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                 },
                 {
                     ""name"": """",
-                    ""id"": ""32f3bb06-c507-48ee-90bd-84902c903bce"",
-                    ""path"": ""<Keyboard>/e"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""MeleeAttack"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
                     ""id"": ""273062ba-2ba7-40e1-9f7a-199756954720"",
                     ""path"": ""<Gamepad>/buttonWest"",
                     ""interactions"": """",
@@ -611,12 +598,12 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                 },
                 {
                     ""name"": """",
-                    ""id"": ""96693160-9b33-4797-990e-6ecced82db06"",
-                    ""path"": ""<Keyboard>/e"",
-                    ""interactions"": ""Hold"",
+                    ""id"": ""9edf611b-ae77-48d4-9c60-7f7b7e79f83f"",
+                    ""path"": ""<Mouse>/leftButton"",
+                    ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
-                    ""action"": ""MeleeAttack_Hold"",
+                    ""action"": ""MeleeAttack"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -628,6 +615,28 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""groups"": """",
                     ""action"": ""MeleeAttack_Hold"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""e40d0597-a432-4873-a9ed-bc51cf90e2b5"",
+                    ""path"": ""<Mouse>/leftButton"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""MeleeAttack_Hold"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""20354cf6-a50e-41ef-b292-3e44e38d0897"",
+                    ""path"": ""<Mouse>/rightButton"",
+                    ""interactions"": ""Hold"",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""SwitchAttackMode"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }
@@ -1864,6 +1873,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         m_Player_MousePosition = m_Player.FindAction("MousePosition", throwIfNotFound: true);
         m_Player_MeleeAttack = m_Player.FindAction("MeleeAttack", throwIfNotFound: true);
         m_Player_MeleeAttack_Hold = m_Player.FindAction("MeleeAttack_Hold", throwIfNotFound: true);
+        m_Player_SwitchAttackMode = m_Player.FindAction("SwitchAttackMode", throwIfNotFound: true);
         // Vehicle
         m_Vehicle = asset.FindActionMap("Vehicle", throwIfNotFound: true);
         m_Vehicle_Move = m_Vehicle.FindAction("Move", throwIfNotFound: true);
@@ -1989,6 +1999,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
     private readonly InputAction m_Player_MousePosition;
     private readonly InputAction m_Player_MeleeAttack;
     private readonly InputAction m_Player_MeleeAttack_Hold;
+    private readonly InputAction m_Player_SwitchAttackMode;
     /// <summary>
     /// Provides access to input actions defined in input action map "Player".
     /// </summary>
@@ -2048,6 +2059,10 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// Provides access to the underlying input action "Player/MeleeAttack_Hold".
         /// </summary>
         public InputAction @MeleeAttack_Hold => m_Wrapper.m_Player_MeleeAttack_Hold;
+        /// <summary>
+        /// Provides access to the underlying input action "Player/SwitchAttackMode".
+        /// </summary>
+        public InputAction @SwitchAttackMode => m_Wrapper.m_Player_SwitchAttackMode;
         /// <summary>
         /// Provides access to the underlying input action map instance.
         /// </summary>
@@ -2110,6 +2125,9 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
             @MeleeAttack_Hold.started += instance.OnMeleeAttack_Hold;
             @MeleeAttack_Hold.performed += instance.OnMeleeAttack_Hold;
             @MeleeAttack_Hold.canceled += instance.OnMeleeAttack_Hold;
+            @SwitchAttackMode.started += instance.OnSwitchAttackMode;
+            @SwitchAttackMode.performed += instance.OnSwitchAttackMode;
+            @SwitchAttackMode.canceled += instance.OnSwitchAttackMode;
         }
 
         /// <summary>
@@ -2157,6 +2175,9 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
             @MeleeAttack_Hold.started -= instance.OnMeleeAttack_Hold;
             @MeleeAttack_Hold.performed -= instance.OnMeleeAttack_Hold;
             @MeleeAttack_Hold.canceled -= instance.OnMeleeAttack_Hold;
+            @SwitchAttackMode.started -= instance.OnSwitchAttackMode;
+            @SwitchAttackMode.performed -= instance.OnSwitchAttackMode;
+            @SwitchAttackMode.canceled -= instance.OnSwitchAttackMode;
         }
 
         /// <summary>
@@ -2865,6 +2886,13 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnMeleeAttack_Hold(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "SwitchAttackMode" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnSwitchAttackMode(InputAction.CallbackContext context);
     }
     /// <summary>
     /// Interface to implement callback methods for all input action callbacks associated with input actions defined by "Vehicle" which allows adding and removing callbacks.

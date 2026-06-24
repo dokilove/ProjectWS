@@ -30,6 +30,9 @@ public class PlayerWorldSpaceUIController : MonoBehaviour
     private VisualElement meleeChargeContainer;
     private ProgressBar meleeChargeProgressBar;
 
+    // Attack Mode UI Elements
+    private Label attackModeLabel;
+
     private Camera mainCamera;
 
     private void Awake()
@@ -61,6 +64,9 @@ public class PlayerWorldSpaceUIController : MonoBehaviour
         meleeChargeContainer = root.Q<VisualElement>("melee-charge-container");
         meleeChargeProgressBar = root.Q<ProgressBar>("melee-charge-progressbar");
 
+        // Query Attack Mode UI Elements
+        attackModeLabel = root.Q<Label>("attack-mode-label");
+
 
         // Find the player unit and its components
         playerUnit = GetComponentInParent<Unit>(); 
@@ -77,6 +83,7 @@ public class PlayerWorldSpaceUIController : MonoBehaviour
             {
                 playerMeleeSystem.OnChargeProgressChanged += UpdateMeleeChargeUI;
             }
+            playerUnit.OnAttackModeChanged += UpdateAttackModeUI;
         }
 
         if (evadeData == null)
@@ -91,12 +98,17 @@ public class PlayerWorldSpaceUIController : MonoBehaviour
         {
             Debug.LogWarning("UnitMeleeSystem not found on playerUnit. Melee Charge UI will not function.");
         }
+        if (playerUnit == null)
+        {
+            Debug.LogWarning("Player Unit not found. Attack Mode UI will not function.");
+        }
 
 
         // Initialize evade charge icons
         if(evadeData != null) CreateChargeIcons();
         UpdateUI(); // Initial update
         UpdateMeleeChargeUI(0); // Initial hide
+        if (playerUnit != null) UpdateAttackModeUI(playerUnit.CurrentAttackMode); // Initial mode display
     }
 
     private void OnDisable()
@@ -104,6 +116,10 @@ public class PlayerWorldSpaceUIController : MonoBehaviour
         if (playerMeleeSystem != null)
         {
             playerMeleeSystem.OnChargeProgressChanged -= UpdateMeleeChargeUI;
+        }
+        if (playerUnit != null)
+        {
+            playerUnit.OnAttackModeChanged -= UpdateAttackModeUI;
         }
     }
 
@@ -132,6 +148,12 @@ public class PlayerWorldSpaceUIController : MonoBehaviour
         {
             meleeChargeContainer.style.display = DisplayStyle.None;
         }
+    }
+
+    private void UpdateAttackModeUI(AttackMode mode)
+    {
+        if (attackModeLabel == null) return;
+        attackModeLabel.text = mode.ToString() + " Mode";
     }
 
     private void UpdateUI()

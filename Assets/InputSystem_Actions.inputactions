@@ -113,6 +113,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "SwitchAttackMode",
+                    "type": "Button",
+                    "id": "bf947a3f-0ebc-4789-ac4b-9a0b535b278a",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -360,17 +369,6 @@
                 },
                 {
                     "name": "",
-                    "id": "58e1b631-eb86-4ef1-819d-ebc10bacd1a1",
-                    "path": "<Mouse>/rightButton",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "",
-                    "action": "Evade",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
                     "id": "04eea73d-1e8a-46bf-b8c4-d705a0840432",
                     "path": "<Keyboard>/leftShift",
                     "interactions": "",
@@ -503,17 +501,6 @@
                 },
                 {
                     "name": "",
-                    "id": "32f3bb06-c507-48ee-90bd-84902c903bce",
-                    "path": "<Keyboard>/e",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "",
-                    "action": "MeleeAttack",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
                     "id": "273062ba-2ba7-40e1-9f7a-199756954720",
                     "path": "<Gamepad>/buttonWest",
                     "interactions": "",
@@ -525,12 +512,12 @@
                 },
                 {
                     "name": "",
-                    "id": "96693160-9b33-4797-990e-6ecced82db06",
-                    "path": "<Keyboard>/e",
-                    "interactions": "Hold",
+                    "id": "9edf611b-ae77-48d4-9c60-7f7b7e79f83f",
+                    "path": "<Mouse>/leftButton",
+                    "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "MeleeAttack_Hold",
+                    "action": "MeleeAttack",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -542,6 +529,28 @@
                     "processors": "",
                     "groups": "",
                     "action": "MeleeAttack_Hold",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "e40d0597-a432-4873-a9ed-bc51cf90e2b5",
+                    "path": "<Mouse>/leftButton",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "MeleeAttack_Hold",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "20354cf6-a50e-41ef-b292-3e44e38d0897",
+                    "path": "<Mouse>/rightButton",
+                    "interactions": "Hold",
+                    "processors": "",
+                    "groups": "",
+                    "action": "SwitchAttackMode",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

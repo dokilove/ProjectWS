@@ -1,4 +1,12 @@
+using System;
 using UnityEngine;
+
+// Enum to define the attack modes
+public enum AttackMode
+{
+    Melee,
+    Ranged
+}
 
 // This script acts as the central coordinator for all Unit components.
 // It holds references to the other components and handles the high-level logic
@@ -29,6 +37,11 @@ public class Unit : MonoBehaviour
 
     public bool IsControlledByPlayer { get; private set; } = false;
 
+    // --- Attack Mode State ---
+    public AttackMode CurrentAttackMode { get; private set; } = AttackMode.Melee;
+    public event Action<AttackMode> OnAttackModeChanged;
+
+
     private void Awake()
     {
         // Get all the components on this GameObject
@@ -55,6 +68,35 @@ public class Unit : MonoBehaviour
         UnitWeaponSystem.Init(this);
         UnitMeleeSystem.Init(this);
         UnitVisuals.Init(this);
+    }
+
+    /// <summary>
+    /// Sets the current attack mode and triggers associated logic in other components.
+    /// </summary>
+    public void SetAttackMode(AttackMode newMode)
+    {
+        if (CurrentAttackMode == newMode) return; // No change needed
+
+        CurrentAttackMode = newMode;
+        Debug.Log($"Attack mode switched to: {CurrentAttackMode}");
+        OnAttackModeChanged?.Invoke(CurrentAttackMode);
+
+        // Reset any active hold states in UnitInput when mode changes
+        UnitInput.ResetHoldStates();
+
+        // Trigger mode-specific logic in other components
+        if (CurrentAttackMode == AttackMode.Ranged)
+        {
+            UnitWeaponSystem.OnEnterRangedMode();
+            UnitMove.OnEnterRangedMode();
+            UnitAnimator.OnEnterRangedMode();
+        }
+        else // Melee Mode
+        {
+            UnitWeaponSystem.OnEnterMeleeMode();
+            UnitMove.OnEnterMeleeMode();
+            UnitAnimator.OnEnterMeleeMode();
+        }
     }
 
     public void TakeDamage(float amount)

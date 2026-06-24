@@ -7,6 +7,7 @@ public class UnitWeaponSystem : MonoBehaviour
     [Header("Components")]
     [SerializeField] private Transform turretTransform;
     [SerializeField] private Transform firePoint;
+    [SerializeField] private GameObject pistolModel; // Reference to the pistol GameObject
 
     [Header("Data")]
     [SerializeField] private WeaponData weaponData;
@@ -57,6 +58,33 @@ public class UnitWeaponSystem : MonoBehaviour
                 projectilePool.Add(proj);
             }
         }
+        
+        // Initial state: Melee mode, so hide pistol
+        if (pistolModel != null)
+        {
+            pistolModel.SetActive(false);
+        }
+    }
+
+    // --- Attack Mode Callbacks ---
+    public void OnEnterRangedMode()
+    {
+        if (pistolModel != null)
+        {
+            pistolModel.SetActive(true);
+        }
+        _unit.UnitAnimator.SetRangedAttackState(true); // Enable shooting animation
+        Debug.Log("UnitWeaponSystem: Entering Ranged Mode");
+    }
+
+    public void OnEnterMeleeMode()
+    {
+        if (pistolModel != null)
+        {
+            pistolModel.SetActive(false);
+        }
+        _unit.UnitAnimator.SetRangedAttackState(false); // Disable shooting animation
+        Debug.Log("UnitWeaponSystem: Entering Melee Mode");
     }
 
     /// <summary>

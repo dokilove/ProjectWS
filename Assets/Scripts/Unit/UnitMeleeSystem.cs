@@ -129,6 +129,20 @@ public class UnitMeleeSystem : MonoBehaviour
     }
 
     /// <summary>
+    /// Cancels any ongoing melee charge.
+    /// </summary>
+    public void CancelCharge()
+    {
+        if (isMeleeChargePrimed)
+        {
+            isMeleeChargePrimed = false;
+            chargeStartTime = 0f;
+            OnChargeProgressChanged?.Invoke(0f); // Reset UI
+            Debug.Log("Melee charge canceled.");
+        }
+    }
+
+    /// <summary>
     /// Handles the release of a charge attack. Performs charge or combo attack based on hold duration.
     /// </summary>
     public void HandleMeleeChargeReleaseInput()
@@ -168,9 +182,7 @@ public class UnitMeleeSystem : MonoBehaviour
         }
         
         // Reset charge-specific state regardless of the outcome.
-        isMeleeChargePrimed = false;
-        chargeStartTime = 0f;
-        OnChargeProgressChanged?.Invoke(0f); // Reset UI
+        CancelCharge();
     }
 
     private void PerformMeleeAttack(float radius, float angle, float damage)
