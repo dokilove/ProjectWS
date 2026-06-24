@@ -175,11 +175,20 @@ public class UnitInput : MonoBehaviour
 
     private void HandleAiming()
     {
+        // In Melee mode, auto-aim is persistent if a target is found.
+        // In Ranged mode, aiming is always player-controlled.
+
         if (_unit.CurrentAttackMode == AttackMode.Melee)
         {
-            // In Melee mode, aim direction is based on move input
-            if (moveInput.sqrMagnitude > 0.01f)
+            // If an auto-aim target is present, prioritize it for aimDirection
+            if (_unit.UnitMeleeSystem.AutoAimTargetPosition != Vector3.zero)
             {
+                aimDirection = (_unit.UnitMeleeSystem.AutoAimTargetPosition - transform.position).normalized;
+                _unit.UnitMove.RotateTowards(_unit.UnitMeleeSystem.AutoAimTargetPosition); // Ensure player body rotates
+            }
+            else if (moveInput.sqrMagnitude > 0.01f)
+            {
+                // If no auto-aim target, aim direction is based on move input
                 Vector3 cameraRight = Camera.main.transform.right;
                 Vector3 cameraRightFlat = new Vector3(cameraRight.x, 0, cameraRight.z).normalized;
                 Vector3 cameraForwardFlat = Vector3.Cross(Vector3.up, cameraRightFlat);
@@ -191,7 +200,7 @@ public class UnitInput : MonoBehaviour
             }
             else
             {
-                // If no move input, maintain current forward direction
+                // If no move input and no auto-aim target, maintain current forward direction
                 aimDirection = transform.forward;
             }
         }

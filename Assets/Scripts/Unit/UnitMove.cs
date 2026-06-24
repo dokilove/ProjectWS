@@ -28,11 +28,13 @@ public class UnitMove : MonoBehaviour
     private bool isStrafeMovementEnabled = false; // New state for strafe movement
     private float baseMoveSpeed; // Stores the initial moveSpeed from Inspector
     private float currentEffectiveMoveSpeed; // The speed currently used for movement
+    private bool isAutoAiming = false; // New flag to indicate if auto-aim is active
 
     // --- Public Properties ---
     public EvadeData EvadeData => evadeData;
     public int CurrentEvadeCharges => currentEvadeCharges;
     public float LastEvadeTime => lastEvadeTime;
+    public bool IsAutoAiming => isAutoAiming; // Public getter for the flag
 
     public void Init(Unit unit)
     {
@@ -77,6 +79,39 @@ public class UnitMove : MonoBehaviour
     }
 
     /// <summary>
+    /// Rotates the unit to face a specific target position.
+    /// </summary>
+    /// <param name="targetPosition">The world position to face.</param>
+    public void RotateTowards(Vector3 targetPosition)
+    {
+        isAutoAiming = true; // Set flag when auto-aiming
+        Vector3 directionToTarget = (targetPosition - transform.position).normalized;
+        directionToTarget.y = 0; // Keep rotation on XZ plane
+
+        if (directionToTarget.sqrMagnitude > 0.01f)
+        {
+            Quaternion targetRotation = Quaternion.LookRotation(directionToTarget);
+            rb.rotation = targetRotation; // Instantaneous rotation
+        }
+    }
+
+    /// <summary>
+    /// Resets the auto-aiming flag.
+    /// </summary>
+    public void ResetAutoAim()
+    {
+        isAutoAiming = false;
+    }
+
+    /// <summary>
+    /// Sets the auto-aiming flag.
+    /// </summary>
+    public void SetIsAutoAiming(bool value)
+    {
+        isAutoAiming = value;
+    }
+
+    /// <summary>
     /// Handles the physics-based movement and rotation of the unit.
     /// This is intended to be called from FixedUpdate.
     /// </summary>
@@ -90,30 +125,16 @@ public class UnitMove : MonoBehaviour
 
         // --- Velocity Calculation ---
         Vector3 moveVector;
-        // Determine movement basis based on attack mode
-        if (_unit.CurrentAttackMode == AttackMode.Ranged)
-        {
-            // Camera-relative movement for Ranged mode
-            Vector3 forward = Camera.main.transform.forward;
-            Vector3 right = Camera.main.transform.right;
-            forward.y = 0; // Keep movement on XZ plane
-            right.y = 0; // Keep movement on XZ plane
-            forward.Normalize();
-            right.Normalize();
+        // Always use camera-relative movement
+        Vector3 forward = Camera.main.transform.forward;
+        Vector3 right = Camera.main.transform.right;
+        forward.y = 0; // Keep movement on XZ plane
+        right.y = 0; // Keep movement on XZ plane
+        forward.Normalize();
+        right.Normalize();
 
-            moveVector = (forward * moveInput.y + right * moveInput.x);
-        }
-        else // Melee Mode (or default)
-        {
-            // Normal movement: forward/backward relative to camera, strafe left/right relative to camera
-            Vector3 cameraRight = Camera.main.transform.right;
-            Vector3 cameraRightFlat = new Vector3(cameraRight.x, 0, cameraRight.z).normalized;
-            Vector3 cameraForwardFlat = Vector3.Cross(Vector3.up, cameraRightFlat);
-            Vector3 moveForward = -cameraForwardFlat; // Assuming camera is behind, so forward is negative camera forward
-            Vector3 moveRight = cameraRightFlat;
-
-            moveVector = (moveForward * moveInput.y + moveRight * moveInput.x);
-        }
+        moveVector = (forward * moveInput.y + right * moveInput.x);
+        
         rb.linearVelocity = moveVector.normalized * currentEffectiveMoveSpeed; // Use currentEffectiveMoveSpeed
 
         // --- Body Rotation (Aiming) ---

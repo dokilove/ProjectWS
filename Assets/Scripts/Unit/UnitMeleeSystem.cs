@@ -20,6 +20,7 @@ public class UnitMeleeSystem : MonoBehaviour
     private float lastMeleeTime = -1f;
     private bool isMeleeChargePrimed = false;
     private float chargeStartTime = 0f;
+    public Vector3 AutoAimTargetPosition { get; private set; } = Vector3.zero; // New property to store auto-aim target
 
     // --- Events ---
     public event Action<float> OnChargeProgressChanged;
@@ -47,6 +48,10 @@ public class UnitMeleeSystem : MonoBehaviour
     {
         HandleComboTimeout();
         HandleChargeProgress();
+        if (_unit.CurrentAttackMode == AttackMode.Melee)
+        {
+            PerformAutoAim(); // Continuously find target in Melee mode
+        }
     }
 
     private void HandleChargeProgress()
@@ -97,6 +102,9 @@ public class UnitMeleeSystem : MonoBehaviour
     {
         if (_meleeData == null) return;
 
+        // Auto-aim before attack
+        PerformAutoAim();
+
         comboCounter++;
         
         if (comboCounter > _meleeData.comboDamages.Count)
@@ -133,6 +141,47 @@ public class UnitMeleeSystem : MonoBehaviour
         if (_meleeData == null) return;
         isMeleeChargePrimed = true;
         chargeStartTime = Time.time;
+
+        // Auto-aim before charge
+        PerformAutoAim();
+    }
+
+    /// <summary>
+    /// Finds the closest enemy within the melee lock-on radius and rotates the player towards it.
+    /// </summary>
+    private void PerformAutoAim()
+    {
+        if (_meleeData == null || _meleeData.meleeLockOnRadius <= 0)
+        {
+            _unit.UnitMove.SetIsAutoAiming(false); // Ensure flag is reset if conditions not met
+            AutoAimTargetPosition = Vector3.zero;
+            return;
+        }
+
+        Collider[] hitColliders = Physics.OverlapSphere(transform.position, _meleeData.meleeLockOnRadius, enemyLayerMask);
+        Transform closestEnemy = null;
+        float minDistance = Mathf.Infinity;
+
+        foreach (Collider hit in hitColliders)
+        {
+            float distance = Vector3.Distance(transform.position, hit.transform.position);
+            if (distance < minDistance)
+            {
+                minDistance = distance;
+                closestEnemy = hit.transform;
+            }
+        }
+
+        if (closestEnemy != null)
+        {
+            AutoAimTargetPosition = closestEnemy.position; // Store the target position
+            _unit.UnitMove.SetIsAutoAiming(true); // Inform UnitMove that auto-aim is active
+        }
+        else
+        {
+            AutoAimTargetPosition = Vector3.zero; // No target, reset
+            _unit.UnitMove.SetIsAutoAiming(false); // Inform UnitMove that auto-aim is not active
+        }
     }
 
     /// <summary>
@@ -145,6 +194,7 @@ public class UnitMeleeSystem : MonoBehaviour
             isMeleeChargePrimed = false;
             chargeStartTime = 0f;
             OnChargeProgressChanged?.Invoke(0f); // Reset UI
+            AutoAimTargetPosition = Vector3.zero; // Reset auto-aim target
             Debug.Log("Melee charge canceled.");
         }
     }
