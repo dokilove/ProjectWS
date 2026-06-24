@@ -70,19 +70,26 @@ public class Unit : MonoBehaviour
         UnitVisuals.Init(this);
     }
 
+    private void Start()
+    {
+        // Set initial attack mode after all components are initialized and started
+        SetAttackMode(CurrentAttackMode);
+    }
+
     /// <summary>
     /// Sets the current attack mode and triggers associated logic in other components.
     /// </summary>
     public void SetAttackMode(AttackMode newMode)
     {
-        if (CurrentAttackMode == newMode) return; // No change needed
-
+        AttackMode previousMode = CurrentAttackMode;
         CurrentAttackMode = newMode;
-        Debug.Log($"Attack mode switched to: {CurrentAttackMode}");
-        OnAttackModeChanged?.Invoke(CurrentAttackMode);
 
-        // Reset any active hold states in UnitInput when mode changes
-        UnitInput.ResetHoldStates();
+        if (previousMode != newMode)
+        {
+            OnAttackModeChanged?.Invoke(CurrentAttackMode);
+            // Reset any active hold states in UnitInput when mode changes
+            UnitInput.ResetHoldStates();
+        }
 
         // Trigger mode-specific logic in other components
         if (CurrentAttackMode == AttackMode.Ranged)
@@ -90,12 +97,14 @@ public class Unit : MonoBehaviour
             UnitWeaponSystem.OnEnterRangedMode();
             UnitMove.OnEnterRangedMode();
             UnitAnimator.OnEnterRangedMode();
+            UnitVisuals.OnEnterRangedMode();
         }
         else // Melee Mode
         {
             UnitWeaponSystem.OnEnterMeleeMode();
             UnitMove.OnEnterMeleeMode();
             UnitAnimator.OnEnterMeleeMode();
+            UnitVisuals.OnEnterMeleeMode();
         }
     }
 

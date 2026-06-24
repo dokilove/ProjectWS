@@ -9,7 +9,7 @@ using System.Collections;
 public class UnitMove : MonoBehaviour
 {
     [Header("Movement")]
-    [SerializeField] private float moveSpeed = 5f;
+    [SerializeField] private float moveSpeed = 5f; // Base move speed from Inspector
     [SerializeField] private float rotationSpeed = 15f;
     [SerializeField] private float rangedMoveSpeedPenalty = 0.5f; // e.g., 0.5 means 50% speed
 
@@ -26,6 +26,8 @@ public class UnitMove : MonoBehaviour
     private float lastEvadeTime;
     private bool isEvading = false;
     private bool isStrafeMovementEnabled = false; // New state for strafe movement
+    private float baseMoveSpeed; // Stores the initial moveSpeed from Inspector
+    private float currentEffectiveMoveSpeed; // The speed currently used for movement
 
     // --- Public Properties ---
     public EvadeData EvadeData => evadeData;
@@ -47,6 +49,9 @@ public class UnitMove : MonoBehaviour
             currentEvadeCharges = evadeData.maxEvadeCharges;
         }
         lastEvadeTime = -evadeData.evadeChargeRegenTime; // Start with full charges
+
+        baseMoveSpeed = moveSpeed; // Store the initial Inspector value
+        currentEffectiveMoveSpeed = baseMoveSpeed; // Start with base speed
     }
 
     private void Update()
@@ -58,7 +63,7 @@ public class UnitMove : MonoBehaviour
     public void OnEnterRangedMode()
     {
         // Apply movement speed penalty
-        moveSpeed *= rangedMoveSpeedPenalty;
+        currentEffectiveMoveSpeed = baseMoveSpeed * rangedMoveSpeedPenalty;
         isStrafeMovementEnabled = true;
         Debug.Log("UnitMove: Entering Ranged Mode. Speed reduced, strafe enabled.");
     }
@@ -66,7 +71,7 @@ public class UnitMove : MonoBehaviour
     public void OnEnterMeleeMode()
     {
         // Normalize movement speed
-        moveSpeed /= rangedMoveSpeedPenalty; // Revert penalty
+        currentEffectiveMoveSpeed = baseMoveSpeed; // Revert to base speed
         isStrafeMovementEnabled = false;
         Debug.Log("UnitMove: Entering Melee Mode. Speed normalized, strafe disabled.");
     }
@@ -85,13 +90,20 @@ public class UnitMove : MonoBehaviour
 
         // --- Velocity Calculation ---
         Vector3 moveVector;
-        if (isStrafeMovementEnabled)
+        // Determine movement basis based on attack mode
+        if (_unit.CurrentAttackMode == AttackMode.Ranged)
         {
-            // Strafe movement: forward/backward relative to aimDirection, strafe left/right relative to aimDirection
-            Vector3 aimRight = Vector3.Cross(Vector3.up, aimDirection).normalized;
-            moveVector = (aimDirection * moveInput.y + aimRight * moveInput.x);
+            // Camera-relative movement for Ranged mode
+            Vector3 forward = Camera.main.transform.forward;
+            Vector3 right = Camera.main.transform.right;
+            forward.y = 0; // Keep movement on XZ plane
+            right.y = 0; // Keep movement on XZ plane
+            forward.Normalize();
+            right.Normalize();
+
+            moveVector = (forward * moveInput.y + right * moveInput.x);
         }
-        else
+        else // Melee Mode (or default)
         {
             // Normal movement: forward/backward relative to camera, strafe left/right relative to camera
             Vector3 cameraRight = Camera.main.transform.right;
@@ -102,7 +114,7 @@ public class UnitMove : MonoBehaviour
 
             moveVector = (moveForward * moveInput.y + moveRight * moveInput.x);
         }
-        rb.linearVelocity = moveVector.normalized * moveSpeed; // Normalize to prevent faster diagonal movement
+        rb.linearVelocity = moveVector.normalized * currentEffectiveMoveSpeed; // Use currentEffectiveMoveSpeed
 
         // --- Body Rotation (Aiming) ---
         if (aimDirection.sqrMagnitude > 0.01f)

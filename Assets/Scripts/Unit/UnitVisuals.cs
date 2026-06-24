@@ -30,7 +30,7 @@ public class UnitVisuals : MonoBehaviour
         {
             radiusVisualizer.startWidth = 0.1f;
             radiusVisualizer.endWidth = 0.1f;
-            radiusVisualizer.enabled = true;
+            radiusVisualizer.enabled = false; // Set to false initially
         }
 
         if (targetLineRenderer != null)
@@ -50,15 +50,28 @@ public class UnitVisuals : MonoBehaviour
         {
             meleeRangeVisualizer.SetActive(false);
         }
+        if (spreadAngleVisualizer != null)
+        {
+            spreadAngleVisualizer.SetActive(false); // Ensure it's off by default
+        }
     }
 
     private void Start()
     {
-        // These depend on WeaponData, so we get it from the weapon system
+        // Initial setup for evade trail
+        if (evadeTrailRenderer != null && _unit.UnitMove.EvadeData != null)
+        {
+            evadeTrailRenderer.time = _unit.UnitMove.EvadeData.dodgeDuration + _unit.UnitMove.EvadeData.trailOffset;
+        }
+    }
+
+    // --- Attack Mode Callbacks ---
+    public void OnEnterRangedMode()
+    {
         var weaponData = _unit.UnitWeaponSystem.WeaponData;
         if (weaponData != null)
         {
-            UpdateLockOnRadiusVisualizer(weaponData.lockOnRadius);
+            UpdateRadiusVisualizerBasedOnMode(); // Update radius visualizer for ranged
             if (attackRangeVisualizer != null)
             {
                 attackRangeVisualizer.GenerateMesh(weaponData.attackAngle, weaponData.lockOnRadius);
@@ -72,7 +85,7 @@ public class UnitVisuals : MonoBehaviour
                     spreadAngleVisualizer.GenerateMesh(weaponData.spreadAngle, weaponData.lockOnRadius);
                     spreadAngleVisualizer.SetColor(new Color(1f, 0.5f, 0f, 0.15f));
                     spreadAngleVisualizer.SetActive(true);
-                    spreadAngleVisualizer.transform.SetParent(_unit.UnitWeaponSystem.transform); // Or a specific turret transform
+                    spreadAngleVisualizer.transform.SetParent(_unit.UnitWeaponSystem.TurretTransform); // Use TurretTransform for correct rotation
                     spreadAngleVisualizer.transform.localPosition = Vector3.zero;
                     spreadAngleVisualizer.transform.localRotation = Quaternion.identity;
                 }
@@ -82,10 +95,60 @@ public class UnitVisuals : MonoBehaviour
                 }
             }
         }
+        // Ensure target line is active in ranged mode
+        SetAimLineActive(true);
+    }
 
-        if (evadeTrailRenderer != null && _unit.UnitMove.EvadeData != null)
+    public void OnEnterMeleeMode()
+    {
+        var meleeData = _unit.UnitMeleeSystem.MeleeData;
+        if (meleeData != null)
         {
-            evadeTrailRenderer.time = _unit.UnitMove.EvadeData.dodgeDuration + _unit.UnitMove.EvadeData.trailOffset;
+            UpdateRadiusVisualizerBasedOnMode(); // Update radius visualizer for melee
+        }
+        else
+        {
+            // If no melee data, just disable the radius visualizer
+            if (radiusVisualizer != null) radiusVisualizer.enabled = false;
+        }
+
+        if (spreadAngleVisualizer != null)
+        {
+            spreadAngleVisualizer.SetActive(false);
+        }
+        if (attackRangeVisualizer != null)
+        {
+            attackRangeVisualizer.SetActive(false);
+        }
+        // Ensure target line is inactive in melee mode
+        SetAimLineActive(false);
+    }
+
+    /// <summary>
+    /// Updates the main lock-on radius visualizer based on the current attack mode.
+    /// </summary>
+    private void UpdateRadiusVisualizerBasedOnMode()
+    {
+        if (radiusVisualizer == null) return;
+
+        float currentRadius = 0f;
+        if (_unit.CurrentAttackMode == AttackMode.Ranged && _unit.UnitWeaponSystem.WeaponData != null)
+        {
+            currentRadius = _unit.UnitWeaponSystem.WeaponData.lockOnRadius;
+        }
+        else if (_unit.CurrentAttackMode == AttackMode.Melee && _unit.UnitMeleeSystem.MeleeData != null)
+        {
+            currentRadius = _unit.UnitMeleeSystem.MeleeData.meleeLockOnRadius;
+        }
+
+        if (currentRadius > 0)
+        {
+            UpdateLockOnRadiusVisualizer(currentRadius);
+            radiusVisualizer.enabled = true;
+        }
+        else
+        {
+            radiusVisualizer.enabled = false;
         }
     }
 
@@ -93,10 +156,20 @@ public class UnitVisuals : MonoBehaviour
     {
         if (_unit.IsControlledByPlayer)
         {
-            var weaponSystem = _unit.UnitWeaponSystem;
-            if (weaponSystem != null && weaponSystem.WeaponData != null)
+            // Update aim line based on current mode
+            if (_unit.CurrentAttackMode == AttackMode.Ranged)
             {
-                UpdateAimLine(weaponSystem.FirePoint.position, weaponSystem.TurretTransform.forward, weaponSystem.WeaponData.lockOnRadius);
+                var weaponSystem = _unit.UnitWeaponSystem;
+                if (weaponSystem != null && weaponSystem.WeaponData != null)
+                {
+                    UpdateAimLine(weaponSystem.FirePoint.position, weaponSystem.TurretTransform.forward, weaponSystem.WeaponData.lockOnRadius);
+                }
+            }
+            else // Melee Mode
+            {
+                // In melee mode, aim line might not be needed or could use meleeLockOnRadius
+                // For now, let's keep it simple and disable it if not explicitly needed.
+                SetAimLineActive(false);
             }
         }
         else

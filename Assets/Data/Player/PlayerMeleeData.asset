@@ -31,4 +31,5 @@ MonoBehaviour:
   - 0.7
   - 0.5
   - 0.5
-  chargeTimeThreshold: 2
+  chargeTimeThreshold: 1
+  meleeLockOnRadius: 6

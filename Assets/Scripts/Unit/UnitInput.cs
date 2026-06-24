@@ -17,6 +17,11 @@ public class UnitInput : MonoBehaviour
     private enum InputDeviceType { None, Gamepad, MouseKeyboard }
     private InputDeviceType lastUsedInputDevice = InputDeviceType.None;
 
+    private void Awake()
+    {
+        lookInput = Vector2.zero; // Ensure lookInput is zero at start
+    }
+
     // --- Input Action Delegates ---
     private System.Action<InputAction.CallbackContext> onMovePerformed;
     private System.Action<InputAction.CallbackContext> onMoveCanceled;
@@ -170,28 +175,51 @@ public class UnitInput : MonoBehaviour
 
     private void HandleAiming()
     {
-        if (lastUsedInputDevice == InputDeviceType.Gamepad)
+        if (_unit.CurrentAttackMode == AttackMode.Melee)
         {
-            if (lookInput.sqrMagnitude > 0.1f * 0.1f)
+            // In Melee mode, aim direction is based on move input
+            if (moveInput.sqrMagnitude > 0.01f)
             {
-                Vector3 camForward = Camera.main.transform.forward;
-                Vector3 camRight = Camera.main.transform.right;
-                camForward.y = 0;
-                camRight.y = 0;
-                camForward.Normalize();
-                camRight.Normalize();
-                Vector3 lookDirection = (camForward * lookInput.y + camRight * lookInput.x).normalized;
-                if (lookDirection != Vector3.zero) aimDirection = lookDirection;
+                Vector3 cameraRight = Camera.main.transform.right;
+                Vector3 cameraRightFlat = new Vector3(cameraRight.x, 0, cameraRight.z).normalized;
+                Vector3 cameraForwardFlat = Vector3.Cross(Vector3.up, cameraRightFlat);
+                Vector3 moveForward = -cameraForwardFlat;
+                Vector3 moveRight = cameraRightFlat;
+
+                Vector3 moveDirection = (moveForward * moveInput.y + moveRight * moveInput.x).normalized;
+                if (moveDirection != Vector3.zero) aimDirection = moveDirection;
+            }
+            else
+            {
+                // If no move input, maintain current forward direction
+                aimDirection = transform.forward;
             }
         }
-        else if (lastUsedInputDevice == InputDeviceType.MouseKeyboard)
+        else // Ranged Mode
         {
-            Ray ray = Camera.main.ScreenPointToRay(mousePositionInput);
-            if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, LayerMask.GetMask("Ground")))
+            if (lastUsedInputDevice == InputDeviceType.Gamepad)
             {
-                Vector3 directionToMouse = hit.point - transform.position;
-                directionToMouse.y = 0;
-                if (directionToMouse.sqrMagnitude > 0.01f) aimDirection = directionToMouse.normalized;
+                if (lookInput.sqrMagnitude > 0.1f * 0.1f)
+                {
+                    Vector3 camForward = Camera.main.transform.forward;
+                    Vector3 camRight = Camera.main.transform.right;
+                    camForward.y = 0;
+                    camRight.y = 0;
+                    camForward.Normalize();
+                    camRight.Normalize();
+                    Vector3 lookDirection = (camForward * lookInput.y + camRight * lookInput.x).normalized;
+                    if (lookDirection != Vector3.zero) aimDirection = lookDirection;
+                }
+            }
+            else if (lastUsedInputDevice == InputDeviceType.MouseKeyboard)
+            {
+                Ray ray = Camera.main.ScreenPointToRay(mousePositionInput);
+                if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, LayerMask.GetMask("Ground")))
+                {
+                    Vector3 directionToMouse = hit.point - transform.position;
+                    directionToMouse.y = 0;
+                    if (directionToMouse.sqrMagnitude > 0.01f) aimDirection = directionToMouse.normalized;
+                }
             }
         }
 

@@ -32,4 +32,8 @@ public class MeleeData : ScriptableObject
 
     [Tooltip("차지 공격으로 인정되기 위해 버튼을 누르고 있어야 하는 최소 시간입니다.")]
     public float chargeTimeThreshold;
+
+    [Header("락온 반경 설정")]
+    [Tooltip("근접 모드에서 사용될 락온 반경입니다.")]
+    public float meleeLockOnRadius = 5f;
 }

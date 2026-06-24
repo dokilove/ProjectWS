@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WeaponData
   fireRate: 4
   projectileData: {fileID: 11400000, guid: 37afba093d5d21344b7b122ae7a34d3a, type: 2}
-  lockOnRadius: 10
+  lockOnRadius: 12
   attackAngle: 360
   spreadAngle: 60
   projectilesPerShot: 5

@@ -853,6 +853,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UnitMove
   moveSpeed: 5
   rotationSpeed: 15
+  rangedMoveSpeedPenalty: 0.5
   evadeData: {fileID: 11400000, guid: 30457d724aa3f904996c68251f2f2a32, type: 2}
 --- !u!114 &7739651956627076741
 MonoBehaviour:
@@ -880,6 +881,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UnitWeaponSystem
   turretTransform: {fileID: 8119486018014156151}
   firePoint: {fileID: 3147461973573372184}
+  pistolModel: {fileID: 0}
   weaponData: {fileID: 11400000, guid: 3f863e2be28fa32469bc853300811ebd, type: 2}
 --- !u!114 &-2081736369807973968
 MonoBehaviour:
@@ -893,7 +895,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 45019d19354c3b941ad900b72b052565, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnitMeleeSystem
-  meleeData: {fileID: 11400000, guid: 7b67eb697b7dc434a84a981bdce1030e, type: 2}
+  _meleeData: {fileID: 11400000, guid: 7b67eb697b7dc434a84a981bdce1030e, type: 2}
   enemyLayerMask:
     serializedVersion: 2
     m_Bits: 1024

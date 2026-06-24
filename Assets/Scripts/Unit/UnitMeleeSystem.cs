@@ -5,7 +5,9 @@ using System;
 public class UnitMeleeSystem : MonoBehaviour
 {
     [Header("Data")]
-    [SerializeField] private MeleeData meleeData;
+    [SerializeField] private MeleeData _meleeData; // Renamed to avoid conflict with public property
+
+    public MeleeData MeleeData => _meleeData; // Public property to access MeleeData
     [SerializeField] private LayerMask enemyLayerMask;
     [SerializeField] private Material chargeAttackMaterial; // Material for charge attack visual
 
@@ -27,13 +29,18 @@ public class UnitMeleeSystem : MonoBehaviour
         _unit = unit;
     }
 
-    private void Start()
+    private void Awake()
     {
-        if (meleeData == null)
+        if (_meleeData == null)
         {
             Debug.LogError("MeleeData is not assigned in the inspector!", this);
         }
         aimDirection = transform.forward;
+    }
+
+    private void Start()
+    {
+        // Start is now empty as initialization moved to Awake
     }
 
     private void Update()
@@ -47,9 +54,9 @@ public class UnitMeleeSystem : MonoBehaviour
         if (isMeleeChargePrimed)
         {
             float progress = 0f;
-            if (meleeData.chargeTimeThreshold > 0)
+            if (_meleeData.chargeTimeThreshold > 0)
             {
-                progress = (Time.time - chargeStartTime) / meleeData.chargeTimeThreshold;
+                progress = (Time.time - chargeStartTime) / _meleeData.chargeTimeThreshold;
             }
             OnChargeProgressChanged?.Invoke(Mathf.Clamp01(progress));
         }
@@ -68,14 +75,14 @@ public class UnitMeleeSystem : MonoBehaviour
     /// </summary>
     private void HandleComboTimeout()
     {
-        if (meleeData == null) return;
+        if (_meleeData == null) return;
 
         if (comboCounter > 0)
         {
             int timeIndex = comboCounter - 1;
-            if (timeIndex < meleeData.comboResetTimes.Count)
+            if (timeIndex < _meleeData.comboResetTimes.Count)
             {
-                if (Time.time - lastMeleeTime > meleeData.comboResetTimes[timeIndex])
+                if (Time.time - lastMeleeTime > _meleeData.comboResetTimes[timeIndex])
                 {
                     comboCounter = 0;
                 }
@@ -88,11 +95,11 @@ public class UnitMeleeSystem : MonoBehaviour
     /// </summary>
     public void HandleMeleeComboInput()
     {
-        if (meleeData == null) return;
+        if (_meleeData == null) return;
 
         comboCounter++;
         
-        if (comboCounter > meleeData.comboDamages.Count)
+        if (comboCounter > _meleeData.comboDamages.Count)
         {
             comboCounter = 1;
         }
@@ -101,18 +108,18 @@ public class UnitMeleeSystem : MonoBehaviour
 
         int comboIndex = comboCounter - 1;
         StartCoroutine(_unit.UnitVisuals.ShowMeleeVisualizer(
-            meleeData.comboAttackRadii[comboIndex],
-            meleeData.comboAttackAngles[comboIndex]
+            _meleeData.comboAttackRadii[comboIndex],
+            _meleeData.comboAttackAngles[comboIndex]
         ));
         PerformMeleeAttack(
-            meleeData.comboAttackRadii[comboIndex],
-            meleeData.comboAttackAngles[comboIndex],
-            meleeData.comboDamages[comboIndex]
+            _meleeData.comboAttackRadii[comboIndex],
+            _meleeData.comboAttackAngles[comboIndex],
+            _meleeData.comboDamages[comboIndex]
         );
 
         lastMeleeTime = Time.time;
 
-        if (comboCounter >= meleeData.comboDamages.Count)
+        if (comboCounter >= _meleeData.comboDamages.Count)
         {
             comboCounter = 0;
         }
@@ -123,7 +130,7 @@ public class UnitMeleeSystem : MonoBehaviour
     /// </summary>
     public void HandleMeleeChargeInput()
     {
-        if (meleeData == null) return;
+        if (_meleeData == null) return;
         isMeleeChargePrimed = true;
         chargeStartTime = Time.time;
     }
@@ -147,27 +154,27 @@ public class UnitMeleeSystem : MonoBehaviour
     /// </summary>
     public void HandleMeleeChargeReleaseInput()
     {
-        if (meleeData == null || !isMeleeChargePrimed)
+        if (_meleeData == null || !isMeleeChargePrimed)
         {
             return;
         }
 
         float chargeDuration = Time.time - chargeStartTime;
 
-        if (chargeDuration >= meleeData.chargeTimeThreshold)
+        if (chargeDuration >= _meleeData.chargeTimeThreshold)
         {
             // Perform Charge Attack
             _unit.UnitAnimator.TriggerChargeMelee();
 
             StartCoroutine(_unit.UnitVisuals.ShowMeleeVisualizer(
-                meleeData.chargeAttackRadius,
-                meleeData.chargeAttackAngle,
+                _meleeData.chargeAttackRadius,
+                _meleeData.chargeAttackAngle,
                 chargeAttackMaterial
             ));
             PerformMeleeAttack(
-                meleeData.chargeAttackRadius,
-                meleeData.chargeAttackAngle,
-                meleeData.chargeAttackDamage
+                _meleeData.chargeAttackRadius,
+                _meleeData.chargeAttackAngle,
+                _meleeData.chargeAttackDamage
             );
             
             // After a charge attack, always reset the combo state.
