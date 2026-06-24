@@ -30,8 +30,7 @@ public class UnitInput : MonoBehaviour
     private System.Action<InputAction.CallbackContext> onFireHoldStarted;
     private System.Action<InputAction.CallbackContext> onFireHoldCanceled;
     private System.Action<InputAction.CallbackContext> onReloadPerformed;
-    private System.Action<InputAction.CallbackContext> onMeleeCombo;
-    private System.Action<InputAction.CallbackContext> onMeleeCharge;
+    private System.Action<InputAction.CallbackContext> onMeleeChargeStarted;
     private System.Action<InputAction.CallbackContext> onMeleeChargeCanceled;
 
     /// <summary>
@@ -59,8 +58,7 @@ public class UnitInput : MonoBehaviour
         onFireHoldCanceled = ctx => isFireHeld = false;
         onReloadPerformed = ctx => _unit.UnitWeaponSystem.HandleReloadInput();
 
-        onMeleeCombo = ctx => _unit.UnitMeleeSystem.HandleMeleeComboInput();
-        onMeleeCharge = ctx => _unit.UnitMeleeSystem.HandleMeleeChargeInput();
+        onMeleeChargeStarted = ctx => _unit.UnitMeleeSystem.HandleMeleeChargeInput();
         onMeleeChargeCanceled = ctx => _unit.UnitMeleeSystem.HandleMeleeChargeReleaseInput();
     }
 
@@ -85,8 +83,7 @@ public class UnitInput : MonoBehaviour
         playerActions.Player.Fire_Hold.started += onFireHoldStarted;
         playerActions.Player.Fire_Hold.canceled += onFireHoldCanceled;
         playerActions.Player.Reload.performed += onReloadPerformed;
-        playerActions.Player.MeleeAttack.performed += onMeleeCombo;
-        playerActions.Player.MeleeAttack_Hold.performed += onMeleeCharge;
+        playerActions.Player.MeleeAttack_Hold.started += onMeleeChargeStarted;
         playerActions.Player.MeleeAttack_Hold.canceled += onMeleeChargeCanceled;
     }
 
@@ -106,8 +103,7 @@ public class UnitInput : MonoBehaviour
         playerActions.Player.Fire_Hold.started -= onFireHoldStarted;
         playerActions.Player.Fire_Hold.canceled -= onFireHoldCanceled;
         playerActions.Player.Reload.performed -= onReloadPerformed;
-        playerActions.Player.MeleeAttack.performed -= onMeleeCombo;
-        playerActions.Player.MeleeAttack_Hold.performed -= onMeleeCharge;
+        playerActions.Player.MeleeAttack_Hold.started -= onMeleeChargeStarted;
         playerActions.Player.MeleeAttack_Hold.canceled -= onMeleeChargeCanceled;
 
         // Reset state

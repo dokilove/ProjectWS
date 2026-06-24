@@ -17,18 +17,18 @@ MonoBehaviour:
   - 30
   - 40
   comboAttackRadii:
-  - 3
-  - 4
+  - 6
   - 5
+  - 4
   comboAttackAngles:
+  - 30
   - 90
-  - 90
-  - 90
+  - 120
   chargeAttackDamage: 120
-  chargeAttackRadius: 5
-  chargeAttackAngle: 120
+  chargeAttackRadius: 8
+  chargeAttackAngle: 260
   comboResetTimes:
   - 0.7
   - 0.5
   - 0.5
-  chargeTimeThreshold: 1
+  chargeTimeThreshold: 2

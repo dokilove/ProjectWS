@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections;
+using System;
 
 public class UnitMeleeSystem : MonoBehaviour
 {
@@ -16,6 +17,10 @@ public class UnitMeleeSystem : MonoBehaviour
     private int comboCounter = 0;
     private float lastMeleeTime = -1f;
     private bool isMeleeChargePrimed = false;
+    private float chargeStartTime = 0f;
+
+    // --- Events ---
+    public event Action<float> OnChargeProgressChanged;
 
     public void Init(Unit unit)
     {
@@ -34,6 +39,20 @@ public class UnitMeleeSystem : MonoBehaviour
     private void Update()
     {
         HandleComboTimeout();
+        HandleChargeProgress();
+    }
+
+    private void HandleChargeProgress()
+    {
+        if (isMeleeChargePrimed)
+        {
+            float progress = 0f;
+            if (meleeData.chargeTimeThreshold > 0)
+            {
+                progress = (Time.time - chargeStartTime) / meleeData.chargeTimeThreshold;
+            }
+            OnChargeProgressChanged?.Invoke(Mathf.Clamp01(progress));
+        }
     }
 
     /// <summary>
@@ -69,7 +88,7 @@ public class UnitMeleeSystem : MonoBehaviour
     /// </summary>
     public void HandleMeleeComboInput()
     {
-        if (meleeData == null || isMeleeChargePrimed) return;
+        if (meleeData == null) return;
 
         comboCounter++;
         
@@ -100,38 +119,58 @@ public class UnitMeleeSystem : MonoBehaviour
     }
 
     /// <summary>
-    /// Handles the start of a charge attack.
+    /// Handles the start of a charge attack. Records the start time.
     /// </summary>
     public void HandleMeleeChargeInput()
     {
         if (meleeData == null) return;
         isMeleeChargePrimed = true;
-        comboCounter = 0; 
+        chargeStartTime = Time.time;
     }
 
     /// <summary>
-    /// Handles the release of a charge attack.
+    /// Handles the release of a charge attack. Performs charge or combo attack based on hold duration.
     /// </summary>
     public void HandleMeleeChargeReleaseInput()
     {
-        if (meleeData == null || !isMeleeChargePrimed) return;
-        
-        _unit.UnitAnimator.TriggerChargeMelee();
+        if (meleeData == null || !isMeleeChargePrimed)
+        {
+            return;
+        }
 
-        StartCoroutine(_unit.UnitVisuals.ShowMeleeVisualizer(
-            meleeData.chargeAttackRadius,
-            meleeData.chargeAttackAngle,
-            chargeAttackMaterial
-        ));
-        PerformMeleeAttack(
-            meleeData.chargeAttackRadius,
-            meleeData.chargeAttackAngle,
-            meleeData.chargeAttackDamage
-        );
+        float chargeDuration = Time.time - chargeStartTime;
+
+        if (chargeDuration >= meleeData.chargeTimeThreshold)
+        {
+            // Perform Charge Attack
+            _unit.UnitAnimator.TriggerChargeMelee();
+
+            StartCoroutine(_unit.UnitVisuals.ShowMeleeVisualizer(
+                meleeData.chargeAttackRadius,
+                meleeData.chargeAttackAngle,
+                chargeAttackMaterial
+            ));
+            PerformMeleeAttack(
+                meleeData.chargeAttackRadius,
+                meleeData.chargeAttackAngle,
+                meleeData.chargeAttackDamage
+            );
+            
+            // After a charge attack, always reset the combo state.
+            comboCounter = 0;
+            lastMeleeTime = -1f; 
+        }
+        else
+        {
+            // If held for less than the threshold, treat it as a normal combo attack.
+            // HandleMeleeComboInput will manage the comboCounter and lastMeleeTime itself.
+            HandleMeleeComboInput();
+        }
         
+        // Reset charge-specific state regardless of the outcome.
         isMeleeChargePrimed = false;
-        comboCounter = 0;
-        lastMeleeTime = -1f; 
+        chargeStartTime = 0f;
+        OnChargeProgressChanged?.Invoke(0f); // Reset UI
     }
 
     private void PerformMeleeAttack(float radius, float angle, float damage)

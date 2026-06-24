@@ -9,6 +9,7 @@ public class PlayerWorldSpaceUIController : MonoBehaviour
 
     // Player Unit and Data
     private Unit playerUnit;
+    private UnitMeleeSystem playerMeleeSystem;
     private EvadeData evadeData;
     private PlayerHealthData playerHealthData;
 
@@ -24,6 +25,10 @@ public class PlayerWorldSpaceUIController : MonoBehaviour
     private VisualElement evadeChargesContainer;
     private ProgressBar evadeRechargeProgressBar;
     private List<VisualElement> chargeIcons = new List<VisualElement>();
+
+    // Melee UI Elements
+    private VisualElement meleeChargeContainer;
+    private ProgressBar meleeChargeProgressBar;
 
     private Camera mainCamera;
 
@@ -52,8 +57,13 @@ public class PlayerWorldSpaceUIController : MonoBehaviour
         evadeChargesContainer = root.Q<VisualElement>("evade-charges-container");
         evadeRechargeProgressBar = root.Q<ProgressBar>("evade-recharge-progressbar");
 
-        // Find the player unit and evade data
-        playerUnit = GetComponentInParent<Unit>(); // Assuming this UI is a child of the player unit
+        // Query Melee UI Elements
+        meleeChargeContainer = root.Q<VisualElement>("melee-charge-container");
+        meleeChargeProgressBar = root.Q<ProgressBar>("melee-charge-progressbar");
+
+
+        // Find the player unit and its components
+        playerUnit = GetComponentInParent<Unit>(); 
         if (playerUnit != null)
         {
             if (playerUnit.UnitMove != null)
@@ -61,22 +71,40 @@ public class PlayerWorldSpaceUIController : MonoBehaviour
                 evadeData = playerUnit.UnitMove.EvadeData;
             }
             playerHealthData = playerUnit.playerHealthData;
+            playerMeleeSystem = playerUnit.UnitMeleeSystem;
+
+            if (playerMeleeSystem != null)
+            {
+                playerMeleeSystem.OnChargeProgressChanged += UpdateMeleeChargeUI;
+            }
         }
 
         if (evadeData == null)
         {
-            Debug.LogError("EvadeData not found or assigned to playerUnit. Evade UI will not function correctly.");
-            // return; // Don't return, as health UI might still work
+            Debug.LogWarning("EvadeData not found or assigned to playerUnit. Evade UI will not function correctly.");
         }
         if (playerHealthData == null)
         {
-            Debug.LogError("PlayerHealthData not found or assigned to playerUnit. Health UI will not function correctly.");
-            // return; // Don't return, as other UIs might still work
+            Debug.LogWarning("PlayerHealthData not found or assigned to playerUnit. Health UI will not function correctly.");
+        }
+        if (playerMeleeSystem == null)
+        {
+            Debug.LogWarning("UnitMeleeSystem not found on playerUnit. Melee Charge UI will not function.");
         }
 
+
         // Initialize evade charge icons
-        CreateChargeIcons();
+        if(evadeData != null) CreateChargeIcons();
         UpdateUI(); // Initial update
+        UpdateMeleeChargeUI(0); // Initial hide
+    }
+
+    private void OnDisable()
+    {
+        if (playerMeleeSystem != null)
+        {
+            playerMeleeSystem.OnChargeProgressChanged -= UpdateMeleeChargeUI;
+        }
     }
 
     private void LateUpdate()
@@ -89,6 +117,21 @@ public class PlayerWorldSpaceUIController : MonoBehaviour
         if (playerUnit == null) return;
 
         UpdateUI();
+    }
+
+    private void UpdateMeleeChargeUI(float progress)
+    {
+        if (meleeChargeContainer == null) return;
+
+        if (progress > 0.01f) // Use a small threshold to avoid flickering
+        {
+            meleeChargeContainer.style.display = DisplayStyle.Flex;
+            meleeChargeProgressBar.value = progress;
+        }
+        else
+        {
+            meleeChargeContainer.style.display = DisplayStyle.None;
+        }
     }
 
     private void UpdateUI()
