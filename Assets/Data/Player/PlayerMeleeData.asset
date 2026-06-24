@@ -27,6 +27,11 @@ MonoBehaviour:
   chargeAttackDamage: 120
   chargeAttackRadius: 8
   chargeAttackAngle: 260
+  comboDashForces:
+  - 200
+  - 100
+  - 50
+  chargeAttackDashForce: -100
   comboResetTimes:
   - 0.7
   - 0.5

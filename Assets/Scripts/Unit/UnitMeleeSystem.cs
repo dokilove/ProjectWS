@@ -20,6 +20,7 @@ public class UnitMeleeSystem : MonoBehaviour
     private float lastMeleeTime = -1f;
     private bool isMeleeChargePrimed = false;
     private float chargeStartTime = 0f;
+    private bool isAttackOnCooldown = false;
     public Vector3 AutoAimTargetPosition { get; private set; } = Vector3.zero; // New property to store auto-aim target
 
     // --- Events ---
@@ -100,7 +101,7 @@ public class UnitMeleeSystem : MonoBehaviour
     /// </summary>
     public void HandleMeleeComboInput()
     {
-        if (_meleeData == null) return;
+        if (_meleeData == null || isAttackOnCooldown) return;
 
         // Auto-aim before attack
         PerformAutoAim();
@@ -115,6 +116,22 @@ public class UnitMeleeSystem : MonoBehaviour
         _unit.UnitAnimator.TriggerMelee(comboCounter);
 
         int comboIndex = comboCounter - 1;
+
+        // Apply melee dash
+        if (_meleeData.comboDashForces != null && comboIndex < _meleeData.comboDashForces.Count)
+        {
+            float dashForce = _meleeData.comboDashForces[comboIndex];
+            if (dashForce > 0)
+            {
+                // If there's an auto-aim target, dash towards it. Otherwise, dash in the aim direction.
+                Vector3 dashDirection = (AutoAimTargetPosition != Vector3.zero)
+                    ? (AutoAimTargetPosition - transform.position).normalized
+                    : aimDirection;
+                dashDirection.y = 0; // Ensure dash is horizontal
+                _unit.UnitMove.ApplyMeleeDash(dashDirection.normalized, dashForce);
+            }
+        }
+
         StartCoroutine(_unit.UnitVisuals.ShowMeleeVisualizer(
             _meleeData.comboAttackRadii[comboIndex],
             _meleeData.comboAttackAngles[comboIndex]
@@ -125,6 +142,8 @@ public class UnitMeleeSystem : MonoBehaviour
             _meleeData.comboDamages[comboIndex]
         );
 
+        isAttackOnCooldown = true;
+        StartCoroutine(ResetAttackCooldown());
         lastMeleeTime = Time.time;
 
         if (comboCounter >= _meleeData.comboDamages.Count)
@@ -204,7 +223,7 @@ public class UnitMeleeSystem : MonoBehaviour
     /// </summary>
     public void HandleMeleeChargeReleaseInput()
     {
-        if (_meleeData == null || !isMeleeChargePrimed)
+        if (_meleeData == null || !isMeleeChargePrimed || isAttackOnCooldown)
         {
             return;
         }
@@ -215,6 +234,17 @@ public class UnitMeleeSystem : MonoBehaviour
         {
             // Perform Charge Attack
             _unit.UnitAnimator.TriggerChargeMelee();
+
+            // Apply charge melee dash
+            if (_meleeData.chargeAttackDashForce > 0)
+            {
+                // If there's an auto-aim target, dash towards it. Otherwise, dash in the aim direction.
+                Vector3 dashDirection = (AutoAimTargetPosition != Vector3.zero)
+                    ? (AutoAimTargetPosition - transform.position).normalized
+                    : aimDirection;
+                dashDirection.y = 0; // Ensure dash is horizontal
+                _unit.UnitMove.ApplyMeleeDash(dashDirection.normalized, _meleeData.chargeAttackDashForce);
+            }
 
             StartCoroutine(_unit.UnitVisuals.ShowMeleeVisualizer(
                 _meleeData.chargeAttackRadius,
@@ -227,6 +257,9 @@ public class UnitMeleeSystem : MonoBehaviour
                 _meleeData.chargeAttackDamage
             );
             
+            isAttackOnCooldown = true;
+            StartCoroutine(ResetAttackCooldown());
+
             // After a charge attack, always reset the combo state.
             comboCounter = 0;
             lastMeleeTime = -1f; 
@@ -268,5 +301,11 @@ public class UnitMeleeSystem : MonoBehaviour
         {
             Debug.Log($"Melee attack hit {hitCount} enemies for {damage} damage.");
         }
+    }
+
+    private IEnumerator ResetAttackCooldown()
+    {
+        yield return new WaitForSeconds(_meleeData.attackCooldown); // Use value from MeleeData
+        isAttackOnCooldown = false;
     }
 }

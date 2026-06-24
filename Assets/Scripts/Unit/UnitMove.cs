@@ -146,6 +146,18 @@ public class UnitMove : MonoBehaviour
     }
 
     /// <summary>
+    /// Applies a forward dash force for melee attacks.
+    /// </summary>
+    /// <param name="direction">The direction of the dash.</param>
+    /// <param name="force">The impulse force of the dash.</param>
+    public void ApplyMeleeDash(Vector3 direction, float force)
+    {
+        if (isEvading || force <= 0) return;
+
+        rb.AddForce(direction * force, ForceMode.Impulse);
+    }
+
+    /// <summary>
     /// Initiates an evade action.
     /// </summary>
     /// <param name="moveInput">The current move input to determine evade direction.</param>
