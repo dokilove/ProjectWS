@@ -184,6 +184,7 @@ public class UnitInput : MonoBehaviour
             if (_unit.UnitMeleeSystem.AutoAimTargetPosition != Vector3.zero)
             {
                 aimDirection = (_unit.UnitMeleeSystem.AutoAimTargetPosition - transform.position).normalized;
+                aimDirection.y = 0; // Flatten the aim direction for smooth rotation
                 _unit.UnitMove.RotateTowards(_unit.UnitMeleeSystem.AutoAimTargetPosition); // Ensure player body rotates
             }
             else if (moveInput.sqrMagnitude > 0.01f)

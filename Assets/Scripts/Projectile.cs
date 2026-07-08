@@ -10,14 +10,16 @@ public class Projectile : MonoBehaviour
     private Vector3 moveDirection;
     private float currentLifespan;
     private int shooterLayer; // To ignore collision with the shooter
+    private float _damage; // [NEW] 실제 데미지 값을 저장할 필드
 
     // 오브젝트 풀에서 활성화될 때 호출될 함수
-    public void Init(ProjectileData projectileData, Vector3 direction, int shooterGameObjectLayer)
+    public void Init(ProjectileData projectileData, Vector3 direction, int shooterGameObjectLayer, float overrideDamage) // [MODIFIED] overrideDamage 인자 추가
     {
         data = projectileData; // Assign the data
         moveDirection = direction.normalized;
         currentLifespan = data.lifespan;
         shooterLayer = shooterGameObjectLayer;
+        _damage = overrideDamage; // [NEW] 전달받은 데미지로 설정
 
         // Optionally ignore collision with the shooter's layer
         // Physics.IgnoreLayerCollision(gameObject.layer, shooterLayer, true);
@@ -57,7 +59,6 @@ public class Projectile : MonoBehaviour
             // Target hit logic
             // Assuming targets have a health component or similar
             // For now, let's just log and disable
-            Debug.Log($"Projectile hit {hit.collider.name} on layer {LayerMask.LayerToName(hit.collider.gameObject.layer)}");
 
             // Example: Damage logic (needs to be adapted to your health system)
             // If the target has a Unit or Vehicle component, deal damage
@@ -76,7 +77,7 @@ public class Projectile : MonoBehaviour
                 }
                 else
                 {
-                    unit.TakeDamage(data.damage);
+                    unit.TakeDamage(_damage);
                 }
             }
             else
@@ -84,7 +85,7 @@ public class Projectile : MonoBehaviour
                 Vehicle vehicle = hit.collider.GetComponent<Vehicle>();
                 if (vehicle != null)
                 {
-                    vehicle.TakeDamage(data.damage);
+                    vehicle.TakeDamage(_damage);
                 }
                 else
                 {
@@ -92,7 +93,7 @@ public class Projectile : MonoBehaviour
                     EnemyHealth enemyHealth = hit.collider.GetComponent<EnemyHealth>();
                     if (enemyHealth != null)
                     {
-                        enemyHealth.TakeDamage(data.damage);
+                        enemyHealth.TakeDamage(_damage);
                     }
                 }
             }
@@ -111,5 +112,13 @@ public class Projectile : MonoBehaviour
             // 충돌하지 않았으면 그냥 이동
             transform.Translate(moveDirection * moveDistance, Space.World);
         }
+    }
+
+    // [NEW] 저스트 회피 트리거에 스쳤을 때 호출될 함수
+    public void OnGraze()
+    {
+        Debug.Log("Projectile grazed! Deactivating.");
+        // 여기에 발사체가 튕겨나가거나 특수 효과를 내는 로직을 추가할 수 있습니다.
+        gameObject.SetActive(false); // 오브젝트 풀링 사용 시 비활성화
     }
 }

@@ -214,7 +214,6 @@ public class UnitMeleeSystem : MonoBehaviour
             chargeStartTime = 0f;
             OnChargeProgressChanged?.Invoke(0f); // Reset UI
             AutoAimTargetPosition = Vector3.zero; // Reset auto-aim target
-            Debug.Log("Melee charge canceled.");
         }
     }
 
@@ -277,6 +276,9 @@ public class UnitMeleeSystem : MonoBehaviour
 
     private void PerformMeleeAttack(float radius, float angle, float damage)
     {
+        // [MODIFIED] Unit에서 버프가 적용된 데미지를 가져옴
+        float finalDamage = _unit.GetBuffedDamage(damage);
+
         // Use the body's forward direction for melee, not the turret aim.
         Vector3 forward = transform.forward; 
         Collider[] hits = Physics.OverlapSphere(transform.position, radius, enemyLayerMask);
@@ -292,14 +294,14 @@ public class UnitMeleeSystem : MonoBehaviour
                 // Assuming enemies have a component that can take damage.
                 if (hit.TryGetComponent<EnemyHealth>(out EnemyHealth enemyHealth))
                 {
-                    enemyHealth.TakeDamage(damage);
+                    enemyHealth.TakeDamage(finalDamage); // 수정된 데미지 적용
                     hitCount++;
                 }
             }
         }
         if (hitCount > 0)
         {
-            Debug.Log($"Melee attack hit {hitCount} enemies for {damage} damage.");
+            // [MODIFIED] 로그 메시지 수정
         }
     }
 

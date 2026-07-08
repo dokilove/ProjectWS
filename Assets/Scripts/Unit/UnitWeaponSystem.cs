@@ -74,7 +74,6 @@ public class UnitWeaponSystem : MonoBehaviour
             pistolModel.SetActive(true);
         }
         _unit.UnitAnimator.SetRangedAttackState(true); // Enable shooting animation
-        Debug.Log("UnitWeaponSystem: Entering Ranged Mode");
     }
 
     public void OnEnterMeleeMode()
@@ -84,7 +83,6 @@ public class UnitWeaponSystem : MonoBehaviour
             pistolModel.SetActive(false);
         }
         _unit.UnitAnimator.SetRangedAttackState(false); // Disable shooting animation
-        Debug.Log("UnitWeaponSystem: Entering Melee Mode");
     }
 
     /// <summary>
@@ -156,6 +154,12 @@ public class UnitWeaponSystem : MonoBehaviour
         
         _unit.UnitAnimator.TriggerAttack();
 
+        // [NEW] 발사 시점에 버프 적용 여부를 결정
+        bool isBuffed = _unit.IsNextAttackBuffed;
+        float damage = weaponData.projectileData.damage;
+        float finalDamage = isBuffed ? _unit.GetBuffedDamage(damage) : damage;
+
+
         for (int i = 0; i < weaponData.projectilesPerShot; i++)
         {
             GameObject projectileGO = GetPooledProjectile();
@@ -176,7 +180,8 @@ public class UnitWeaponSystem : MonoBehaviour
                 Projectile projectile = projectileGO.GetComponent<Projectile>();
                 if (projectile != null)
                 {
-                    projectile.Init(weaponData.projectileData, fireDirection, _unit.gameObject.layer);
+                    // [MODIFIED] 발사체 초기화 시 최종 데미지를 넘겨줌
+                    projectile.Init(weaponData.projectileData, fireDirection, _unit.gameObject.layer, finalDamage);
                 }
             }
         }
@@ -186,11 +191,9 @@ public class UnitWeaponSystem : MonoBehaviour
     {
         isReloading = true;
         _unit.UnitAnimator.TriggerReload();
-        Debug.Log("Reloading...");
         yield return new WaitForSeconds(weaponData.reloadTime);
         currentAmmo = weaponData.magazineSize;
         isReloading = false;
-        Debug.Log("Reload complete.");
     }
 
     private GameObject GetPooledProjectile()

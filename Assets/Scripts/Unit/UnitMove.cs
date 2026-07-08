@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.AI;
 using System.Collections;
+using ProjectWS.Utility; // [NEW] BulletTimeManager 사용을 위해 추가
 
 // This component requires other components to function correctly.
 // Unit.cs: To get references to other components like UnitAnimator and UnitVisuals.
@@ -67,7 +68,6 @@ public class UnitMove : MonoBehaviour
         // Apply movement speed penalty
         currentEffectiveMoveSpeed = baseMoveSpeed * rangedMoveSpeedPenalty;
         isStrafeMovementEnabled = true;
-        Debug.Log("UnitMove: Entering Ranged Mode. Speed reduced, strafe enabled.");
     }
 
     public void OnEnterMeleeMode()
@@ -75,7 +75,6 @@ public class UnitMove : MonoBehaviour
         // Normalize movement speed
         currentEffectiveMoveSpeed = baseMoveSpeed; // Revert to base speed
         isStrafeMovementEnabled = false;
-        Debug.Log("UnitMove: Entering Melee Mode. Speed normalized, strafe disabled.");
     }
 
     /// <summary>
@@ -135,7 +134,17 @@ public class UnitMove : MonoBehaviour
 
         moveVector = (forward * moveInput.y + right * moveInput.x);
         
-        rb.linearVelocity = moveVector.normalized * currentEffectiveMoveSpeed; // Use currentEffectiveMoveSpeed
+        // [MODIFIED] 불릿 타임 중 플레이어 이동 속도 보정
+        float currentSpeed = currentEffectiveMoveSpeed;
+        if (BulletTimeManager.Instance != null && BulletTimeManager.Instance.IsBulletTimeActive)
+        {
+            // Time.timeScale이 0에 가까울 경우를 대비한 예외 처리
+            if (Time.timeScale > 0.01f)
+            {
+                currentSpeed *= (1f / Time.timeScale); // 역산 보정
+            }
+        }
+        rb.linearVelocity = moveVector.normalized * currentSpeed; // 보정된 속도 적용
 
         // --- Body Rotation (Aiming) ---
         if (aimDirection.sqrMagnitude > 0.01f)
@@ -164,6 +173,9 @@ public class UnitMove : MonoBehaviour
     public void PerformEvade(Vector2 moveInput)
     {
         if (evadeData == null || isEvading || currentEvadeCharges <= 0) return;
+
+        // [NEW] 회피 시작을 Unit 코디네이터에게 알림
+        _unit.OnEvadeStart();
 
         isEvading = true;
         currentEvadeCharges--;

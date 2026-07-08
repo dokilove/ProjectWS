@@ -190,7 +190,7 @@ public class VehicleWeaponSystem : MonoBehaviour
                 projectile.transform.position = firePoint.position;
                 projectile.transform.rotation = Quaternion.LookRotation(finalFireDirection);
                 projectile.SetActive(true);
-                projectile.GetComponent<Projectile>().Init(weaponData.projectileData, finalFireDirection, _vehicle.gameObject.layer);
+                projectile.GetComponent<Projectile>().Init(weaponData.projectileData, finalFireDirection, _vehicle.gameObject.layer, weaponData.projectileData.damage);
             }
         }
     }

@@ -21,8 +21,8 @@ TagManager:
   - Vehicle
   - Ground
   - Obstacle
-  - 
-  - 
+  - JustDodgeTrigger
+  - EnemyAttackLayer
   - 
   - 
   - 

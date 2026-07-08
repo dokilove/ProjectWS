@@ -1,4 +1,5 @@
 using UnityEngine;
+using ProjectWS.Utility; // [NEW]
 
 [RequireComponent(typeof(Animator))]
 public class UnitAnimator : MonoBehaviour
@@ -13,19 +14,34 @@ public class UnitAnimator : MonoBehaviour
         _rigidbody = GetComponentInParent<Rigidbody>();
     }
 
+    // [NEW] 불릿 타임 중에도 애니메이션 속도를 정상으로 유지하기 위한 Update
+    private void Update()
+    {
+        if (BulletTimeManager.Instance != null && BulletTimeManager.Instance.IsBulletTimeActive)
+        {
+            // Time.timeScale이 0에 가까울 경우를 대비한 예외 처리
+            if (Time.timeScale > 0.01f)
+            {
+                _animator.speed = 1f / Time.timeScale;
+            }
+        }
+        else
+        {
+            _animator.speed = 1f;
+        }
+    }
+
     // --- Attack Mode Callbacks ---
     public void OnEnterRangedMode()
     {
         SetRangedAttackState(true); // Enable shooting animation
         // TODO: Set animator parameters for ranged movement (e.g., strafing blend tree)
-        Debug.Log("UnitAnimator: Entering Ranged Mode");
     }
 
     public void OnEnterMeleeMode()
     {
         SetRangedAttackState(false); // Disable shooting animation
         // TODO: Set animator parameters for melee movement (e.g., normal blend tree)
-        Debug.Log("UnitAnimator: Entering Melee Mode");
     }
 
     public void SetRangedAttackState(bool isRanged)

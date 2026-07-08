@@ -1,5 +1,8 @@
 using System;
 using UnityEngine;
+using ProjectWS.Utility; // [NEW] BulletTimeManager 사용을 위해 추가
+using System.Collections;
+
 
 // Enum to define the attack modes
 public enum AttackMode
@@ -31,6 +34,15 @@ public class Unit : MonoBehaviour
     public PlayerHealthData playerHealthData;
     public string hitEffectPoolTag;
     public string guardEffectPoolTag; // New field for guard effect
+
+    [Header("Just Dodge Settings")]
+    [SerializeField] private float justDodgeWindow = 0.15f; // 저스트 회피 판정 시간
+    [SerializeField] private float bulletTimeDuration = 2f;   // 불릿 타임 지속 시간
+    [SerializeField] private float bulletTimeScale = 0.2f;    // 불릿 타임 속도
+    [SerializeField] private float justDodgeAttackBuffMultiplier = 2f; // 다음 공격 데미지 배율
+
+    public bool IsJustDodgeWindowActive { get; private set; }
+    public bool IsNextAttackBuffed { get; private set; }
     public float CurrentHealth { get; private set; }
     public bool IsInvincible { get; set; } = false; // New field for invincibility
     public bool IsDead => CurrentHealth <= 0;
@@ -68,6 +80,24 @@ public class Unit : MonoBehaviour
         UnitWeaponSystem.Init(this);
         UnitMeleeSystem.Init(this);
         UnitVisuals.Init(this);
+    }
+
+    private void OnEnable()
+    {
+        // [NEW] 불릿 타임 종료 시 버프 해제 이벤트 구독
+        if (BulletTimeManager.Instance != null)
+        {
+            BulletTimeManager.Instance.OnBulletTimeEnd += ConsumeAttackBuff;
+        }
+    }
+
+    private void OnDisable()
+    {
+        // [NEW] 오브젝트 비활성화 시 이벤트 구독 해제
+        if (BulletTimeManager.Instance != null)
+        {
+            BulletTimeManager.Instance.OnBulletTimeEnd -= ConsumeAttackBuff;
+        }
     }
 
     private void Start()
@@ -111,6 +141,15 @@ public class Unit : MonoBehaviour
     public void TakeDamage(float amount)
     {
         if (IsDead) return;
+
+        // [MODIFIED] 저스트 회피 판정 로직 추가
+        if (IsJustDodgeWindowActive)
+        {
+            Debug.Log("Just Dodge Successful!");
+            ActivateJustDodgeEffects();
+            return; // 데미지를 받지 않고 함수 종료
+        }
+
         if (IsInvincible) return; // If invincible, do not take damage
 
         Debug.Log($"TakeDamage called on {gameObject.name} for {amount} damage.");
@@ -136,6 +175,55 @@ public class Unit : MonoBehaviour
             Debug.Log($"{gameObject.name} has been defeated!");
             // TODO: Add death logic (e.g., disable unit, play death animation)
         }
+    }
+
+    // [NEW] 회피 시작 시 호출될 함수
+    public void OnEvadeStart()
+    {
+        StartCoroutine(JustDodgeWindowCoroutine());
+    }
+
+    // [NEW] 저스트 회피 판정 시간을 관리하는 코루틴
+    private IEnumerator JustDodgeWindowCoroutine()
+    {
+        IsJustDodgeWindowActive = true;
+        yield return new WaitForSeconds(justDodgeWindow);
+        IsJustDodgeWindowActive = false;
+    }
+
+    // [NEW] 저스트 회피 성공 효과를 발동시키는 함수
+    public void ActivateJustDodgeEffects()
+    {
+        IsNextAttackBuffed = true;
+        if (BulletTimeManager.Instance != null)
+        {
+            BulletTimeManager.Instance.StartBulletTime(bulletTimeDuration, bulletTimeScale);
+        }
+        else
+        {
+            Debug.LogError("BulletTimeManager 인스턴스를 찾을 수 없습니다!");
+        }
+    }
+
+    // [NEW] 공격력 버프를 사용(소모)하거나 해제하는 함수
+    public void ConsumeAttackBuff()
+    {
+        if (IsNextAttackBuffed)
+        {
+            Debug.Log("Just Dodge attack buff consumed or expired.");
+            IsNextAttackBuffed = false;
+        }
+    }
+
+    // [NEW] 현재 공격 데미지에 버프를 적용하는 함수
+    public float GetBuffedDamage(float originalDamage)
+    {
+        if (IsNextAttackBuffed)
+        {
+            ConsumeAttackBuff(); // 버프를 사용했으므로 즉시 소모
+            return originalDamage * justDodgeAttackBuffMultiplier;
+        }
+        return originalDamage;
     }
 
     public void Heal(float amount)

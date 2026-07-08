@@ -524,6 +524,72 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FieldOfViewMesh
   fovMaterial: {fileID: 2100000, guid: 5d499f4f7a105f343b18b79f82b53950, type: 2}
   fovColor: {r: 1, g: 0, b: 0, a: 0.8}
+--- !u!1 &4299911705076867587
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8478822981992114995}
+  - component: {fileID: 3919425549525945183}
+  - component: {fileID: 7769722880640968833}
+  m_Layer: 14
+  m_Name: JustDodgeTrigger
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8478822981992114995
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4299911705076867587}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1861158880881925691}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3919425549525945183
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4299911705076867587}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1848fbd40575f544db9c1667ecfad19d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::JustDodgeTrigger
+--- !u!135 &7769722880640968833
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4299911705076867587}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 1.2
+  m_Center: {x: 0, y: -0.2, z: 0}
 --- !u!1 &6227535827070417311
 GameObject:
   m_ObjectHideFlags: 0
@@ -643,6 +709,7 @@ Transform:
   - {fileID: 1777230052906974783}
   - {fileID: 7720572438374075997}
   - {fileID: 7101914822017158139}
+  - {fileID: 8478822981992114995}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!136 &6988497974824472418
@@ -693,7 +760,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 112
+  m_Constraints: 116
   m_CollisionDetection: 2
 --- !u!96 &942299507975720265
 TrailRenderer:
@@ -934,6 +1001,10 @@ MonoBehaviour:
   playerHealthData: {fileID: 11400000, guid: 42a825921c356d244910a0b01dd97c8b, type: 2}
   hitEffectPoolTag: hit03
   guardEffectPoolTag: guard
+  justDodgeWindow: 0.2
+  bulletTimeDuration: 2
+  bulletTimeScale: 0.2
+  justDodgeAttackBuffMultiplier: 2
 --- !u!1 &7392096247342573764
 GameObject:
   m_ObjectHideFlags: 0
