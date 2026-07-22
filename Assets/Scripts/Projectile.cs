@@ -6,6 +6,7 @@ public class Projectile : MonoBehaviour
     [SerializeField] private ProjectileData data;
     [SerializeField] private LayerMask targetLayer; // Inspector에서 Target 레이어를 지정해줘야 합니다.
     [SerializeField] private LayerMask playerLayers; // New: Layers that belong to the player (Unit or Vehicle)
+    [SerializeField] private LayerMask justDodgeLayer; // Inspector에서 JustDodgeTrigger 레이어를 지정
 
     private Vector3 moveDirection;
     private float currentLifespan;
@@ -20,10 +21,6 @@ public class Projectile : MonoBehaviour
         currentLifespan = data.lifespan;
         shooterLayer = shooterGameObjectLayer;
         _damage = overrideDamage; // [NEW] 전달받은 데미지로 설정
-
-        // Optionally ignore collision with the shooter's layer
-        // Physics.IgnoreLayerCollision(gameObject.layer, shooterLayer, true);
-        // This might be better handled in Projectile.cs's collision logic or Unity's Physics settings
     }
 
     private void Update()
@@ -36,83 +33,81 @@ public class Projectile : MonoBehaviour
             return;
         }
 
+        // 충돌 감지는 OnTriggerEnter에서 처리하므로 여기서는 이동만 담당
         float moveDistance = data.speed * Time.deltaTime;
+        transform.Translate(moveDirection * moveDistance, Space.World);
+    }
 
-        // 이동하기 전에 해당 경로에 적이 있는지 Raycast로 확인
-        // Raycast should ignore the shooter's layer
-        LayerMask raycastLayerMask = targetLayer | playerLayers;
-        // If shooterLayer is valid, remove it from the raycastLayerMask
-        // This is a bit tricky with LayerMask, often easier to manage with Physics.IgnoreLayerCollision
-        // For now, we'll rely on the targetLayer to define what it hits.
-        // If the shooter is also in the targetLayer, we'd need more sophisticated logic.
-
-        if (Physics.Raycast(transform.position, moveDirection, out RaycastHit hit, moveDistance, raycastLayerMask))
+    private void OnTriggerEnter(Collider other)
+    {
+        // 자기 자신(발사체)의 레이어와 충돌은 무시
+        if (other.gameObject.layer == shooterLayer)
         {
-            // Check if the hit object is the shooter itself
-            if (hit.collider.gameObject.layer == shooterLayer)
+            return;
+        }
+
+        // 저스트 회피 영역에 닿았는지 먼저 확인
+        if (((1 << other.gameObject.layer) & justDodgeLayer) != 0)
+        {
+            OnGraze();
+            return; // 저스트 회피 성공 시, 아래의 일반 피격 로직은 실행하지 않음
+        }
+
+        // 일반 피격 대상인지 확인 (targetLayer 또는 playerLayers)
+        if (!(((1 << other.gameObject.layer) & targetLayer) != 0 || ((1 << other.gameObject.layer) & playerLayers) != 0))
+        {
+            // 대상이 아니면 아무것도 하지 않고 통과 (또는 벽과 같은 환경에 부딪혔을 때의 로직 추가 가능)
+            // 예: if (other.gameObject.CompareTag("Environment")) { gameObject.SetActive(false); }
+            return;
+        }
+
+        // --- Target Hit Logic ---
+        Unit unit = other.GetComponentInParent<Unit>();
+        if (unit != null)
+        {
+            if (unit.IsInvincible)
             {
-                // Ignore collision with self and continue moving
-                transform.Translate(moveDirection * moveDistance, Space.World);
+                Debug.Log("Hit an invincible unit! No damage will be dealt."); // 디버그 로그 추가
+                if (!string.IsNullOrEmpty(unit.guardEffectPoolTag) && EffectPoolManager.Instance != null)
+                {
+                    EffectPoolManager.Instance.GetPooledObject(unit.guardEffectPoolTag, other.ClosestPoint(transform.position), Quaternion.identity);
+                }
+                gameObject.SetActive(false);
                 return;
-            }
-
-            // Target hit logic
-            // Assuming targets have a health component or similar
-            // For now, let's just log and disable
-
-            // Example: Damage logic (needs to be adapted to your health system)
-            // If the target has a Unit or Vehicle component, deal damage
-            Unit unit = hit.collider.GetComponent<Unit>();
-            if (unit != null)
-            {
-                if (unit.IsInvincible)
-                {
-                    // Play guard effect if unit is invincible
-                    if (!string.IsNullOrEmpty(unit.guardEffectPoolTag) && EffectPoolManager.Instance != null)
-                    {
-                        EffectPoolManager.Instance.GetPooledObject(unit.guardEffectPoolTag, hit.point, Quaternion.identity);
-                    }
-                    gameObject.SetActive(false); // Deactivate projectile
-                    return; // Do not proceed with damage
-                }
-                else
-                {
-                    unit.TakeDamage(_damage);
-                }
             }
             else
             {
-                Vehicle vehicle = hit.collider.GetComponent<Vehicle>();
-                if (vehicle != null)
-                {
-                    vehicle.TakeDamage(_damage);
-                }
-                else
-                {
-                    // Fallback for other damageable objects, e.g., EnemyHealth
-                    EnemyHealth enemyHealth = hit.collider.GetComponent<EnemyHealth>();
-                    if (enemyHealth != null)
-                    {
-                        enemyHealth.TakeDamage(_damage);
-                    }
-                }
+                unit.TakeDamage(_damage);
             }
-
-            // 피격 이펙트 생성
-            if (data.hitEffectPrefab != null)
-            {
-                Instantiate(data.hitEffectPrefab, hit.point, Quaternion.LookRotation(hit.normal));
-            }
-
-            // 발사체 비활성화
-            gameObject.SetActive(false);
         }
         else
         {
-            // 충돌하지 않았으면 그냥 이동
-            transform.Translate(moveDirection * moveDistance, Space.World);
+            Vehicle vehicle = other.GetComponentInParent<Vehicle>();
+            if (vehicle != null)
+            {
+                vehicle.TakeDamage(_damage);
+            }
+            else
+            {
+                EnemyHealth enemyHealth = other.GetComponentInParent<EnemyHealth>();
+                if (enemyHealth != null)
+                {
+                    enemyHealth.TakeDamage(_damage);
+                }
+            }
         }
+
+        // 피격 이펙트 생성
+        if (data.hitEffectPrefab != null)
+        {
+            // 충돌 지점에 이펙트 생성
+            Instantiate(data.hitEffectPrefab, other.ClosestPoint(transform.position), Quaternion.LookRotation(other.transform.position - transform.position));
+        }
+
+        // 발사체 비활성화
+        gameObject.SetActive(false);
     }
+
 
     // [NEW] 저스트 회피 트리거에 스쳤을 때 호출될 함수
     public void OnGraze()

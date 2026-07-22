@@ -93,7 +93,10 @@ public class UnitWeaponSystem : MonoBehaviour
         aimDirection = newAimDirection;
         if (turretTransform != null && aimDirection.sqrMagnitude > 0.01f)
         {
-            Quaternion targetRotation = Quaternion.LookRotation(aimDirection);
+            // Turret only rotates on Y axis, so we project the aim direction onto the horizontal plane.
+            Vector3 horizontalAim = newAimDirection;
+            horizontalAim.y = 0;
+            Quaternion targetRotation = Quaternion.LookRotation(horizontalAim.normalized);
             turretTransform.rotation = Quaternion.Slerp(turretTransform.rotation, targetRotation, 20f * Time.deltaTime);
         }
     }
@@ -159,7 +162,6 @@ public class UnitWeaponSystem : MonoBehaviour
         float damage = weaponData.projectileData.damage;
         float finalDamage = isBuffed ? _unit.GetBuffedDamage(damage) : damage;
 
-
         for (int i = 0; i < weaponData.projectilesPerShot; i++)
         {
             GameObject projectileGO = GetPooledProjectile();
@@ -171,7 +173,7 @@ public class UnitWeaponSystem : MonoBehaviour
                 if (weaponData.spreadAngle > 0)
                 {
                     float randomAngle = Random.Range(-weaponData.spreadAngle / 2, weaponData.spreadAngle / 2);
-                    fireDirection = Quaternion.Euler(0, randomAngle, 0) * fireDirection;
+                    fireDirection = Quaternion.AngleAxis(randomAngle, turretTransform.up) * fireDirection;
                 }
                 
                 projectileGO.transform.rotation = Quaternion.LookRotation(fireDirection);

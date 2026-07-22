@@ -9,8 +9,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3028468686477829392}
-  - component: {fileID: 3135147930434493935}
   - component: {fileID: 976028370877845210}
+  - component: {fileID: 6954973905775275951}
+  - component: {fileID: 7621749536196600937}
   m_Layer: 0
   m_Name: Vehicle2Projectile
   m_TagString: Untagged
@@ -34,8 +35,54 @@ Transform:
   - {fileID: 6134354615403239717}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!135 &3135147930434493935
-SphereCollider:
+--- !u!114 &976028370877845210
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2819337062272718742}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a5f68c4fa88bb984282f13d6edd86a52, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Projectile
+  data: {fileID: 11400000, guid: 04562adf54c63314c84c8a6a53335ad5, type: 2}
+  targetLayer:
+    serializedVersion: 2
+    m_Bits: 1024
+  playerLayers:
+    serializedVersion: 2
+    m_Bits: 0
+--- !u!54 &6954973905775275951
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2819337062272718742}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 0
+  m_IsKinematic: 1
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
+--- !u!65 &7621749536196600937
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -53,24 +100,8 @@ SphereCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Radius: 0.4
+  m_Size: {x: 0.4, y: 100, z: 0.8}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &976028370877845210
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2819337062272718742}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a5f68c4fa88bb984282f13d6edd86a52, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Projectile
-  data: {fileID: 11400000, guid: 04562adf54c63314c84c8a6a53335ad5, type: 2}
-  targetLayer:
-    serializedVersion: 2
-    m_Bits: 1024
 --- !u!1 &3159758419127099811
 GameObject:
   m_ObjectHideFlags: 0

@@ -16,6 +16,7 @@ public class UnitMove : MonoBehaviour
 
     [Header("Evade")]
     [SerializeField] private EvadeData evadeData;
+    [SerializeField] private GameObject justDodgeTriggerObject; // 저스트 회피 트리거 오브젝트
 
     // --- Dependencies ---
     private Unit _unit;
@@ -55,6 +56,12 @@ public class UnitMove : MonoBehaviour
 
         baseMoveSpeed = moveSpeed; // Store the initial Inspector value
         currentEffectiveMoveSpeed = baseMoveSpeed; // Start with base speed
+
+        // 게임 시작 시 저스트 회피 트리거를 비활성화
+        if (justDodgeTriggerObject != null)
+        {
+            justDodgeTriggerObject.SetActive(false);
+        }
     }
 
     private void Update()
@@ -182,6 +189,8 @@ public class UnitMove : MonoBehaviour
         lastEvadeTime = Time.time;
 
         _unit.IsInvincible = true; // Set invincibility at the start of evade
+        if (justDodgeTriggerObject != null) justDodgeTriggerObject.SetActive(true);
+
 
         // --- Animation ---
         _unit.UnitAnimator.TriggerEvade();
@@ -254,6 +263,7 @@ public class UnitMove : MonoBehaviour
         gameObject.layer = originalLayer; // Reverted: Set layer back to original
         _unit.UnitVisuals.SetEvadeTrail(false);
         _unit.IsInvincible = false; // Reset invincibility at the end of evade
+        if (justDodgeTriggerObject != null) justDodgeTriggerObject.SetActive(false);
     }
 
     private void ForceIdleAnimation()

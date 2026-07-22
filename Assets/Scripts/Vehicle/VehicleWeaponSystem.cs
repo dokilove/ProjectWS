@@ -10,7 +10,6 @@ public class VehicleWeaponSystem : MonoBehaviour
     [SerializeField] private Transform firePoint;
 
     [Header("Data")]
-    [SerializeField] private LayerMask enemyLayer;
     [SerializeField] private WeaponData weaponData;
 
     // --- Dependencies ---
@@ -26,9 +25,6 @@ public class VehicleWeaponSystem : MonoBehaviour
     // --- Projectile Pool ---
     private List<GameObject> projectilePool = new List<GameObject>();
     private int poolSize = 20;
-    
-    // --- Targeting ---
-    private RaycastHit[] hitResults = new RaycastHit[10];
 
     // --- Public Properties ---
     public Transform TurretTransform => turretTransform;
@@ -135,9 +131,10 @@ public class VehicleWeaponSystem : MonoBehaviour
             float distanceToTarget = Vector3.Distance(transform.position, aiTarget.position);
             if (distanceToTarget > weaponData.lockOnRadius) return false;
 
-            Vector3 directionToTarget = (aiTarget.position - turretTransform.position).normalized;
+            Vector3 directionToTarget = (aiTarget.position - turretTransform.position);
+            directionToTarget.y = 0; // Check angle on horizontal plane only
             float angleToTarget = Vector3.Angle(turretTransform.forward, directionToTarget);
-            return angleToTarget <= weaponData.attackAngle / 2;
+            return angleToTarget <= 5; // AI fires if target is roughly in front
         }
         
         return true; // Player can always fire if not reloading/on cooldown
@@ -149,31 +146,15 @@ public class VehicleWeaponSystem : MonoBehaviour
 
         nextFireTime = Time.time + 1f / weaponData.fireRate;
         currentAmmo--;
-        Vector3 baseFireDirection = turretTransform.forward;
+        
+        Vector3 fireDirection = turretTransform.forward;
 
-        if (_vehicle.IsControlledByPlayer)
+        // For AI, aim directly at the target on the horizontal plane
+        if (!_vehicle.IsControlledByPlayer && aiTarget != null)
         {
-            int hitCount = Physics.SphereCastNonAlloc(firePoint.position, 1f, turretTransform.forward, hitResults, weaponData.lockOnRadius, enemyLayer);
-            Transform closestEnemy = null;
-            float minDistance = float.MaxValue;
-
-            for (int i = 0; i < hitCount; i++)
-            {
-                if (hitResults[i].transform.CompareTag("Enemy"))
-                {
-                    float distance = Vector3.Distance(firePoint.position, hitResults[i].transform.position);
-                    if (distance < minDistance)
-                    {
-                        minDistance = distance;
-                        closestEnemy = hitResults[i].transform;
-                    }
-                }
-            }
-            if (closestEnemy != null) baseFireDirection = (closestEnemy.position - firePoint.position).normalized;
-        }
-        else
-        {
-            if (aiTarget != null) baseFireDirection = (aiTarget.position - firePoint.position).normalized;
+            Vector3 directionToTarget = aiTarget.position - firePoint.position;
+            directionToTarget.y = 0;
+            fireDirection = directionToTarget.normalized;
         }
 
         for (int i = 0; i < weaponData.projectilesPerShot; i++)
@@ -181,11 +162,11 @@ public class VehicleWeaponSystem : MonoBehaviour
             GameObject projectile = GetPooledProjectile();
             if (projectile != null)
             {
-                Vector3 finalFireDirection = baseFireDirection;
+                Vector3 finalFireDirection = fireDirection;
                 if (weaponData.spreadAngle > 0)
                 {
                     float randomAngle = Random.Range(-weaponData.spreadAngle / 2, weaponData.spreadAngle / 2);
-                    finalFireDirection = Quaternion.Euler(0, randomAngle, 0) * finalFireDirection;
+                    finalFireDirection = Quaternion.AngleAxis(randomAngle, turretTransform.up) * finalFireDirection;
                 }
                 projectile.transform.position = firePoint.position;
                 projectile.transform.rotation = Quaternion.LookRotation(finalFireDirection);
