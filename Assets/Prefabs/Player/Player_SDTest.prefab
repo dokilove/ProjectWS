@@ -1001,7 +1001,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Unit
   playerHealthData: {fileID: 11400000, guid: 42a825921c356d244910a0b01dd97c8b, type: 2}
   hitEffectPoolTag: hit03
-  guardEffectPoolTag: guard
+  justDodgeEffectPoolTag: bullet_time
   justDodgeWindow: 0.2
   bulletTimeDuration: 2
   bulletTimeScale: 0.2

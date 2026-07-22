@@ -33,7 +33,7 @@ public class Unit : MonoBehaviour
 
     public PlayerHealthData playerHealthData;
     public string hitEffectPoolTag;
-    public string guardEffectPoolTag; // New field for guard effect
+    public string justDodgeEffectPoolTag; // [MODIFIED] Name changed from guardEffectPoolTag
 
     [Header("Just Dodge Settings")]
     [SerializeField] private float justDodgeWindow = 0.15f; // 저스트 회피 판정 시간
@@ -194,6 +194,12 @@ public class Unit : MonoBehaviour
     // [NEW] 저스트 회피 성공 효과를 발동시키는 함수
     public void ActivateJustDodgeEffects()
     {
+        // [NEW] Play the visual effect for a successful just dodge
+        if (!string.IsNullOrEmpty(justDodgeEffectPoolTag) && EffectPoolManager.Instance != null)
+        {
+            EffectPoolManager.Instance.GetPooledObject(justDodgeEffectPoolTag, transform.position, Quaternion.identity);
+        }
+
         IsNextAttackBuffed = true;
         if (BulletTimeManager.Instance != null)
         {

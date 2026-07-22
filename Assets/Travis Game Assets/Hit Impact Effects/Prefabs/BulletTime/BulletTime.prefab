@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 8460667080445658519}
   - component: {fileID: 6657354250575056361}
   m_Layer: 0
-  m_Name: Guard_01
+  m_Name: BulletTime
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

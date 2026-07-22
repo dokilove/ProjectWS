@@ -67,11 +67,7 @@ public class Projectile : MonoBehaviour
         {
             if (unit.IsInvincible)
             {
-                Debug.Log("Hit an invincible unit! No damage will be dealt."); // 디버그 로그 추가
-                if (!string.IsNullOrEmpty(unit.guardEffectPoolTag) && EffectPoolManager.Instance != null)
-                {
-                    EffectPoolManager.Instance.GetPooledObject(unit.guardEffectPoolTag, other.ClosestPoint(transform.position), Quaternion.identity);
-                }
+                // Unit is invincible (e.g., during a normal dodge), so do nothing.
                 gameObject.SetActive(false);
                 return;
             }
