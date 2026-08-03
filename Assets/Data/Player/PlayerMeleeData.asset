@@ -32,6 +32,7 @@ MonoBehaviour:
   - 100
   - 50
   chargeAttackDashForce: -100
+  attackCooldown: 0.2
   comboResetTimes:
   - 0.7
   - 0.5

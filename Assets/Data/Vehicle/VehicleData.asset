@@ -13,4 +13,5 @@ MonoBehaviour:
   m_Name: VehicleData
   m_EditorClassIdentifier: Assembly-CSharp::VehicleAIBehaviour
   followSpeed: 7
-  followStopDistance: 5
+  followStopDistance: 15
+  followCoolTime: 5

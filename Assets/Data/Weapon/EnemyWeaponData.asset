@@ -18,5 +18,5 @@ MonoBehaviour:
   attackAngle: 360
   spreadAngle: 0
   projectilesPerShot: 1
-  magazineSize: 30
-  reloadTime: 1.5
+  magazineSize: 2
+  reloadTime: 3

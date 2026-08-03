@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: EnemyProjectile
   m_EditorClassIdentifier: Assembly-CSharp::ProjectileData
   damage: 10
-  speed: 4
-  lifespan: 4
+  speed: 20
+  lifespan: 10
   hitEffectPrefab: {fileID: 0}
   projectilePrefab: {fileID: 2819337062272718742, guid: 768964c9c3c23c647afe080915158d93, type: 3}

@@ -950,7 +950,7 @@ MonoBehaviour:
   turretTransform: {fileID: 8119486018014156151}
   firePoint: {fileID: 3147461973573372184}
   pistolModel: {fileID: 0}
-  weaponData: {fileID: 11400000, guid: 3f863e2be28fa32469bc853300811ebd, type: 2}
+  weaponData: {fileID: 11400000, guid: 210a2650f3422474fb29c6c5a8312879, type: 2}
 --- !u!114 &-2081736369807973968
 MonoBehaviour:
   m_ObjectHideFlags: 0
