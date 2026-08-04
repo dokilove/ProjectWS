@@ -4,6 +4,9 @@ using UnityEngine.UIElements;
 [RequireComponent(typeof(UIDocument))]
 public class VehicleInteractionHandler : MonoBehaviour
 {
+    [Tooltip("체크하면 홀드 없이 탭으로 탑승합니다.")]
+    public bool useTapToEnter = false;
+
     private UIDocument _uiDocument;
     private VisualElement _promptContainer;
     private float _currentProgress = 0f;

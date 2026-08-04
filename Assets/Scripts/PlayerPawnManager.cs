@@ -207,7 +207,8 @@ public class PlayerPawnManager : MonoBehaviour
         {
             _currentTargetHandler.Show();
 
-            if (_isHoldingInteract)
+            // Only show progress if the target requires a hold
+            if (_isHoldingInteract && !_currentTargetHandler.useTapToEnter)
             {
                 float progress = (Time.time - _interactHoldStartTime) / vehicleEnterHoldTime;
                 _currentTargetHandler.UpdateProgress(progress);
@@ -218,16 +219,27 @@ public class PlayerPawnManager : MonoBehaviour
 
     private void OnInteract(InputAction.CallbackContext context)
     {
-        // If currently controlling Vehicle, try to exit (Tap)
+        // Priority 1: Exit vehicle if we are in one.
         if (currentVehicle != null && currentVehicle.IsControlledByPlayer)
         {
             ExitVehicle();
+            return;
+        }
+
+        // Priority 2: Enter vehicle if we are on foot and target is tap-to-enter.
+        if (_currentTargetHandler != null && _currentTargetHandler.useTapToEnter)
+        {
+            if (_potentialVehicleTarget != null && currentUnit != null)
+            {
+                TryEnterVehicle(_potentialVehicleTarget);
+            }
         }
     }
 
     private void OnInteractHold_Started(InputAction.CallbackContext context)
     {
-        if (_potentialVehicleTarget != null)
+        // Only start holding if there is a target and it's not a tap-to-enter vehicle
+        if (_currentTargetHandler != null && !_currentTargetHandler.useTapToEnter)
         {
             _isHoldingInteract = true;
             _interactHoldStartTime = Time.time;
