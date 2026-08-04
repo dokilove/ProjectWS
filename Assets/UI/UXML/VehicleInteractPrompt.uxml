@@ -1,0 +1,5 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="prompt-container" style="width: 96px; height: 96px; display: none; position: absolute;">
+        <ui:VisualElement name="hold-progress" class="progress-bar-radial" style="width: 100%; height: 100%;" />
+    </ui:VisualElement>
+</ui:UXML>

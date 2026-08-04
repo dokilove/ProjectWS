@@ -17,6 +17,7 @@ public class PlayerPawnManager : MonoBehaviour
 
     [Header("Vehicle Interaction")]
     [SerializeField] private float vehicleDetectionRadius = 3f; // 탈것 탐지 반경
+    [SerializeField] private float vehicleEnterHoldTime = 1.5f; // 탑승에 필요한 홀드 시간
     [SerializeField] private LayerMask vehicleLayer; // 탈것 레이어 (Unity Editor에서 설정 필요)
     [SerializeField] private LayerMask groundLayer; // 바닥 레이어 (Unity Editor에서 설정 필요)
 
@@ -26,6 +27,12 @@ public class PlayerPawnManager : MonoBehaviour
 
     private Unit currentUnit; // Reference to the currently possessed Unit
     private IVehicle currentVehicle; // Reference to the currently possessed Vehicle
+
+    // --- Interaction State ---
+    private IVehicle _potentialVehicleTarget;
+    private VehicleInteractionHandler _currentTargetHandler;
+    private bool _isHoldingInteract;
+    private float _interactHoldStartTime;
 
     private InputSystem_Actions playerActions;
     private InputSystem_Actions.PlayerActions playerOnFootActions; // For Unit control
@@ -41,8 +48,16 @@ public class PlayerPawnManager : MonoBehaviour
 
         // Subscribe to Interact action (always active for the PlayerPawnManager)
         playerOnFootActions.Interact.performed += OnInteract;
-        playerOnFootActions.Interact_Hold.performed += OnInteractHold;
-        // The Interact_Hold action will be subscribed/unsubscribed dynamically for vehicle
+        
+        // Hold Actions
+        playerOnFootActions.Interact_Hold.started += OnInteractHold_Started;
+        playerOnFootActions.Interact_Hold.performed += OnInteractHold_Performed;
+        playerOnFootActions.Interact_Hold.canceled += OnInteractHold_Canceled;
+    }
+
+    private void Update()
+    {
+        HandleVehicleInteraction();
     }
 
     private void Start()
@@ -136,33 +151,114 @@ public class PlayerPawnManager : MonoBehaviour
     {
         playerOnFootActions.Disable();
         playerInVehicleActions.Disable();
+
         playerOnFootActions.Interact.performed -= OnInteract;
-        playerOnFootActions.Interact_Hold.performed -= OnInteractHold;
-        // Unsubscribe Interact_Hold if it was subscribed for vehicle
-        playerInVehicleActions.Interact_Hold.performed -= OnInteractHold;
+        playerOnFootActions.Interact_Hold.started -= OnInteractHold_Started;
+        playerOnFootActions.Interact_Hold.performed -= OnInteractHold_Performed;
+        playerOnFootActions.Interact_Hold.canceled -= OnInteractHold_Canceled;
+        
+        playerInVehicleActions.Interact.performed -= OnInteract;
     }
+
+    private void HandleVehicleInteraction()
+    {
+        if (currentUnit == null || !currentUnit.IsControlledByPlayer)
+        {
+            if (_currentTargetHandler != null)
+            {
+                _currentTargetHandler.Hide();
+                _currentTargetHandler = null;
+            }
+            _potentialVehicleTarget = null;
+            return;
+        }
+
+        // Find the closest vehicle
+        Collider[] hitColliders = Physics.OverlapSphere(currentUnit.transform.position, vehicleDetectionRadius, vehicleLayer);
+        IVehicle closestVehicle = null;
+        float minDistance = Mathf.Infinity;
+
+        foreach (Collider hitCollider in hitColliders)
+        {
+            if (hitCollider.TryGetComponent<IVehicle>(out IVehicle vehicle) && vehicle as Object != currentVehicle as Object)
+            {
+                float distance = Vector3.Distance(currentUnit.transform.position, vehicle.transform.position);
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                    closestVehicle = vehicle;
+                }
+            }
+        }
+
+        // Update potential target
+        _potentialVehicleTarget = closestVehicle;
+        var newTargetHandler = _potentialVehicleTarget?.transform.GetComponentInChildren<VehicleInteractionHandler>();
+
+        // If target changed, hide old one
+        if (_currentTargetHandler != null && _currentTargetHandler != newTargetHandler)
+        {
+            _currentTargetHandler.Hide();
+        }
+        
+        _currentTargetHandler = newTargetHandler;
+
+        if (_currentTargetHandler != null)
+        {
+            _currentTargetHandler.Show();
+
+            if (_isHoldingInteract)
+            {
+                float progress = (Time.time - _interactHoldStartTime) / vehicleEnterHoldTime;
+                _currentTargetHandler.UpdateProgress(progress);
+            }
+        }
+    }
+
 
     private void OnInteract(InputAction.CallbackContext context)
     {
-        // If currently controlling Unit, try to enter vehicle
-        if (currentUnit != null && currentUnit.IsControlledByPlayer)
-        {
-            TryEnterVehicle();
-        }
-        // If currently controlling Vehicle, Interact does nothing (Interact_Hold handles leaving)
-    }
-
-    private void OnInteractHold(InputAction.CallbackContext context)
-    {
-        // If currently controlling Vehicle, try to exit
+        // If currently controlling Vehicle, try to exit (Tap)
         if (currentVehicle != null && currentVehicle.IsControlledByPlayer)
         {
             ExitVehicle();
         }
     }
 
-    
+    private void OnInteractHold_Started(InputAction.CallbackContext context)
+    {
+        if (_potentialVehicleTarget != null)
+        {
+            _isHoldingInteract = true;
+            _interactHoldStartTime = Time.time;
+        }
+    }
 
+    private void OnInteractHold_Performed(InputAction.CallbackContext context)
+    {
+        if (_isHoldingInteract && _potentialVehicleTarget != null)
+        {
+            TryEnterVehicle(_potentialVehicleTarget);
+        }
+        
+        // Reset state regardless
+        _isHoldingInteract = false;
+        if (_currentTargetHandler != null)
+        {
+            _currentTargetHandler.UpdateProgress(0);
+        }
+    }
+
+    private void OnInteractHold_Canceled(InputAction.CallbackContext context)
+    {
+        // Released button early
+        _isHoldingInteract = false;
+        if (_currentTargetHandler != null)
+        {
+            _currentTargetHandler.UpdateProgress(0);
+        }
+    }
+    
     private void PossessUnit(Unit unitToPossess)
     {
         if (unitToPossess == null)
@@ -179,7 +275,7 @@ public class PlayerPawnManager : MonoBehaviour
         if (currentVehicle != null && currentVehicle.IsControlledByPlayer)
         {
             currentVehicle.DisableControl();
-            playerInVehicleActions.Interact_Hold.performed -= OnInteractHold; // Unsubscribe Interact_Hold
+            playerInVehicleActions.Interact.performed -= OnInteract; // Unsubscribe Interact (TAP)
             playerInVehicleActions.Disable(); // Disable Vehicle actions
             // 차량에서 내릴 때 플레이어 카메라 위치를 차량 카메라 위치로 옮김
             playerCam.ForceCameraPosition(vehicleCam.transform.position, vehicleCam.transform.rotation);
@@ -210,17 +306,25 @@ public class PlayerPawnManager : MonoBehaviour
             return;
         }
 
+        // Hide and reset the prompt before possessing
+        _isHoldingInteract = false;
+        if (_currentTargetHandler != null)
+        {
+            _currentTargetHandler.Hide();
+            _currentTargetHandler = null;
+        }
+
+
         // Unpossess current if any
         if (currentUnit != null && currentUnit.IsControlledByPlayer)
         {
             currentUnit.DisableControl();
             playerOnFootActions.Disable(); // Disable Player actions
-            playerOnFootActions.Interact_Hold.performed -= OnInteractHold; // Unsubscribe Interact_Hold
         }
         if (currentVehicle != null && currentVehicle.IsControlledByPlayer)
         {
             currentVehicle.DisableControl();
-            playerInVehicleActions.Interact_Hold.performed -= OnInteractHold; // Unsubscribe Interact_Hold
+            playerInVehicleActions.Interact.performed -= OnInteract; // Unsubscribe Interact (TAP)
         }
 
         currentVehicle = vehicleToPossess;
@@ -231,7 +335,7 @@ public class PlayerPawnManager : MonoBehaviour
 
         currentVehicle.EnableControl(); // Enable Vehicle control
         playerInVehicleActions.Enable(); // Enable Vehicle actions
-        playerInVehicleActions.Interact_Hold.performed += OnInteractHold; // Subscribe to Interact_Hold
+        playerInVehicleActions.Interact.performed += OnInteract; // Subscribe to Interact (TAP)
 
         ActivePlayerTransform = currentVehicle.transform; // Set active transform
 
@@ -279,30 +383,14 @@ public class PlayerPawnManager : MonoBehaviour
         return vehicleTransform.position + Vector3.up * 2f;
     }
 
-    private void TryEnterVehicle()
+    private void TryEnterVehicle(IVehicle vehicleToEnter)
     {
-        Collider[] hitColliders = Physics.OverlapSphere(currentUnit.transform.position, vehicleDetectionRadius, vehicleLayer);
-        IVehicle nearestVehicle = null;
-        float minDistance = Mathf.Infinity;
-
-        foreach (Collider hitCollider in hitColliders)
-        {
-            if (hitCollider.TryGetComponent<IVehicle>(out IVehicle vehicle))
-            {
-                float distance = Vector3.Distance(currentUnit.transform.position, vehicle.transform.position);
-                if (distance < minDistance)
-                {
-                    minDistance = distance;
-                    nearestVehicle = vehicle;
-                }
-            }
-        }
-
-        if (nearestVehicle != null)
+        if (vehicleToEnter != null)
         {
             // Position unit near vehicle before possessing
-            currentUnit.transform.position = nearestVehicle.transform.position + nearestVehicle.transform.forward * 2f; // Exit in front of vehicle
-            PossessVehicle(nearestVehicle);
+            // This might not be needed if the player is already close
+            // currentUnit.transform.position = vehicleToEnter.transform.position + vehicleToEnter.transform.forward * 2f; 
+            PossessVehicle(vehicleToEnter);
         }
     }
 

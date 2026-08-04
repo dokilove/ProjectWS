@@ -1,0 +1,30 @@
+.progress-bar-radial {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    overflow: hidden;
+    position: absolute;
+}
+
+.progress-bar-radial > #unity-progress-bar__background {
+    background-color: rgba(0, 0, 0, 0.5);
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+}
+
+.progress-bar-radial > #unity-progress-bar__progress {
+    /* This will be used as a mask. The actual fill will be a separate element manipulated by script */
+    background-color: white;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    /* We will use clip-path or other properties from C# to create the radial effect */
+    -unity-slice-scale: 0;
+}
+
+/* Add a simple icon inside if needed, e.g., a hand icon */
+#prompt-container {
+    /* For example, you could set a background image here for a hand icon */
+    /* background-image: url('project-resource://MyIcon.png'); */
+}
