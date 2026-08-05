@@ -3,14 +3,19 @@ using UnityEngine;
 // This script will act as the coordinator for all other Vehicle components.
 [RequireComponent(typeof(VehicleInput))]
 [RequireComponent(typeof(VehicleMove))]
-[RequireComponent(typeof(VehicleWeaponSystem))]
 [RequireComponent(typeof(VehicleVisuals))]
 // Not requiring VehicleAI as it might not be on player vehicles
 public class Vehicle : MonoBehaviour, IVehicle
 {
+    [Header("Weapon Systems")]
+    [SerializeField] private VehicleWeaponSystem autoWeaponSystem;
+    [SerializeField] private VehicleWeaponSystem playerWeaponSystem;
+
     public VehicleInput VehicleInput { get; private set; }
     public VehicleMove VehicleMove { get; private set; }
-    public VehicleWeaponSystem VehicleWeaponSystem { get; private set; }
+    public VehicleWeaponSystem AutoWeaponSystem => autoWeaponSystem;
+    public VehicleWeaponSystem PlayerWeaponSystem => playerWeaponSystem;
+    public VehicleWeaponSystem VehicleWeaponSystem => playerWeaponSystem != null ? playerWeaponSystem : (autoWeaponSystem != null ? autoWeaponSystem : GetComponentInChildren<VehicleWeaponSystem>());
     public VehicleVisuals VehicleVisuals { get; private set; }
     public VehicleAI VehicleAI { get; private set; }
 
@@ -30,27 +35,63 @@ public class Vehicle : MonoBehaviour, IVehicle
     {
         VehicleInput = GetComponent<VehicleInput>();
         VehicleMove = GetComponent<VehicleMove>();
-        VehicleWeaponSystem = GetComponent<VehicleWeaponSystem>();
         VehicleVisuals = GetComponent<VehicleVisuals>();
-        VehicleAI = GetComponent<VehicleAI>(); // This can be null
+        VehicleAI = GetComponent<VehicleAI>();
 
+        var weaponSystems = GetComponentsInChildren<VehicleWeaponSystem>();
+        foreach (var ws in weaponSystems)
+        {
+            if (ws.IsAutoWeapon)
+            {
+                if (autoWeaponSystem == null) autoWeaponSystem = ws;
+            }
+            else
+            {
+                if (playerWeaponSystem == null) playerWeaponSystem = ws;
+            }
+        }
+
+        if (autoWeaponSystem == null && playerWeaponSystem == null && weaponSystems.Length > 0)
+        {
+            if (weaponSystems[0].IsAutoWeapon) autoWeaponSystem = weaponSystems[0];
+            else playerWeaponSystem = weaponSystems[0];
+        }
+
+        if (vehicleHealthData == null)
+        {
+            Debug.LogWarning("VehicleHealthData is not assigned to Vehicle. CurrentHealth will not be initialized.");
+            CurrentHealth = 200f;
+        }
+
+        if (VehicleInput != null) VehicleInput.Init(this);
+        if (VehicleMove != null) VehicleMove.Init(this);
+        if (autoWeaponSystem != null) autoWeaponSystem.Init(this);
+        if (playerWeaponSystem != null) playerWeaponSystem.Init(this);
+        if (VehicleVisuals != null) VehicleVisuals.Init(this);
+        if (VehicleAI != null) VehicleAI.Init(this);
+    }
+
+    private void Start()
+    {
         if (vehicleHealthData != null)
         {
             CurrentHealth = vehicleHealthData.maxHealth;
         }
-        else
-        {
-            Debug.LogWarning("VehicleHealthData is not assigned to Vehicle. CurrentHealth will not be initialized.");
-            CurrentHealth = 200f; // Default if not assigned
-        }
 
-        // Initialize components
-        if(VehicleInput != null) VehicleInput.Init(this);
-        if(VehicleMove != null) VehicleMove.Init(this);
-        if(VehicleWeaponSystem != null) VehicleWeaponSystem.Init(this);
-        if(VehicleVisuals != null) VehicleVisuals.Init(this);
-        if(VehicleAI != null) VehicleAI.Init(this);
-        // Other inits will go here
+        UpdatePlayerTurretVisibility();
+    }
+
+    public void UpdatePlayerTurretVisibility()
+    {
+        var pWeapon = playerWeaponSystem != null ? playerWeaponSystem : (VehicleWeaponSystem != null && !VehicleWeaponSystem.IsAutoWeapon ? VehicleWeaponSystem : null);
+        if (pWeapon != null)
+        {
+            Transform tTransform = pWeapon.TurretTransform != null ? pWeapon.TurretTransform : pWeapon.transform;
+            if (tTransform != null)
+            {
+                tTransform.gameObject.SetActive(IsControlledByPlayer);
+            }
+        }
     }
 
     public void TakeDamage(float amount)
@@ -103,6 +144,8 @@ public class Vehicle : MonoBehaviour, IVehicle
             rb.isKinematic = false;
             rb.constraints = RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
         }
+
+        UpdatePlayerTurretVisibility();
     }
 
     public void DisableControl()
@@ -131,5 +174,7 @@ public class Vehicle : MonoBehaviour, IVehicle
                 rb.constraints = RigidbodyConstraints.FreezeAll;
             }
         }
+
+        UpdatePlayerTurretVisibility();
     }
 }

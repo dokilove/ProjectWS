@@ -30,7 +30,6 @@ public class UnitWeaponSystem : MonoBehaviour
     public Transform TurretTransform => turretTransform;
     public int CurrentAmmo => currentAmmo;
     public WeaponData WeaponData => weaponData;
-    public bool IsReloading => isReloading;
 
     public void Init(Unit unit)
     {
@@ -134,18 +133,96 @@ public class UnitWeaponSystem : MonoBehaviour
     /// <summary>
     /// Handles the reload input event.
     /// </summary>
+    private float reloadFinishTime = 0f;
+
+    public bool IsReloading
+    {
+        get
+        {
+            if (isReloading && Time.time >= reloadFinishTime)
+            {
+                currentAmmo = weaponData != null ? weaponData.magazineSize : 30;
+                isReloading = false;
+            }
+            return isReloading;
+        }
+    }
+
     public void HandleReloadInput()
     {
-        if (!isReloading && currentAmmo < weaponData.magazineSize)
+        if (!IsReloading && weaponData != null && currentAmmo < weaponData.magazineSize)
         {
-            StartCoroutine(Reload());
+            StartReload();
+        }
+    }
+
+    public void StartReload()
+    {
+        if (isReloading || weaponData == null) return;
+        isReloading = true;
+        reloadFinishTime = Time.time + weaponData.reloadTime;
+        if (_unit != null && _unit.UnitAnimator != null && _unit.gameObject.activeInHierarchy)
+        {
+            _unit.UnitAnimator.TriggerReload();
         }
     }
 
     private bool CanFire()
     {
         if (weaponData == null) return false;
-        return Time.time >= nextFireTime && !isReloading && currentAmmo > 0;
+        return Time.time >= nextFireTime && !IsReloading && currentAmmo > 0;
+    }
+
+    public void FireFromVehicle(Vector3 position, Vector3 direction)
+    {
+        if (!CanFire())
+        {
+            if (currentAmmo <= 0 && !IsReloading)
+            {
+                StartReload();
+            }
+            return;
+        }
+
+        nextFireTime = Time.time + 1f / weaponData.fireRate;
+        currentAmmo--;
+
+        if (_unit != null && _unit.UnitAnimator != null && _unit.gameObject.activeInHierarchy)
+        {
+            _unit.UnitAnimator.TriggerAttack();
+        }
+
+        bool isBuffed = _unit != null ? _unit.IsNextAttackBuffed : false;
+        float damage = weaponData.projectileData.damage;
+        float finalDamage = isBuffed && _unit != null ? _unit.GetBuffedDamage(damage) : damage;
+
+        int ownerLayer = _unit != null ? _unit.gameObject.layer : LayerMask.NameToLayer("Player");
+        if (ownerLayer < 0) ownerLayer = 0;
+
+        for (int i = 0; i < weaponData.projectilesPerShot; i++)
+        {
+            GameObject projectileGO = GetPooledProjectile();
+            if (projectileGO != null)
+            {
+                projectileGO.transform.position = position;
+
+                Vector3 finalFireDirection = direction;
+                if (weaponData.spreadAngle > 0)
+                {
+                    float randomAngle = Random.Range(-weaponData.spreadAngle / 2, weaponData.spreadAngle / 2);
+                    finalFireDirection = Quaternion.AngleAxis(randomAngle, Vector3.up) * finalFireDirection;
+                }
+                
+                projectileGO.transform.rotation = Quaternion.LookRotation(finalFireDirection);
+                projectileGO.SetActive(true);
+
+                Projectile projectile = projectileGO.GetComponent<Projectile>();
+                if (projectile != null)
+                {
+                    projectile.Init(weaponData.projectileData, finalFireDirection, ownerLayer, finalDamage);
+                }
+            }
+        }
     }
 
     private void Fire()
@@ -157,7 +234,6 @@ public class UnitWeaponSystem : MonoBehaviour
         
         _unit.UnitAnimator.TriggerAttack();
 
-        // [NEW] 발사 시점에 버프 적용 여부를 결정
         bool isBuffed = _unit.IsNextAttackBuffed;
         float damage = weaponData.projectileData.damage;
         float finalDamage = isBuffed ? _unit.GetBuffedDamage(damage) : damage;
@@ -182,7 +258,6 @@ public class UnitWeaponSystem : MonoBehaviour
                 Projectile projectile = projectileGO.GetComponent<Projectile>();
                 if (projectile != null)
                 {
-                    // [MODIFIED] 발사체 초기화 시 최종 데미지를 넘겨줌
                     projectile.Init(weaponData.projectileData, fireDirection, _unit.gameObject.layer, finalDamage);
                 }
             }
@@ -191,11 +266,8 @@ public class UnitWeaponSystem : MonoBehaviour
 
     private IEnumerator Reload()
     {
-        isReloading = true;
-        _unit.UnitAnimator.TriggerReload();
+        StartReload();
         yield return new WaitForSeconds(weaponData.reloadTime);
-        currentAmmo = weaponData.magazineSize;
-        isReloading = false;
     }
 
     private GameObject GetPooledProjectile()

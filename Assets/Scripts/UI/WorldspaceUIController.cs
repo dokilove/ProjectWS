@@ -83,18 +83,34 @@ public class WorldspaceUIController : MonoBehaviour
             healthLabel.style.display = DisplayStyle.None;
         }
 
-        var weaponSystem = vehicle.VehicleWeaponSystem;
-        if (weaponSystem == null || weaponSystem.WeaponData == null)
+        // --- Update Ammo UI ---
+        if (!vehicle.IsControlledByPlayer)
         {
             if (ammoLabel != null) ammoLabel.style.display = DisplayStyle.None;
             if (reloadStatusLabel != null) reloadStatusLabel.style.display = DisplayStyle.None;
             return;
         }
 
-        ammoLabel.style.display = DisplayStyle.Flex;
-        ammoLabel.text = $"{weaponSystem.CurrentAmmo}/{weaponSystem.WeaponData.magazineSize}";
+        var weaponSystem = vehicle.VehicleWeaponSystem;
 
-        bool isReloading = weaponSystem.IsReloading;
-        reloadStatusLabel.style.display = isReloading ? DisplayStyle.Flex : DisplayStyle.None;
+        if (weaponSystem != null && weaponSystem.WeaponData != null)
+        {
+            if (ammoLabel != null)
+            {
+                ammoLabel.style.display = DisplayStyle.Flex;
+                ammoLabel.text = $"{weaponSystem.CurrentAmmo}/{weaponSystem.WeaponData.magazineSize}";
+            }
+
+            if (reloadStatusLabel != null)
+            {
+                bool isReloading = weaponSystem.IsReloading;
+                reloadStatusLabel.style.display = isReloading ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+        }
+        else
+        {
+            if (ammoLabel != null) ammoLabel.style.display = DisplayStyle.None;
+            if (reloadStatusLabel != null) reloadStatusLabel.style.display = DisplayStyle.None;
+        }
     }
 }

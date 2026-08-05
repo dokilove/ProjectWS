@@ -52,9 +52,9 @@ public class VehicleAI : MonoBehaviour
 
     void Update()
     {
-        if (_vehicle.IsControlledByPlayer)
+        if (_vehicle == null || _vehicle.IsControlledByPlayer || aiBehaviour == null)
         {
-            if(this.enabled) this.enabled = false; // Disable self if player is in control
+            enabled = false;
             return;
         }
 
@@ -63,16 +63,14 @@ public class VehicleAI : MonoBehaviour
 
     private void HandleAIControl()
     {
-        // In a real scenario, a central manager would assign the target.
-        // For now, we'll find the player.
         if (PlayerPawnManager.ActivePlayerTransform == null || aiBehaviour == null)
         {
-            if (agent.enabled) agent.enabled = false;
+            if (agent != null && agent.enabled) agent.enabled = false;
             return;
         }
 
         // Ensure the agent is enabled if AI is running
-        if (!agent.enabled)
+        if (agent != null && !agent.enabled)
         {
             agent.enabled = true;
             agent.speed = aiBehaviour.followSpeed;
@@ -87,7 +85,7 @@ public class VehicleAI : MonoBehaviour
             // Only resume following if cooldown has passed
             if (Time.time >= lastFollowStopTime + aiBehaviour.followCoolTime)
             {
-                if (agent.isOnNavMesh)
+                if (agent != null && agent.isOnNavMesh)
                 {
                     agent.SetDestination(PlayerPawnManager.ActivePlayerTransform.position);
                 }
@@ -95,7 +93,7 @@ public class VehicleAI : MonoBehaviour
             else
             {
                 // Still in cooldown, so ensure agent is stopped
-                if (agent.isOnNavMesh && agent.hasPath)
+                if (agent != null && agent.isOnNavMesh && agent.hasPath)
                 {
                     agent.ResetPath();
                 }
@@ -103,8 +101,7 @@ public class VehicleAI : MonoBehaviour
         }
         else // Player is within stop distance
         {
-            // Just reset the path to stop movement. Do NOT disable the agent.
-            if (agent.isOnNavMesh && agent.hasPath)
+            if (agent != null && agent.isOnNavMesh && agent.hasPath)
             {
                 agent.ResetPath();
             }
@@ -112,8 +109,8 @@ public class VehicleAI : MonoBehaviour
         }
 
         // --- Targeting & Weapons ---
-        var weaponSystem = _vehicle.VehicleWeaponSystem;
-        if (weaponSystem != null)
+        var weaponSystem = _vehicle.AutoWeaponSystem != null ? _vehicle.AutoWeaponSystem : null;
+        if (weaponSystem != null && weaponSystem.IsAutoWeapon)
         {
             UpdateAndSelectTargetAI(weaponSystem.WeaponData);
             weaponSystem.SetAimAI(currentTarget, transform);
@@ -124,7 +121,7 @@ public class VehicleAI : MonoBehaviour
             }
             else if (weaponSystem.CurrentAmmo <= 0 && !weaponSystem.IsReloading)
             {
-                weaponSystem.HandleReloadInput(); // Can be called directly
+                weaponSystem.HandleReloadInput();
             }
         }
     }

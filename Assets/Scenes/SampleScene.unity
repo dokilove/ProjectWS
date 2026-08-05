@@ -8187,6 +8187,7 @@ MonoBehaviour:
   playerCam: {fileID: 1958903312}
   vehicleCam: {fileID: 282028024}
   vehicleDetectionRadius: 3
+  vehicleEnterHoldTime: 0.5
   vehicleLayer:
     serializedVersion: 2
     m_Bits: 2048

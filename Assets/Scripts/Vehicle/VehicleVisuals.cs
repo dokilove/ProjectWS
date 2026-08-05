@@ -51,15 +51,20 @@ public class VehicleVisuals : MonoBehaviour
 
     private void Start()
     {
-        var weaponData = _vehicle.VehicleWeaponSystem.WeaponData;
+        if (_vehicle == null) return;
+        var weaponSystem = _vehicle.PlayerWeaponSystem != null ? _vehicle.PlayerWeaponSystem : _vehicle.VehicleWeaponSystem;
+        if (weaponSystem == null) return;
+        var weaponData = weaponSystem.WeaponData;
         if (weaponData == null) return;
 
         UpdateRadiusVisualizer(weaponData.lockOnRadius);
 
         if (attackRangeVisualizer != null)
         {
-            attackRangeVisualizer.GenerateMesh(weaponData.attackAngle, weaponData.lockOnRadius);
-            attackRangeVisualizer.SetActive(true);
+            float angle = weaponData.vehicleMountedAttackAngle > 0 ? weaponData.vehicleMountedAttackAngle : weaponData.attackAngle;
+            attackRangeVisualizer.GenerateMesh(angle, weaponData.lockOnRadius);
+            attackRangeVisualizer.SetColor(new Color(0f, 1f, 0.5f, 0.15f));
+            attackRangeVisualizer.SetActive(false);
         }
 
         if (spreadAngleVisualizer != null)
@@ -69,8 +74,7 @@ public class VehicleVisuals : MonoBehaviour
                 spreadAngleVisualizer.GenerateMesh(weaponData.spreadAngle, weaponData.lockOnRadius);
                 spreadAngleVisualizer.SetColor(new Color(1f, 0.5f, 0f, 0.15f));
                 spreadAngleVisualizer.SetActive(true);
-                // This assumes the weapon system is on a child object that represents the turret
-                spreadAngleVisualizer.transform.SetParent(_vehicle.VehicleWeaponSystem.transform);
+                spreadAngleVisualizer.transform.SetParent(weaponSystem.transform);
                 spreadAngleVisualizer.transform.localPosition = Vector3.zero;
                 spreadAngleVisualizer.transform.localRotation = Quaternion.identity;
             }
@@ -85,37 +89,62 @@ public class VehicleVisuals : MonoBehaviour
     {
         HandleBodyTilt();
         HandleTargetLine();
+        HandleAttackRangeVisualizer();
+    }
+
+    private void HandleAttackRangeVisualizer()
+    {
+        if (attackRangeVisualizer == null || _vehicle == null) return;
+
+        if (!_vehicle.IsControlledByPlayer)
+        {
+            attackRangeVisualizer.SetActive(false);
+            return;
+        }
+
+        var weaponSystem = _vehicle.PlayerWeaponSystem != null ? _vehicle.PlayerWeaponSystem : _vehicle.VehicleWeaponSystem;
+        var weaponData = weaponSystem != null ? weaponSystem.WeaponData : null;
+
+        if (weaponData == null)
+        {
+            attackRangeVisualizer.SetActive(false);
+            return;
+        }
+
+        float angle = weaponData.vehicleMountedAttackAngle > 0 ? weaponData.vehicleMountedAttackAngle : weaponData.attackAngle;
+        float radius = weaponData.lockOnRadius;
+
+        attackRangeVisualizer.GenerateMesh(angle, radius);
+        attackRangeVisualizer.SetActive(true);
+
+        attackRangeVisualizer.transform.position = _vehicle.transform.position + Vector3.up * 0.05f;
+        attackRangeVisualizer.transform.rotation = _vehicle.transform.rotation;
     }
 
     private void HandleTargetLine()
     {
-        if (targetLineRenderer == null) return;
-        var weaponSystem = _vehicle.VehicleWeaponSystem;
-        if (weaponSystem == null || weaponSystem.FirePoint == null || weaponSystem.TurretTransform == null) return;
+        if (targetLineRenderer == null || _vehicle == null) return;
 
+        if (!_vehicle.IsControlledByPlayer)
+        {
+            targetLineRenderer.enabled = false;
+            return;
+        }
 
-        if (_vehicle.IsControlledByPlayer)
+        var weaponSystem = _vehicle.PlayerWeaponSystem != null ? _vehicle.PlayerWeaponSystem : _vehicle.VehicleWeaponSystem;
+        if (weaponSystem == null || weaponSystem.FirePoint == null || weaponSystem.TurretTransform == null || weaponSystem.WeaponData == null)
         {
-            targetLineRenderer.enabled = true;
-            targetLineRenderer.startColor = defaultTargetColor;
-            targetLineRenderer.endColor = defaultTargetColor;
-            targetLineRenderer.SetPosition(0, weaponSystem.FirePoint.position);
-            targetLineRenderer.SetPosition(1, weaponSystem.FirePoint.position + weaponSystem.TurretTransform.forward * weaponSystem.WeaponData.lockOnRadius);
+            targetLineRenderer.enabled = false;
+            return;
         }
-        else // AI
-        {
-            var ai = _vehicle.VehicleAI;
-            if (ai != null && ai.CurrentTarget != null)
-            {
-                targetLineRenderer.enabled = true;
-                targetLineRenderer.SetPosition(0, weaponSystem.FirePoint.position);
-                targetLineRenderer.SetPosition(1, ai.CurrentTarget.position);
-            }
-            else
-            {
-                targetLineRenderer.enabled = false;
-            }
-        }
+
+        float lockOnRadius = weaponSystem.WeaponData != null ? weaponSystem.WeaponData.lockOnRadius : 15f;
+
+        targetLineRenderer.enabled = true;
+        targetLineRenderer.startColor = defaultTargetColor;
+        targetLineRenderer.endColor = defaultTargetColor;
+        targetLineRenderer.SetPosition(0, weaponSystem.FirePoint.position);
+        targetLineRenderer.SetPosition(1, weaponSystem.FirePoint.position + weaponSystem.TurretTransform.forward * lockOnRadius);
     }
 
     private void HandleBodyTilt()

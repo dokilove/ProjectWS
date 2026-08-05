@@ -39,6 +39,7 @@ public class PlayerPawnManager : MonoBehaviour
     private InputSystem_Actions.VehicleActions playerInVehicleActions; // For Vehicle control
 
     public static Transform ActivePlayerTransform { get; private set; }
+    public static Unit ActiveUnit { get; private set; }
 
     private void Awake()
     {
@@ -300,6 +301,7 @@ public class PlayerPawnManager : MonoBehaviour
         playerOnFootActions.Enable(); // Enable Player actions
 
         ActivePlayerTransform = currentUnit.transform; // Set active transform
+        ActiveUnit = currentUnit;
 
         if (playerCam != null)
         {
@@ -350,6 +352,7 @@ public class PlayerPawnManager : MonoBehaviour
         playerInVehicleActions.Interact.performed += OnInteract; // Subscribe to Interact (TAP)
 
         ActivePlayerTransform = currentVehicle.transform; // Set active transform
+        ActiveUnit = unitPawn;
 
         if (vehicleCam != null)
         {

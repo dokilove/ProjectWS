@@ -35,90 +35,134 @@ private System.Action<InputAction.CallbackContext> onReloadPerformed;
 private System.Action<InputAction.CallbackContext> onAccelStarted;
 private System.Action<InputAction.CallbackContext> onAccelCanceled;
 
-public void Init(Vehicle vehicle)
-{
-    _vehicle = vehicle;
-    playerActions = new InputSystem_Actions();
+    private Vector3 lastPlayerAimDirection;
 
-    onMovePerformed = ctx => { moveInput = ctx.ReadValue<Vector2>(); UpdateInputDevice(ctx.control.device); };
-    onMoveCanceled = ctx => moveInput = Vector2.zero;
-    onLookPerformed = ctx => { lookInput = ctx.ReadValue<Vector2>(); UpdateInputDevice(ctx.control.device); };
-    onLookCanceled = ctx => lookInput = Vector2.zero;
-    onMousePositionPerformed = ctx => { mousePositionInput = ctx.ReadValue<Vector2>(); UpdateInputDevice(ctx.control.device); };
-    onMousePositionCanceled = ctx => mousePositionInput = Vector2.zero;
-
-    onFirePerformed = ctx => _vehicle.VehicleWeaponSystem.HandleFireInput();
-    onFireHoldStarted = ctx => isFireHeld = true;
-    onFireHoldCanceled = ctx => isFireHeld = false;
-    onReloadPerformed = ctx => _vehicle.VehicleWeaponSystem.HandleReloadInput();
-
-    onNeutralTurnStarted = ctx => isNeutralTurning = true;
-    onNeutralTurnCanceled = ctx => isNeutralTurning = false;
-
-    onAccelStarted = ctx => _vehicle.VehicleMove.IsAccelerating = true;
-    onAccelCanceled = ctx => _vehicle.VehicleMove.IsAccelerating = false;
-}
-
-private void UpdateInputDevice(InputControl device)
-{
-    if (device is Gamepad) lastUsedInputDevice = InputDeviceType.Gamepad;
-    else if (device is Mouse || device is Keyboard) lastUsedInputDevice = InputDeviceType.MouseKeyboard;
-}
-
-public void EnableInput()
-{
-    playerActions.Vehicle.Enable();
-    playerActions.Vehicle.Move.performed += onMovePerformed;
-    playerActions.Vehicle.Move.canceled += onMoveCanceled;
-    playerActions.Vehicle.Look.performed += onLookPerformed;
-    playerActions.Vehicle.Look.canceled += onLookCanceled;
-    playerActions.Vehicle.MousePosition.performed += onMousePositionPerformed;
-    playerActions.Vehicle.MousePosition.canceled += onMousePositionCanceled;
-    playerActions.Vehicle.Fire.performed += onFirePerformed;
-    playerActions.Vehicle.Fire_Hold.started += onFireHoldStarted;
-    playerActions.Vehicle.Fire_Hold.canceled += onFireHoldCanceled;
-    playerActions.Vehicle.NeutralTurn.started += onNeutralTurnStarted;
-    playerActions.Vehicle.NeutralTurn.canceled += onNeutralTurnCanceled;
-    playerActions.Vehicle.Reload.performed += onReloadPerformed;
-    playerActions.Vehicle.Accel.started += onAccelStarted;
-    playerActions.Vehicle.Accel.canceled += onAccelCanceled;
-}
-
-public void DisableInput()
-{
-    if (playerActions == null) return;
-    playerActions.Vehicle.Disable();
-    playerActions.Vehicle.Move.performed -= onMovePerformed;
-    playerActions.Vehicle.Move.canceled -= onMoveCanceled;
-    playerActions.Vehicle.Look.performed -= onLookPerformed;
-    playerActions.Vehicle.Look.canceled -= onLookCanceled;
-    playerActions.Vehicle.MousePosition.performed -= onMousePositionPerformed;
-    playerActions.Vehicle.MousePosition.canceled -= onMousePositionCanceled;
-    playerActions.Vehicle.Fire.performed -= onFirePerformed;
-    playerActions.Vehicle.Fire_Hold.started -= onFireHoldStarted;
-    playerActions.Vehicle.Fire_Hold.canceled -= onFireHoldCanceled;
-    playerActions.Vehicle.NeutralTurn.started -= onNeutralTurnStarted;
-    playerActions.Vehicle.NeutralTurn.canceled -= onNeutralTurnCanceled;
-    playerActions.Vehicle.Reload.performed -= onReloadPerformed;
-    playerActions.Vehicle.Accel.started -= onAccelStarted;
-    playerActions.Vehicle.Accel.canceled -= onAccelCanceled;
-
-    moveInput = Vector2.zero;
-    lookInput = Vector2.zero;
-    isFireHeld = false;
-    isNeutralTurning = false;
-    if (_vehicle != null && _vehicle.VehicleMove != null)
+    private VehicleWeaponSystem GetManualVehicleWeapon()
     {
-        _vehicle.VehicleMove.IsAccelerating = false;
+        if (_vehicle == null) return null;
+        if (_vehicle.PlayerWeaponSystem != null && !_vehicle.PlayerWeaponSystem.IsAutoWeapon)
+        {
+            return _vehicle.PlayerWeaponSystem;
+        }
+        return null;
     }
-}
+
+    public void Init(Vehicle vehicle)
+    {
+        _vehicle = vehicle;
+        playerActions = new InputSystem_Actions();
+
+        onMovePerformed = ctx => { moveInput = ctx.ReadValue<Vector2>(); UpdateInputDevice(ctx.control.device); };
+        onMoveCanceled = ctx => moveInput = Vector2.zero;
+        onLookPerformed = ctx => { lookInput = ctx.ReadValue<Vector2>(); UpdateInputDevice(ctx.control.device); };
+        onLookCanceled = ctx => lookInput = Vector2.zero;
+        onMousePositionPerformed = ctx => { mousePositionInput = ctx.ReadValue<Vector2>(); UpdateInputDevice(ctx.control.device); };
+        onMousePositionCanceled = ctx => mousePositionInput = Vector2.zero;
+
+        onFirePerformed = ctx => {
+            var mWeapon = GetManualVehicleWeapon();
+            if (mWeapon != null)
+            {
+                mWeapon.HandleFireInput();
+            }
+            else if (PlayerPawnManager.ActiveUnit != null && PlayerPawnManager.ActiveUnit.UnitWeaponSystem != null)
+            {
+                Vector3 fireDir = lastPlayerAimDirection.sqrMagnitude > 0.01f ? lastPlayerAimDirection : transform.forward;
+                PlayerPawnManager.ActiveUnit.UnitWeaponSystem.FireFromVehicle(transform.position, fireDir);
+            }
+        };
+        onFireHoldStarted = ctx => isFireHeld = true;
+        onFireHoldCanceled = ctx => isFireHeld = false;
+        onReloadPerformed = ctx => {
+            var mWeapon = GetManualVehicleWeapon();
+            if (mWeapon != null)
+            {
+                mWeapon.HandleReloadInput();
+            }
+            else if (PlayerPawnManager.ActiveUnit != null && PlayerPawnManager.ActiveUnit.UnitWeaponSystem != null)
+            {
+                PlayerPawnManager.ActiveUnit.UnitWeaponSystem.HandleReloadInput();
+            }
+        };
+
+        onNeutralTurnStarted = ctx => isNeutralTurning = true;
+        onNeutralTurnCanceled = ctx => isNeutralTurning = false;
+
+        onAccelStarted = ctx => _vehicle.VehicleMove.IsAccelerating = true;
+        onAccelCanceled = ctx => _vehicle.VehicleMove.IsAccelerating = false;
+    }
+
+    private void UpdateInputDevice(InputControl device)
+    {
+        if (device is Gamepad) lastUsedInputDevice = InputDeviceType.Gamepad;
+        else if (device is Mouse || device is Keyboard) lastUsedInputDevice = InputDeviceType.MouseKeyboard;
+    }
+
+    public void EnableInput()
+    {
+        playerActions.Vehicle.Enable();
+        playerActions.Vehicle.Move.performed += onMovePerformed;
+        playerActions.Vehicle.Move.canceled += onMoveCanceled;
+        playerActions.Vehicle.Look.performed += onLookPerformed;
+        playerActions.Vehicle.Look.canceled += onLookCanceled;
+        playerActions.Vehicle.MousePosition.performed += onMousePositionPerformed;
+        playerActions.Vehicle.MousePosition.canceled += onMousePositionCanceled;
+        playerActions.Vehicle.Fire.performed += onFirePerformed;
+        playerActions.Vehicle.Fire_Hold.started += onFireHoldStarted;
+        playerActions.Vehicle.Fire_Hold.canceled += onFireHoldCanceled;
+        playerActions.Vehicle.NeutralTurn.started += onNeutralTurnStarted;
+        playerActions.Vehicle.NeutralTurn.canceled += onNeutralTurnCanceled;
+        playerActions.Vehicle.Reload.performed += onReloadPerformed;
+        playerActions.Vehicle.Accel.started += onAccelStarted;
+        playerActions.Vehicle.Accel.canceled += onAccelCanceled;
+    }
+
+    public void DisableInput()
+    {
+        if (playerActions == null) return;
+        playerActions.Vehicle.Disable();
+        playerActions.Vehicle.Move.performed -= onMovePerformed;
+        playerActions.Vehicle.Move.canceled -= onMoveCanceled;
+        playerActions.Vehicle.Look.performed -= onLookPerformed;
+        playerActions.Vehicle.Look.canceled -= onLookCanceled;
+        playerActions.Vehicle.MousePosition.performed -= onMousePositionPerformed;
+        playerActions.Vehicle.MousePosition.canceled -= onMousePositionCanceled;
+        playerActions.Vehicle.Fire.performed -= onFirePerformed;
+        playerActions.Vehicle.Fire_Hold.started -= onFireHoldStarted;
+        playerActions.Vehicle.Fire_Hold.canceled -= onFireHoldCanceled;
+        playerActions.Vehicle.NeutralTurn.started -= onNeutralTurnStarted;
+        playerActions.Vehicle.NeutralTurn.canceled -= onNeutralTurnCanceled;
+        playerActions.Vehicle.Reload.performed -= onReloadPerformed;
+        playerActions.Vehicle.Accel.started -= onAccelStarted;
+        playerActions.Vehicle.Accel.canceled -= onAccelCanceled;
+
+        moveInput = Vector2.zero;
+        lookInput = Vector2.zero;
+        isFireHeld = false;
+        isNeutralTurning = false;
+        if (_vehicle != null && _vehicle.VehicleMove != null)
+        {
+            _vehicle.VehicleMove.IsAccelerating = false;
+        }
+    }
 
     private void Update()
     {
         if (!_vehicle.IsControlledByPlayer) return;
 
         _vehicle.VehicleMove.SetPlayerInput(moveInput, isNeutralTurning);
-        _vehicle.VehicleWeaponSystem.HandleFireHold(isFireHeld);
+        
+        var mWeapon = GetManualVehicleWeapon();
+        if (mWeapon != null)
+        {
+            mWeapon.HandleFireHold(isFireHeld);
+        }
+        else if (isFireHeld && PlayerPawnManager.ActiveUnit != null && PlayerPawnManager.ActiveUnit.UnitWeaponSystem != null)
+        {
+            Vector3 fireDir = lastPlayerAimDirection.sqrMagnitude > 0.01f ? lastPlayerAimDirection : transform.forward;
+            PlayerPawnManager.ActiveUnit.UnitWeaponSystem.FireFromVehicle(transform.position, fireDir);
+        }
+
         HandlePlayerAiming();
     }
 
@@ -153,9 +197,29 @@ public void DisableInput()
             }
         }
 
-        if (_vehicle.VehicleWeaponSystem != null)
+        var mWeapon = GetManualVehicleWeapon();
+        var unitWeapon = PlayerPawnManager.ActiveUnit != null ? PlayerPawnManager.ActiveUnit.UnitWeaponSystem : null;
+        WeaponData activeWeaponData = mWeapon != null && mWeapon.WeaponData != null ? mWeapon.WeaponData : (unitWeapon != null ? unitWeapon.WeaponData : null);
+
+        float maxAngle = activeWeaponData != null ? activeWeaponData.vehicleMountedAttackAngle : 90f;
+
+        if (calculatedAimDirection.sqrMagnitude > 0.01f)
         {
-            _vehicle.VehicleWeaponSystem.SetAim(calculatedAimDirection, transform);
+            Vector3 localTargetDir = transform.InverseTransformDirection(calculatedAimDirection);
+            float targetAngle = Mathf.Atan2(localTargetDir.x, localTargetDir.z) * Mathf.Rad2Deg;
+            float clampedAngle = Mathf.Clamp(targetAngle, -maxAngle / 2f, maxAngle / 2f);
+
+            calculatedAimDirection = transform.TransformDirection(Quaternion.Euler(0, clampedAngle, 0) * Vector3.forward);
+            lastPlayerAimDirection = calculatedAimDirection;
+        }
+        else if (lastPlayerAimDirection.sqrMagnitude < 0.01f)
+        {
+            lastPlayerAimDirection = transform.forward;
+        }
+
+        if (mWeapon != null)
+        {
+            mWeapon.SetAim(calculatedAimDirection, transform);
         }
         
         lookInput = Vector2.zero;
