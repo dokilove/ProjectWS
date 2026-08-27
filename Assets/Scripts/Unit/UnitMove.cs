@@ -168,7 +168,7 @@ public class UnitMove : MonoBehaviour
     /// <param name="force">The impulse force of the dash.</param>
     public void ApplyMeleeDash(Vector3 direction, float force)
     {
-        if (isEvading || force <= 0) return;
+        if (isEvading || Mathf.Approximately(force, 0f)) return;
 
         rb.AddForce(direction * force, ForceMode.Impulse);
     }
@@ -180,6 +180,9 @@ public class UnitMove : MonoBehaviour
     public void PerformEvade(Vector2 moveInput)
     {
         if (evadeData == null || isEvading || currentEvadeCharges <= 0) return;
+
+        // [NEW] 회피 시작 시 진행 중인 근접 공격/차징 즉시 캔슬
+        _unit?.UnitMeleeSystem?.CancelCurrentAttack();
 
         // [NEW] 회피 시작을 Unit 코디네이터에게 알림
         _unit.OnEvadeStart();

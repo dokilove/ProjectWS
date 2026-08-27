@@ -219,7 +219,18 @@ public class UnitVisuals : MonoBehaviour
         }
     }
 
-    public IEnumerator ShowMeleeVisualizer(float radius, float angle, Material overrideMaterial = null)
+    /// <summary>
+    /// 지정된 히트박스 형태(부채꼴 / 박스 / 원형)에 맞춰 바닥에 공격 범위를 시각화합니다.
+    /// </summary>
+    public IEnumerator ShowMeleeVisualizer(
+        MeleeHitboxShape shape,
+        float radius,
+        float angle,
+        float boxWidth,
+        float boxLength,
+        float forwardOffset,
+        Material overrideMaterial = null,
+        float duration = 0.2f)
     {
         if (meleeRangeVisualizer == null) yield break;
 
@@ -228,15 +239,34 @@ public class UnitVisuals : MonoBehaviour
             meleeRangeVisualizer.SetMaterial(overrideMaterial);
         }
 
-        meleeRangeVisualizer.GenerateMesh(angle, radius);
+        switch (shape)
+        {
+            case MeleeHitboxShape.Sector:
+                meleeRangeVisualizer.GenerateSectorMesh(angle, radius);
+                break;
+
+            case MeleeHitboxShape.Box:
+                meleeRangeVisualizer.GenerateBoxMesh(boxWidth, boxLength, forwardOffset);
+                break;
+
+            case MeleeHitboxShape.Circle:
+                meleeRangeVisualizer.GenerateCircleMesh(radius, forwardOffset);
+                break;
+        }
+
         meleeRangeVisualizer.SetActive(true);
-        yield return new WaitForSeconds(0.2f);
+        yield return new WaitForSeconds(duration);
         meleeRangeVisualizer.SetActive(false);
 
         if (overrideMaterial != null)
         {
             meleeRangeVisualizer.RevertMaterial();
         }
+    }
+
+    public IEnumerator ShowMeleeVisualizer(float radius, float angle, Material overrideMaterial = null)
+    {
+        return ShowMeleeVisualizer(MeleeHitboxShape.Sector, radius, angle, 0f, 0f, 0f, overrideMaterial, 0.2f);
     }
 
     public void SetEvadeTrail(bool isActive)

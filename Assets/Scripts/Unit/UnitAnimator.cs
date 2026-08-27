@@ -112,16 +112,41 @@ public class UnitAnimator : MonoBehaviour
 
     public void TriggerMelee(int comboCounter)
     {
-        if (_animator != null) _animator.SetTrigger("Melee" + comboCounter);
+        if (_animator == null) return;
+        
+        // 이전 트리거 잔여물 정리
+        for (int i = 1; i <= 5; i++)
+        {
+            _animator.ResetTrigger("Melee" + i);
+        }
+        _animator.ResetTrigger("MeleeChargeAttack");
+        
+        _animator.SetTrigger("Melee" + comboCounter);
     }
 
     public void TriggerChargeMelee()
     {
-        if (_animator != null) _animator.SetTrigger("MeleeChargeAttack");
+        if (_animator == null) return;
+
+        for (int i = 1; i <= 5; i++)
+        {
+            _animator.ResetTrigger("Melee" + i);
+        }
+        
+        _animator.SetTrigger("MeleeChargeAttack");
     }
 
     public void ForceIdle()
     {
-        if (_animator != null) _animator.SetTrigger("ForceIdle");
+        if (_animator == null) return;
+
+        for (int i = 1; i <= 5; i++)
+        {
+            _animator.ResetTrigger("Melee" + i);
+        }
+        _animator.ResetTrigger("MeleeChargeAttack");
+        _animator.ResetTrigger("Attack");
+
+        _animator.SetTrigger("ForceIdle");
     }
 }

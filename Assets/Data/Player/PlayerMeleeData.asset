@@ -12,30 +12,118 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 34862f95ce2d5eb45b3049ec4663aa46, type: 3}
   m_Name: PlayerMeleeData
   m_EditorClassIdentifier: Assembly-CSharp::MeleeData
-  comboDamages:
-  - 20
-  - 30
-  - 40
-  comboAttackRadii:
-  - 6
-  - 5
-  - 4
-  comboAttackAngles:
-  - 30
-  - 90
-  - 120
-  chargeAttackDamage: 120
-  chargeAttackRadius: 8
-  chargeAttackAngle: 260
-  comboDashForces:
-  - 200
-  - 100
-  - 50
-  chargeAttackDashForce: -100
-  attackCooldown: 0.2
-  comboResetTimes:
-  - 0.7
-  - 0.5
-  - 0.5
-  chargeTimeThreshold: 1
+  comboSteps:
+  - stepName: Combo 1
+    shape: 0
+    attackRadius: 6
+    attackAngle: 30
+    boxWidth: 2
+    boxLength: 5
+    forwardOffset: 0
+    damage: 20
+    dashForce: 200
+    overrideMaterial: {fileID: 0}
+    useMultiHit: 1
+    subHits:
+    - hitTime: 0.1
+      damage: 10
+      dashForce: 0
+      overrideMaterial: {fileID: 0}
+      shape: 1
+      attackRadius: 0
+      attackAngle: 0
+      boxWidth: 3
+      boxLength: 5
+      forwardOffset: 0
+    - hitTime: 0.2
+      damage: 15
+      dashForce: 0
+      overrideMaterial: {fileID: 0}
+      shape: 1
+      attackRadius: 0
+      attackAngle: 0
+      boxWidth: 2
+      boxLength: 6
+      forwardOffset: 0
+    hitDelay: 0.08
+    cancelWindowTime: 0.2
+    totalDuration: 0.35
+    comboResetTime: 0.7
+  - stepName: Combo 2
+    shape: 0
+    attackRadius: 5
+    attackAngle: 90
+    boxWidth: 2.5
+    boxLength: 4
+    forwardOffset: 0
+    damage: 30
+    dashForce: 100
+    overrideMaterial: {fileID: 0}
+    useMultiHit: 1
+    subHits:
+    - hitTime: 0.08
+      damage: 10
+      dashForce: 30
+      overrideMaterial: {fileID: 0}
+      shape: 1
+      attackRadius: 5
+      attackAngle: 90
+      boxWidth: 2
+      boxLength: 4
+      forwardOffset: 0
+    - hitTime: 0.35
+      damage: 15
+      dashForce: 0
+      overrideMaterial: {fileID: 0}
+      shape: 1
+      attackRadius: 5
+      attackAngle: 90
+      boxWidth: 3
+      boxLength: 5
+      forwardOffset: 0
+    - hitTime: 0.4
+      damage: 20
+      dashForce: 0
+      overrideMaterial: {fileID: 0}
+      shape: 1
+      attackRadius: 5
+      attackAngle: 90
+      boxWidth: 4
+      boxLength: 6
+      forwardOffset: 0
+    hitDelay: 0.08
+    cancelWindowTime: 0.2
+    totalDuration: 0.5
+    comboResetTime: 0.6
+  - stepName: Combo 3
+    shape: 0
+    attackRadius: 4
+    attackAngle: 120
+    boxWidth: 3
+    boxLength: 4
+    forwardOffset: 0
+    damage: 40
+    dashForce: 50
+    overrideMaterial: {fileID: 0}
+    useMultiHit: 0
+    subHits: []
+    hitDelay: 0.1
+    cancelWindowTime: 0.25
+    totalDuration: 0.4
+    comboResetTime: 0.5
+  chargeAttack:
+    shape: 2
+    attackRadius: 8
+    attackAngle: 260
+    boxWidth: 4
+    boxLength: 6
+    forwardOffset: 0
+    damage: 240
+    dashForce: -100
+    overrideMaterial: {fileID: 0}
+    useMultiHit: 0
+    subHits: []
+    chargeTimeThreshold: 1
+    hitDelay: 0.1
+    totalDuration: 0.5
   meleeLockOnRadius: 6
