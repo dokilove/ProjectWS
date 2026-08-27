@@ -35,7 +35,7 @@ MonoBehaviour:
       boxWidth: 3
       boxLength: 5
       forwardOffset: 0
-    - hitTime: 0.2
+    - hitTime: 0.15
       damage: 15
       dashForce: 0
       overrideMaterial: {fileID: 0}
@@ -45,9 +45,29 @@ MonoBehaviour:
       boxWidth: 2
       boxLength: 6
       forwardOffset: 0
+    - hitTime: 0.18
+      damage: 10
+      dashForce: 0
+      overrideMaterial: {fileID: 0}
+      shape: 1
+      attackRadius: 5
+      attackAngle: 90
+      boxWidth: 5
+      boxLength: 3
+      forwardOffset: 0
+    - hitTime: 0.21
+      damage: 15
+      dashForce: 0
+      overrideMaterial: {fileID: 0}
+      shape: 1
+      attackRadius: 5
+      attackAngle: 90
+      boxWidth: 4
+      boxLength: 4
+      forwardOffset: 0
     hitDelay: 0.08
-    cancelWindowTime: 0.2
-    totalDuration: 0.35
+    cancelWindowTime: 0.3
+    totalDuration: 0.4
     comboResetTime: 0.7
   - stepName: Combo 2
     shape: 0
@@ -59,7 +79,7 @@ MonoBehaviour:
     damage: 30
     dashForce: 100
     overrideMaterial: {fileID: 0}
-    useMultiHit: 1
+    useMultiHit: 0
     subHits:
     - hitTime: 0.08
       damage: 10
@@ -91,25 +111,25 @@ MonoBehaviour:
       boxWidth: 4
       boxLength: 6
       forwardOffset: 0
-    hitDelay: 0.08
-    cancelWindowTime: 0.2
+    hitDelay: 0.1
+    cancelWindowTime: 0.45
     totalDuration: 0.5
     comboResetTime: 0.6
   - stepName: Combo 3
-    shape: 0
-    attackRadius: 4
+    shape: 2
+    attackRadius: 6
     attackAngle: 120
     boxWidth: 3
     boxLength: 4
     forwardOffset: 0
-    damage: 40
+    damage: 60
     dashForce: 50
     overrideMaterial: {fileID: 0}
     useMultiHit: 0
     subHits: []
-    hitDelay: 0.1
-    cancelWindowTime: 0.25
-    totalDuration: 0.4
+    hitDelay: 0.5
+    cancelWindowTime: 0.6
+    totalDuration: 1
     comboResetTime: 0.5
   chargeAttack:
     shape: 2

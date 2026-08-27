@@ -8181,7 +8181,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerPawnManager
   unitPawnPrefab: {fileID: 7233607023411274857, guid: 48965314f2979f741a090bc948ee281e, type: 3}
-  vehiclePawnPrefab: {fileID: 2557076716787556367, guid: b9bec3f6ff61ad547beeb87a615e767b, type: 3}
+  vehiclePawnPrefab: {fileID: 0}
   playerSpawnPoint: {fileID: 2056785463}
   vehicleSpawnPoint: {fileID: 2020458929}
   playerCam: {fileID: 1958903312}
