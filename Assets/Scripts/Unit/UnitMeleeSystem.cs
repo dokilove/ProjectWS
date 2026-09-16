@@ -26,6 +26,14 @@ public class UnitMeleeSystem : MonoBehaviour
     [SerializeField] private LayerMask enemyLayerMask;
     [SerializeField] private Material chargeAttackMaterial;
 
+    [Header("Projectile Destruction (발사체 파괴)")]
+    [Tooltip("근접 공격으로 적 발사체를 베어 파괴/삭제할 수 있는지 여부")]
+    [SerializeField] private bool canDestroyProjectiles = true;
+    [Tooltip("파괴 가능한 적 발사체 레이어 (미지정 시 EnemyAttackLayer 기본 할당)")]
+    [SerializeField] private LayerMask projectileLayerMask;
+    [Tooltip("발사체 파괴 시 재생할 이펙트 태그 (EffectPoolManager)")]
+    [SerializeField] private string projectileDestroyEffectTag = "hit02";
+
     [Header("Input Buffer Settings")]
     [Tooltip("선입력 유효 시간 (초)")]
     [SerializeField] private float inputBufferWindow = 0.25f;
@@ -39,8 +47,10 @@ public class UnitMeleeSystem : MonoBehaviour
 
     private Vector3 aimDirection;
     private int comboCounter = 0;
+    public int ComboCounter => comboCounter;
     private float _lastAttackStartTime = -1f;
     private bool isMeleeChargePrimed = false;
+    public bool IsMeleeChargePrimed => isMeleeChargePrimed;
     private float chargeStartTime = 0f;
 
     private bool _hasBufferedComboInput = false;
@@ -68,6 +78,16 @@ public class UnitMeleeSystem : MonoBehaviour
             Debug.LogError("MeleeData is not assigned in the inspector!", this);
         }
         aimDirection = transform.forward;
+
+        // 발사체 레이어가 인스펙터에서 미할당(0)된 경우 EnemyAttackLayer(15) 자동 설정
+        if (projectileLayerMask.value == 0)
+        {
+            projectileLayerMask = LayerMask.GetMask("EnemyAttackLayer");
+            if (projectileLayerMask.value == 0)
+            {
+                projectileLayerMask = 1 << 15;
+            }
+        }
     }
 
     private void Update()
@@ -76,9 +96,14 @@ public class UnitMeleeSystem : MonoBehaviour
         HandleChargeProgress();
         CheckBufferedInput();
 
-        if (_unit != null && _unit.CurrentAttackMode == AttackMode.Melee)
+        // 콤보 2타 이상 대기/진행 중이거나 차지 중일 때만 적 탐색 수행
+        if (_unit != null && _unit.CurrentAttackMode == AttackMode.Melee && (comboCounter > 0 || isMeleeChargePrimed))
         {
             PerformAutoAim();
+        }
+        else if (comboCounter == 0 && !isMeleeChargePrimed)
+        {
+            AutoAimTargetPosition = Vector3.zero;
         }
     }
 
@@ -120,6 +145,62 @@ public class UnitMeleeSystem : MonoBehaviour
     public void SetAim(Vector3 newAimDirection)
     {
         aimDirection = newAimDirection;
+    }
+
+    /// <summary>
+    /// 현재 우선순위(1. 이동 입력, 2. 반경 내 적, 3. 캐릭터 전방)가 반영된 유효 공격 방향을 반환합니다.
+    /// allowAutoAim이 false인 경우(Combo 1 등) 적 자동 조준을 무시하고 입력/전방만 반영합니다.
+    /// </summary>
+    public Vector3 GetCurrentAttackDirection(bool allowAutoAim = true)
+    {
+        // 1순위: 이동 입력 방향
+        if (_unit != null && _unit.UnitInput != null && _unit.UnitInput.MoveInput.sqrMagnitude > 0.01f)
+        {
+            Vector2 moveInput = _unit.UnitInput.MoveInput;
+            Vector3 moveDirection;
+            if (Camera.main != null)
+            {
+                Vector3 cameraRight = Camera.main.transform.right;
+                Vector3 cameraRightFlat = new Vector3(cameraRight.x, 0, cameraRight.z).normalized;
+                Vector3 cameraForwardFlat = Vector3.Cross(Vector3.up, cameraRightFlat);
+                Vector3 moveForward = -cameraForwardFlat;
+                Vector3 moveRight = cameraRightFlat;
+                moveDirection = (moveForward * moveInput.y + moveRight * moveInput.x).normalized;
+            }
+            else
+            {
+                moveDirection = new Vector3(moveInput.x, 0, moveInput.y).normalized;
+            }
+
+            if (moveDirection.sqrMagnitude > 0.001f)
+            {
+                return moveDirection;
+            }
+        }
+
+        // 2순위: 반경 내 적 방향 (allowAutoAim이 true인 경우만)
+        if (allowAutoAim && AutoAimTargetPosition != Vector3.zero)
+        {
+            Vector3 dirToEnemy = AutoAimTargetPosition - transform.position;
+            dirToEnemy.y = 0;
+            if (dirToEnemy.sqrMagnitude > 0.001f)
+            {
+                return dirToEnemy.normalized;
+            }
+        }
+
+        // 3순위: 수동 조준 방향 또는 캐릭터 전방 방향
+        if (aimDirection.sqrMagnitude > 0.001f)
+        {
+            Vector3 dir = aimDirection;
+            dir.y = 0;
+            return dir.normalized;
+        }
+
+        Vector3 fwd = transform.forward;
+        fwd.y = 0;
+        if (fwd.sqrMagnitude < 0.001f) fwd = Vector3.forward;
+        return fwd.normalized;
     }
 
     /// <summary>
@@ -197,18 +278,31 @@ public class UnitMeleeSystem : MonoBehaviour
         _hitTargetsThisSwing.Clear();
         float motionStartTime = Time.time;
 
+        // Combo 1(stepIndex == 0)일 때는 적 자동 추적을 끄고, Combo 2 이상(stepIndex > 0)일 때만 자동 추적 활성화
+        bool allowAutoAim = (stepIndex > 0);
+        if (allowAutoAim)
+        {
+            PerformAutoAim();
+        }
+        else
+        {
+            AutoAimTargetPosition = Vector3.zero;
+            _unit?.UnitMove?.SetIsAutoAiming(false);
+        }
+
         // [Phase 1: 시작]
-        PerformAutoAim();
+        Vector3 attackDir = GetCurrentAttackDirection(allowAutoAim);
+        if (attackDir != Vector3.zero)
+        {
+            transform.rotation = Quaternion.LookRotation(attackDir);
+        }
+
         _unit.UnitAnimator.TriggerMelee(stepIndex + 1);
 
         // 초기 대시 적용
         if (step.dashForce != 0)
         {
-            Vector3 dashDirection = (AutoAimTargetPosition != Vector3.zero)
-                ? (AutoAimTargetPosition - transform.position).normalized
-                : aimDirection;
-            dashDirection.y = 0;
-            _unit.UnitMove.ApplyMeleeDash(dashDirection.normalized, step.dashForce);
+            _unit.UnitMove.ApplyMeleeDash(attackDir, step.dashForce);
         }
 
         if (step.useMultiHit && step.subHits != null && step.subHits.Count > 0)
@@ -234,12 +328,13 @@ public class UnitMeleeSystem : MonoBehaviour
                 // 서브히트 순간 추가 대시
                 if (subHit.dashForce != 0)
                 {
-                    PerformAutoAim();
-                    Vector3 dashDir = (AutoAimTargetPosition != Vector3.zero)
-                        ? (AutoAimTargetPosition - transform.position).normalized
-                        : aimDirection;
-                    dashDir.y = 0;
-                    _unit.UnitMove.ApplyMeleeDash(dashDir.normalized, subHit.dashForce);
+                    if (allowAutoAim) PerformAutoAim();
+                    Vector3 dashDir = GetCurrentAttackDirection(allowAutoAim);
+                    if (dashDir != Vector3.zero)
+                    {
+                        transform.rotation = Quaternion.LookRotation(dashDir);
+                    }
+                    _unit.UnitMove.ApplyMeleeDash(dashDir, subHit.dashForce);
                 }
 
                 // 형태 파라미터 적용 (서브히트 자체 형태 및 범위 사용)
@@ -336,6 +431,11 @@ public class UnitMeleeSystem : MonoBehaviour
         isMeleeChargePrimed = true;
         chargeStartTime = Time.time;
         PerformAutoAim();
+        Vector3 attackDir = GetCurrentAttackDirection(allowAutoAim: true);
+        if (attackDir != Vector3.zero)
+        {
+            transform.rotation = Quaternion.LookRotation(attackDir);
+        }
     }
 
     /// <summary>
@@ -376,16 +476,18 @@ public class UnitMeleeSystem : MonoBehaviour
         float motionStartTime = Time.time;
 
         PerformAutoAim();
+        Vector3 attackDir = GetCurrentAttackDirection(allowAutoAim: true);
+        if (attackDir != Vector3.zero)
+        {
+            transform.rotation = Quaternion.LookRotation(attackDir);
+        }
+
         _unit.UnitAnimator.TriggerChargeMelee();
 
         // 초기 차지 대시 적용
         if (charge.dashForce != 0)
         {
-            Vector3 dashDirection = (AutoAimTargetPosition != Vector3.zero)
-                ? (AutoAimTargetPosition - transform.position).normalized
-                : aimDirection;
-            dashDirection.y = 0;
-            _unit.UnitMove.ApplyMeleeDash(dashDirection.normalized, charge.dashForce);
+            _unit.UnitMove.ApplyMeleeDash(attackDir, charge.dashForce);
         }
 
         if (charge.useMultiHit && charge.subHits != null && charge.subHits.Count > 0)
@@ -410,11 +512,12 @@ public class UnitMeleeSystem : MonoBehaviour
                 if (subHit.dashForce != 0)
                 {
                     PerformAutoAim();
-                    Vector3 dashDir = (AutoAimTargetPosition != Vector3.zero)
-                        ? (AutoAimTargetPosition - transform.position).normalized
-                        : aimDirection;
-                    dashDir.y = 0;
-                    _unit.UnitMove.ApplyMeleeDash(dashDir.normalized, subHit.dashForce);
+                    Vector3 dashDir = GetCurrentAttackDirection(allowAutoAim: true);
+                    if (dashDir != Vector3.zero)
+                    {
+                        transform.rotation = Quaternion.LookRotation(dashDir);
+                    }
+                    _unit.UnitMove.ApplyMeleeDash(dashDir, subHit.dashForce);
                 }
 
                 MeleeHitboxShape shape = subHit.shape;
@@ -510,6 +613,8 @@ public class UnitMeleeSystem : MonoBehaviour
         }
 
         _hasBufferedComboInput = false;
+        comboCounter = 0;
+        _lastAttackStartTime = -1f;
         CancelCharge();
         SetState(MeleeState.Idle);
         _hitTargetsThisSwing.Clear();
@@ -567,7 +672,8 @@ public class UnitMeleeSystem : MonoBehaviour
 
     /// <summary>
     /// 지정된 히트박스 형태(부채꼴 / 박스 / 원형)에 따라 적 충돌 판정 및 데미지를 적용합니다.
-    /// 1회 휘두름당 동일 적 중복 타격을 방지합니다.
+    /// 적 발사체가 범위 내에 있으면 함께 베어 파괴/삭제합니다.
+    /// 1회 휘두름당 동일 적/발사체 중복 타격을 방지합니다.
     /// </summary>
     private void PerformMeleeAttack(
         MeleeHitboxShape shape,
@@ -586,6 +692,12 @@ public class UnitMeleeSystem : MonoBehaviour
         if (forward.sqrMagnitude < 0.001f) forward = Vector3.forward;
         forward.Normalize();
 
+        LayerMask targetMask = enemyLayerMask;
+        if (canDestroyProjectiles)
+        {
+            targetMask |= projectileLayerMask;
+        }
+
         Collider[] hits = null;
 
         switch (shape)
@@ -593,22 +705,18 @@ public class UnitMeleeSystem : MonoBehaviour
             case MeleeHitboxShape.Sector:
             {
                 // 부채꼴: 플레이어 중심 OverlapSphere + 전방 각도 검사
-                hits = Physics.OverlapSphere(transform.position, radius, enemyLayerMask);
+                hits = Physics.OverlapSphere(transform.position, radius, targetMask, QueryTriggerInteraction.Collide);
                 foreach (Collider hit in hits)
                 {
-                    if (_hitTargetsThisSwing.Contains(hit)) continue;
-
-                    Vector3 directionToTarget = (hit.transform.position - transform.position).normalized;
+                    Vector3 directionToTarget = hit.transform.position - transform.position;
                     directionToTarget.y = 0;
-                    float angleToTarget = Vector3.Angle(forward, directionToTarget);
+                    float angleToTarget = directionToTarget.sqrMagnitude > 0.001f
+                        ? Vector3.Angle(forward, directionToTarget.normalized)
+                        : 0f;
 
                     if (angleToTarget <= angle * 0.5f)
                     {
-                        if (hit.TryGetComponent<EnemyHealth>(out var enemyHealth))
-                        {
-                            _hitTargetsThisSwing.Add(hit);
-                            enemyHealth.TakeDamage(finalDamage);
-                        }
+                        ProcessHitCollider(hit, finalDamage);
                     }
                 }
                 return;
@@ -621,7 +729,7 @@ public class UnitMeleeSystem : MonoBehaviour
                 Vector3 halfExtents = new Vector3(boxWidth * 0.5f, 1.5f, boxLength * 0.5f);
                 Quaternion orientation = Quaternion.LookRotation(forward, Vector3.up);
 
-                hits = Physics.OverlapBox(center, halfExtents, orientation, enemyLayerMask);
+                hits = Physics.OverlapBox(center, halfExtents, orientation, targetMask, QueryTriggerInteraction.Collide);
                 break;
             }
 
@@ -629,7 +737,7 @@ public class UnitMeleeSystem : MonoBehaviour
             {
                 // 전방 원형/구형: 플레이어 전방 forwardOffset 지점 중심 OverlapSphere
                 Vector3 center = transform.position + forward * forwardOffset + Vector3.up * 0.5f;
-                hits = Physics.OverlapSphere(center, radius, enemyLayerMask);
+                hits = Physics.OverlapSphere(center, radius, targetMask, QueryTriggerInteraction.Collide);
                 break;
             }
         }
@@ -638,13 +746,35 @@ public class UnitMeleeSystem : MonoBehaviour
         {
             foreach (Collider hit in hits)
             {
-                if (_hitTargetsThisSwing.Contains(hit)) continue;
+                ProcessHitCollider(hit, finalDamage);
+            }
+        }
+    }
 
-                if (hit.TryGetComponent<EnemyHealth>(out var enemyHealth))
-                {
-                    _hitTargetsThisSwing.Add(hit);
-                    enemyHealth.TakeDamage(finalDamage);
-                }
+    /// <summary>
+    /// 감지된 충돌체에 대해 적 유닛 피격(데미지) 또는 발사체 파괴를 수행합니다.
+    /// </summary>
+    private void ProcessHitCollider(Collider hit, float finalDamage)
+    {
+        if (hit == null || !hit.gameObject.activeInHierarchy || _hitTargetsThisSwing.Contains(hit)) return;
+
+        // 1. 적 유닛 피격 처리
+        EnemyHealth enemyHealth = hit.GetComponentInParent<EnemyHealth>();
+        if (enemyHealth != null)
+        {
+            _hitTargetsThisSwing.Add(hit);
+            enemyHealth.TakeDamage(finalDamage);
+            return;
+        }
+
+        // 2. 적 발사체 파괴 처리
+        if (canDestroyProjectiles)
+        {
+            Projectile projectile = hit.GetComponentInParent<Projectile>();
+            if (projectile != null)
+            {
+                _hitTargetsThisSwing.Add(hit);
+                projectile.DestroyByMelee(projectileDestroyEffectTag);
             }
         }
     }

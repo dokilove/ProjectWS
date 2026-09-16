@@ -968,6 +968,11 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 1024
   chargeAttackMaterial: {fileID: 2100000, guid: 778e6fcf7f6bf7e4db641774074a5edd, type: 2}
+  canDestroyProjectiles: 1
+  projectileLayerMask:
+    serializedVersion: 2
+    m_Bits: 32768
+  projectileDestroyEffectTag: hit02
 --- !u!114 &2228374163829482903
 MonoBehaviour:
   m_ObjectHideFlags: 0

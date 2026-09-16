@@ -16,7 +16,8 @@ MonoBehaviour:
   projectileData: {fileID: 11400000, guid: 1b90b9debe856ef45927bf3aa3af39c3, type: 2}
   lockOnRadius: 10
   attackAngle: 360
+  vehicleMountedAttackAngle: 90
   spreadAngle: 0
   projectilesPerShot: 1
   magazineSize: 6
-  reloadTime: 3
+  reloadTime: 2

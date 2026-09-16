@@ -12,10 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a0861e7023a9ff343957b42c0bccfcc3, type: 3}
   m_Name: EnemyWeaponData
   m_EditorClassIdentifier: Assembly-CSharp::WeaponData
-  fireRate: 2
+  fireRate: 5
   projectileData: {fileID: 11400000, guid: 9d133891150259e4bb6e059fb535be88, type: 2}
   lockOnRadius: 15
   attackAngle: 360
+  vehicleMountedAttackAngle: 90
   spreadAngle: 0
   projectilesPerShot: 1
   magazineSize: 2

@@ -25,7 +25,7 @@ MonoBehaviour:
     overrideMaterial: {fileID: 0}
     useMultiHit: 1
     subHits:
-    - hitTime: 0.1
+    - hitTime: 0
       damage: 10
       dashForce: 0
       overrideMaterial: {fileID: 0}
@@ -72,7 +72,7 @@ MonoBehaviour:
   - stepName: Combo 2
     shape: 0
     attackRadius: 5
-    attackAngle: 90
+    attackAngle: 80
     boxWidth: 2.5
     boxLength: 4
     forwardOffset: 0
@@ -111,12 +111,12 @@ MonoBehaviour:
       boxWidth: 4
       boxLength: 6
       forwardOffset: 0
-    hitDelay: 0.1
+    hitDelay: 0
     cancelWindowTime: 0.45
     totalDuration: 0.5
     comboResetTime: 0.6
   - stepName: Combo 3
-    shape: 2
+    shape: 0
     attackRadius: 6
     attackAngle: 120
     boxWidth: 3
@@ -127,7 +127,7 @@ MonoBehaviour:
     overrideMaterial: {fileID: 0}
     useMultiHit: 0
     subHits: []
-    hitDelay: 0.5
+    hitDelay: 0
     cancelWindowTime: 0.6
     totalDuration: 1
     comboResetTime: 0.5

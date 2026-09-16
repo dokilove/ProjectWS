@@ -101,15 +101,9 @@ public class UnitVisuals : MonoBehaviour
 
     public void OnEnterMeleeMode()
     {
-        var meleeData = _unit.UnitMeleeSystem.MeleeData;
-        if (meleeData != null)
+        if (radiusVisualizer != null)
         {
-            UpdateRadiusVisualizerBasedOnMode(); // Update radius visualizer for melee
-        }
-        else
-        {
-            // If no melee data, just disable the radius visualizer
-            if (radiusVisualizer != null) radiusVisualizer.enabled = false;
+            radiusVisualizer.enabled = false;
         }
 
         if (spreadAngleVisualizer != null)
@@ -135,10 +129,6 @@ public class UnitVisuals : MonoBehaviour
         if (_unit.CurrentAttackMode == AttackMode.Ranged && _unit.UnitWeaponSystem.WeaponData != null)
         {
             currentRadius = _unit.UnitWeaponSystem.WeaponData.lockOnRadius;
-        }
-        else if (_unit.CurrentAttackMode == AttackMode.Melee && _unit.UnitMeleeSystem.MeleeData != null)
-        {
-            currentRadius = _unit.UnitMeleeSystem.MeleeData.meleeLockOnRadius;
         }
 
         if (currentRadius > 0)

@@ -67,8 +67,20 @@ public class UnitInput : MonoBehaviour
         onFireHoldCanceled = ctx => { if (_unit.CurrentAttackMode == AttackMode.Ranged) isFireHeld = false; };
         onReloadPerformed = ctx => { _unit.UnitWeaponSystem.HandleReloadInput(); };
 
-        onMeleeChargeStarted = ctx => { if (_unit.CurrentAttackMode == AttackMode.Melee) _unit.UnitMeleeSystem.HandleMeleeChargeInput(); };
-        onMeleeChargeCanceled = ctx => { if (_unit.CurrentAttackMode == AttackMode.Melee) _unit.UnitMeleeSystem.HandleMeleeChargeReleaseInput(); };
+        onMeleeChargeStarted = ctx => { 
+            if (_unit.CurrentAttackMode == AttackMode.Melee) 
+            {
+                HandleAiming();
+                _unit.UnitMeleeSystem.HandleMeleeChargeInput(); 
+            }
+        };
+        onMeleeChargeCanceled = ctx => { 
+            if (_unit.CurrentAttackMode == AttackMode.Melee) 
+            {
+                HandleAiming();
+                _unit.UnitMeleeSystem.HandleMeleeChargeReleaseInput(); 
+            }
+        };
 
         // Mode switching delegates
         onSwitchAttackModeStarted = ctx => { if (lastUsedInputDevice == InputDeviceType.MouseKeyboard) _unit.SetAttackMode(AttackMode.Ranged); };
@@ -78,6 +90,7 @@ public class UnitInput : MonoBehaviour
             if (!_unit.UnitInput.IsRangedModeInputActive)
             {
                 _unit.SetAttackMode(AttackMode.Melee);
+                HandleAiming();
                 _unit.UnitMeleeSystem.HandleMeleeComboInput();
             }
             else
@@ -180,29 +193,72 @@ public class UnitInput : MonoBehaviour
 
         if (_unit.CurrentAttackMode == AttackMode.Melee)
         {
-            // If an auto-aim target is present, prioritize it for aimDirection
-            if (_unit.UnitMeleeSystem.AutoAimTargetPosition != Vector3.zero)
+            // 1순위: 이동 입력이 있을 때는 이동 방향으로 조준
+            if (moveInput.sqrMagnitude > 0.01f)
             {
-                aimDirection = (_unit.UnitMeleeSystem.AutoAimTargetPosition - transform.position).normalized;
-                aimDirection.y = 0; // Flatten the aim direction for smooth rotation
-                _unit.UnitMove.RotateTowards(_unit.UnitMeleeSystem.AutoAimTargetPosition); // Ensure player body rotates
-            }
-            else if (moveInput.sqrMagnitude > 0.01f)
-            {
-                // If no auto-aim target, aim direction is based on move input
-                Vector3 cameraRight = Camera.main.transform.right;
-                Vector3 cameraRightFlat = new Vector3(cameraRight.x, 0, cameraRight.z).normalized;
-                Vector3 cameraForwardFlat = Vector3.Cross(Vector3.up, cameraRightFlat);
-                Vector3 moveForward = -cameraForwardFlat;
-                Vector3 moveRight = cameraRightFlat;
+                if (Camera.main != null)
+                {
+                    Vector3 cameraRight = Camera.main.transform.right;
+                    Vector3 cameraRightFlat = new Vector3(cameraRight.x, 0, cameraRight.z).normalized;
+                    Vector3 cameraForwardFlat = Vector3.Cross(Vector3.up, cameraRightFlat);
+                    Vector3 moveForward = -cameraForwardFlat;
+                    Vector3 moveRight = cameraRightFlat;
 
-                Vector3 moveDirection = (moveForward * moveInput.y + moveRight * moveInput.x).normalized;
-                if (moveDirection != Vector3.zero) aimDirection = moveDirection;
+                    Vector3 moveDirection = (moveForward * moveInput.y + moveRight * moveInput.x).normalized;
+                    if (moveDirection != Vector3.zero)
+                    {
+                        aimDirection = moveDirection;
+                    }
+                }
+                else
+                {
+                    Vector3 moveDirection = new Vector3(moveInput.x, 0, moveInput.y).normalized;
+                    if (moveDirection != Vector3.zero)
+                    {
+                        aimDirection = moveDirection;
+                    }
+                }
+
+                _unit.UnitMove.ResetAutoAim();
             }
+            // 2순위: 이동 입력이 없고, Combo 2 이상이거나 차지 중일 때만 적 자동 추적
             else
             {
-                // If no move input and no auto-aim target, maintain current forward direction
-                aimDirection = transform.forward;
+                bool canAutoAim = _unit.UnitMeleeSystem != null &&
+                    (_unit.UnitMeleeSystem.ComboCounter > 0 || _unit.UnitMeleeSystem.IsMeleeChargePrimed);
+
+                if (canAutoAim && _unit.UnitMeleeSystem.AutoAimTargetPosition != Vector3.zero)
+                {
+                    Vector3 dirToEnemy = _unit.UnitMeleeSystem.AutoAimTargetPosition - transform.position;
+                    dirToEnemy.y = 0;
+                    if (dirToEnemy.sqrMagnitude > 0.001f)
+                    {
+                        aimDirection = dirToEnemy.normalized;
+                        _unit.UnitMove.SetIsAutoAiming(true);
+                    }
+                    else
+                    {
+                        Vector3 fwd = transform.forward;
+                        fwd.y = 0;
+                        if (fwd.sqrMagnitude > 0.001f)
+                        {
+                            aimDirection = fwd.normalized;
+                        }
+                        _unit.UnitMove.ResetAutoAim();
+                    }
+                }
+                // 3순위: Combo 1 대기 상태이거나 적이 없을 때 전방 유지
+                else
+                {
+                    Vector3 fwd = transform.forward;
+                    fwd.y = 0;
+                    if (fwd.sqrMagnitude > 0.001f)
+                    {
+                        aimDirection = fwd.normalized;
+                    }
+
+                    _unit.UnitMove.ResetAutoAim();
+                }
             }
         }
         else // Ranged Mode
@@ -244,6 +300,11 @@ public class UnitInput : MonoBehaviour
         // This can be expanded to find the closest interactable object
         Debug.Log("Unit Interact button pressed!");
     }
+
+    /// <summary>
+    /// 현재 이동 입력 벡터
+    /// </summary>
+    public Vector2 MoveInput => moveInput;
 
     /// <summary>
     /// Checks if the input for Ranged Mode (SwitchAttackMode or Look stick) is currently active.
