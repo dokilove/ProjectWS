@@ -353,7 +353,7 @@ public class UnitMeleeSystem : MonoBehaviour
                     ));
                 }
 
-                PerformMeleeAttack(shape, radius, angle, boxWidth, boxLength, offset, subHit.damage);
+                PerformMeleeAttack(shape, radius, angle, boxWidth, boxLength, offset, subHit.damage, subHit.hitStunDuration);
             }
         }
         else
@@ -388,7 +388,8 @@ public class UnitMeleeSystem : MonoBehaviour
                 step.boxWidth,
                 step.boxLength,
                 step.forwardOffset,
-                step.damage
+                step.damage,
+                step.hitStunDuration
             );
         }
 
@@ -535,7 +536,7 @@ public class UnitMeleeSystem : MonoBehaviour
                     ));
                 }
 
-                PerformMeleeAttack(shape, radius, angle, boxWidth, boxLength, offset, subHit.damage);
+                PerformMeleeAttack(shape, radius, angle, boxWidth, boxLength, offset, subHit.damage, subHit.hitStunDuration);
             }
         }
         else
@@ -570,7 +571,8 @@ public class UnitMeleeSystem : MonoBehaviour
                 charge.boxWidth,
                 charge.boxLength,
                 charge.forwardOffset,
-                charge.damage
+                charge.damage,
+                charge.hitStunDuration
             );
         }
 
@@ -682,7 +684,8 @@ public class UnitMeleeSystem : MonoBehaviour
         float boxWidth,
         float boxLength,
         float forwardOffset,
-        float damage)
+        float damage,
+        float hitStunDuration)
     {
         if (_unit == null) return;
 
@@ -716,7 +719,7 @@ public class UnitMeleeSystem : MonoBehaviour
 
                     if (angleToTarget <= angle * 0.5f)
                     {
-                        ProcessHitCollider(hit, finalDamage);
+                        ProcessHitCollider(hit, finalDamage, hitStunDuration);
                     }
                 }
                 return;
@@ -746,15 +749,15 @@ public class UnitMeleeSystem : MonoBehaviour
         {
             foreach (Collider hit in hits)
             {
-                ProcessHitCollider(hit, finalDamage);
+                ProcessHitCollider(hit, finalDamage, hitStunDuration);
             }
         }
     }
 
     /// <summary>
-    /// 감지된 충돌체에 대해 적 유닛 피격(데미지) 또는 발사체 파괴를 수행합니다.
+    /// 감지된 충돌체에 대해 적 유닛 피격(데미지/경직) 또는 발사체 파괴를 수행합니다.
     /// </summary>
-    private void ProcessHitCollider(Collider hit, float finalDamage)
+    private void ProcessHitCollider(Collider hit, float finalDamage, float hitStunDuration)
     {
         if (hit == null || !hit.gameObject.activeInHierarchy || _hitTargetsThisSwing.Contains(hit)) return;
 
@@ -763,7 +766,7 @@ public class UnitMeleeSystem : MonoBehaviour
         if (enemyHealth != null)
         {
             _hitTargetsThisSwing.Add(hit);
-            enemyHealth.TakeDamage(finalDamage);
+            enemyHealth.TakeDamage(finalDamage, hitStunDuration);
             return;
         }
 

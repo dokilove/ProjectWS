@@ -64,6 +64,7 @@ public class MeleeDataEditor : Editor
             newElem.FindPropertyRelative("boxLength").floatValue = 4f;
             newElem.FindPropertyRelative("forwardOffset").floatValue = 0f;
             newElem.FindPropertyRelative("damage").floatValue = 20f;
+            newElem.FindPropertyRelative("hitStunDuration").floatValue = 0.2f;
             newElem.FindPropertyRelative("dashForce").floatValue = 100f;
             newElem.FindPropertyRelative("useMultiHit").boolValue = false;
             newElem.FindPropertyRelative("subHits").ClearArray();
@@ -98,6 +99,7 @@ public class MeleeDataEditor : Editor
         SerializedProperty lengthProp = stepProp.FindPropertyRelative("boxLength");
         SerializedProperty offsetProp = stepProp.FindPropertyRelative("forwardOffset");
         SerializedProperty damageProp = stepProp.FindPropertyRelative("damage");
+        SerializedProperty hitStunProp = stepProp.FindPropertyRelative("hitStunDuration");
         SerializedProperty dashProp = stepProp.FindPropertyRelative("dashForce");
         SerializedProperty matProp = stepProp.FindPropertyRelative("overrideMaterial");
         SerializedProperty multiHitProp = stepProp.FindPropertyRelative("useMultiHit");
@@ -153,6 +155,7 @@ public class MeleeDataEditor : Editor
                 EditorGUILayout.Space(3);
                 EditorGUILayout.LabelField("위력 및 선딜레이", EditorStyles.boldLabel);
                 EditorGUILayout.PropertyField(damageProp, new GUIContent("단발 데미지 (Damage)"));
+                EditorGUILayout.PropertyField(hitStunProp, new GUIContent("피격 경직 시간 (Hit Stun)", "적중 시 적이 멈추는 경직 시간 (초)"));
                 EditorGUILayout.PropertyField(hitDelayProp, new GUIContent("선딜레이 (Hit Delay)", "모션 시작 후 데미지가 터지는 시간 (초)"));
             }
 
@@ -184,6 +187,7 @@ public class MeleeDataEditor : Editor
         SerializedProperty lengthProp = _chargeAttackProp.FindPropertyRelative("boxLength");
         SerializedProperty offsetProp = _chargeAttackProp.FindPropertyRelative("forwardOffset");
         SerializedProperty damageProp = _chargeAttackProp.FindPropertyRelative("damage");
+        SerializedProperty hitStunProp = _chargeAttackProp.FindPropertyRelative("hitStunDuration");
         SerializedProperty dashProp = _chargeAttackProp.FindPropertyRelative("dashForce");
         SerializedProperty matProp = _chargeAttackProp.FindPropertyRelative("overrideMaterial");
         SerializedProperty multiHitProp = _chargeAttackProp.FindPropertyRelative("useMultiHit");
@@ -220,6 +224,7 @@ public class MeleeDataEditor : Editor
                 EditorGUILayout.Space(3);
                 EditorGUILayout.LabelField("위력 및 선딜레이", EditorStyles.boldLabel);
                 EditorGUILayout.PropertyField(damageProp, new GUIContent("차지 단발 데미지 (Damage)"));
+                EditorGUILayout.PropertyField(hitStunProp, new GUIContent("차지 경직 시간 (Hit Stun)", "차지 적중 시 적이 멈추는 경직 시간 (초)"));
                 EditorGUILayout.PropertyField(hitDelayProp, new GUIContent("선딜레이 (Hit Delay)"));
             }
 
@@ -293,6 +298,7 @@ public class MeleeDataEditor : Editor
             var newHit = subHitsProp.GetArrayElementAtIndex(subHitsProp.arraySize - 1);
             newHit.FindPropertyRelative("hitTime").floatValue = (subHitsProp.arraySize) * 0.1f;
             newHit.FindPropertyRelative("damage").floatValue = 15f;
+            newHit.FindPropertyRelative("hitStunDuration").floatValue = 0.15f;
             newHit.FindPropertyRelative("dashForce").floatValue = 0f;
             newHit.FindPropertyRelative("shape").enumValueIndex = 0;
             newHit.FindPropertyRelative("attackRadius").floatValue = 5f;
@@ -308,6 +314,7 @@ public class MeleeDataEditor : Editor
             SerializedProperty hitElem = subHitsProp.GetArrayElementAtIndex(j);
             SerializedProperty timeProp = hitElem.FindPropertyRelative("hitTime");
             SerializedProperty dmgProp = hitElem.FindPropertyRelative("damage");
+            SerializedProperty hitStunProp = hitElem.FindPropertyRelative("hitStunDuration");
             SerializedProperty subDashProp = hitElem.FindPropertyRelative("dashForce");
             SerializedProperty subMatProp = hitElem.FindPropertyRelative("overrideMaterial");
             SerializedProperty subShapeProp = hitElem.FindPropertyRelative("shape");
@@ -337,6 +344,7 @@ public class MeleeDataEditor : Editor
 
             EditorGUILayout.PropertyField(timeProp, new GUIContent("발생 시점 (Hit Time)", "모션 시작(0초) 후 이 타격이 터지는 시점 (초)"));
             EditorGUILayout.PropertyField(dmgProp, new GUIContent("타격 데미지 (Damage)"));
+            EditorGUILayout.PropertyField(hitStunProp, new GUIContent("피격 경직 시간 (Hit Stun)", "이 타격 적중 시 적이 멈추는 경직 시간 (초)"));
             EditorGUILayout.PropertyField(subDashProp, new GUIContent("순간 대시력 (Dash Force)", "이 타격 시 순간적으로 가해지는 전진/후진 힘"));
             EditorGUILayout.PropertyField(subMatProp, new GUIContent("비주얼 머티리얼 (선택)"));
 

@@ -6,6 +6,16 @@ public class EnemyHealth : MonoBehaviour
     [SerializeField] private EnemyData enemyData;
     public string hitEffectPoolTag;
     private float currentHealth;
+    private EnemyAI _enemyAI;
+
+    private void Awake()
+    {
+        _enemyAI = GetComponent<EnemyAI>();
+        if (_enemyAI == null)
+        {
+            _enemyAI = GetComponentInParent<EnemyAI>();
+        }
+    }
 
     private void OnEnable()
     {
@@ -21,7 +31,7 @@ public class EnemyHealth : MonoBehaviour
         }
     }
 
-    public void TakeDamage(float damage)
+    public void TakeDamage(float damage, float hitStunDuration = 0f)
     {
         currentHealth -= damage;
         Debug.Log($"{gameObject.name} took {damage} damage. Current health: {currentHealth}");
@@ -47,6 +57,10 @@ public class EnemyHealth : MonoBehaviour
         if (currentHealth <= 0)
         {
             Die();
+        }
+        else if (_enemyAI != null && hitStunDuration > 0f)
+        {
+            _enemyAI.ApplyStun(hitStunDuration);
         }
     }
 

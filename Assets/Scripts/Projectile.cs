@@ -142,7 +142,8 @@ public class Projectile : MonoBehaviour
                 EnemyHealth enemyHealth = other.GetComponentInParent<EnemyHealth>();
                 if (enemyHealth != null)
                 {
-                    enemyHealth.TakeDamage(_damage);
+                    float stunDuration = data != null ? data.hitStunDuration : 0.1f;
+                    enemyHealth.TakeDamage(_damage, stunDuration);
                 }
             }
         }

@@ -14,3 +14,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
   maxHealth: 500
   moveSpeed: 0.25
+  canBeStunned: 1
+  stunResistance: 0.5

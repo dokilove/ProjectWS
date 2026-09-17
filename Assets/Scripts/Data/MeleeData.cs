@@ -24,6 +24,9 @@ public class MeleeSubHit
     [Tooltip("해당 타격의 데미지")]
     public float damage = 15f;
 
+    [Tooltip("해당 타격 적중 시 대상에게 부여할 경직 시간 (초 단위)")]
+    public float hitStunDuration = 0.15f;
+
     [Tooltip("해당 타격 순간의 추가 돌진/대시 힘 (0이면 없음, 음수면 백스텝)")]
     public float dashForce = 0f;
 
@@ -71,6 +74,9 @@ public class MeleeComboStep
 
     [Tooltip("기본 단발 데미지 (다단히트 미사용 시)")]
     public float damage = 20f;
+
+    [Tooltip("단발 공격 적중 시 대상에게 부여할 경직 시간 (초 단위)")]
+    public float hitStunDuration = 0.2f;
 
     [Tooltip("공격 시작 시 전방 대쉬 힘 (0이면 대쉬하지 않음)")]
     public float dashForce = 100f;
@@ -127,6 +133,9 @@ public class MeleeChargeAttackData
 
     [Tooltip("차지 공격의 기본 데미지")]
     public float damage = 120f;
+
+    [Tooltip("차지 공격 적중 시 대상에게 부여할 경직 시간 (초 단위)")]
+    public float hitStunDuration = 0.6f;
 
     [Tooltip("차지 공격의 대쉬 힘 (음수면 백스텝)")]
     public float dashForce = -100f;

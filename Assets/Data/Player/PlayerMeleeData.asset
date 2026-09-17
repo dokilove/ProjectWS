@@ -27,6 +27,7 @@ MonoBehaviour:
     subHits:
     - hitTime: 0
       damage: 10
+      hitStunDuration: 0.15
       dashForce: 0
       overrideMaterial: {fileID: 0}
       shape: 1
@@ -37,6 +38,7 @@ MonoBehaviour:
       forwardOffset: 0
     - hitTime: 0.15
       damage: 15
+      hitStunDuration: 0.15
       dashForce: 0
       overrideMaterial: {fileID: 0}
       shape: 1
@@ -47,6 +49,7 @@ MonoBehaviour:
       forwardOffset: 0
     - hitTime: 0.18
       damage: 10
+      hitStunDuration: 0.15
       dashForce: 0
       overrideMaterial: {fileID: 0}
       shape: 1
@@ -57,6 +60,7 @@ MonoBehaviour:
       forwardOffset: 0
     - hitTime: 0.21
       damage: 15
+      hitStunDuration: 0.15
       dashForce: 0
       overrideMaterial: {fileID: 0}
       shape: 1
@@ -65,6 +69,7 @@ MonoBehaviour:
       boxWidth: 4
       boxLength: 4
       forwardOffset: 0
+    hitStunDuration: 0.2
     hitDelay: 0.08
     cancelWindowTime: 0.3
     totalDuration: 0.4
@@ -111,6 +116,7 @@ MonoBehaviour:
       boxWidth: 4
       boxLength: 6
       forwardOffset: 0
+    hitStunDuration: 0.25
     hitDelay: 0
     cancelWindowTime: 0.45
     totalDuration: 0.5
@@ -123,6 +129,7 @@ MonoBehaviour:
     boxLength: 4
     forwardOffset: 0
     damage: 60
+    hitStunDuration: 0.4
     dashForce: 50
     overrideMaterial: {fileID: 0}
     useMultiHit: 0
@@ -139,6 +146,7 @@ MonoBehaviour:
     boxLength: 6
     forwardOffset: 0
     damage: 240
+    hitStunDuration: 0.6
     dashForce: -100
     overrideMaterial: {fileID: 0}
     useMultiHit: 0

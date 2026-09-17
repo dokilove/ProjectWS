@@ -17,3 +17,4 @@ MonoBehaviour:
   lifespan: 2
   hitEffectPrefab: {fileID: 0}
   projectilePrefab: {fileID: 2819337062272718742, guid: f520dbee5d3c728409c9e56fe89326ec, type: 3}
+  hitStunDuration: 0.2
