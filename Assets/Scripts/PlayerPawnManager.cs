@@ -40,6 +40,7 @@ public class PlayerPawnManager : MonoBehaviour
 
     public static Transform ActivePlayerTransform { get; private set; }
     public static Unit ActiveUnit { get; private set; }
+    public static IVehicle ActiveVehicle { get; private set; }
 
     private void Awake()
     {
@@ -302,6 +303,7 @@ public class PlayerPawnManager : MonoBehaviour
 
         ActivePlayerTransform = currentUnit.transform; // Set active transform
         ActiveUnit = currentUnit;
+        ActiveVehicle = null;
 
         if (playerCam != null)
         {
@@ -353,6 +355,7 @@ public class PlayerPawnManager : MonoBehaviour
 
         ActivePlayerTransform = currentVehicle.transform; // Set active transform
         ActiveUnit = unitPawn;
+        ActiveVehicle = currentVehicle;
 
         if (vehicleCam != null)
         {

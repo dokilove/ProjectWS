@@ -1,12 +1,17 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 // This script will act as the coordinator for all other Vehicle components.
 [RequireComponent(typeof(VehicleInput))]
 [RequireComponent(typeof(VehicleMove))]
 [RequireComponent(typeof(VehicleVisuals))]
+[RequireComponent(typeof(VehicleRamSystem))]
 // Not requiring VehicleAI as it might not be on player vehicles
 public class Vehicle : MonoBehaviour, IVehicle
 {
+    // --- Active Vehicles Registry ---
+    public static readonly List<Vehicle> ActiveVehicles = new List<Vehicle>();
+
     [Header("Weapon Systems")]
     [SerializeField] private VehicleWeaponSystem autoWeaponSystem;
     [SerializeField] private VehicleWeaponSystem playerWeaponSystem;
@@ -18,6 +23,7 @@ public class Vehicle : MonoBehaviour, IVehicle
     public VehicleWeaponSystem VehicleWeaponSystem => playerWeaponSystem != null ? playerWeaponSystem : (autoWeaponSystem != null ? autoWeaponSystem : GetComponentInChildren<VehicleWeaponSystem>());
     public VehicleVisuals VehicleVisuals { get; private set; }
     public VehicleAI VehicleAI { get; private set; }
+    public VehicleRamSystem VehicleRamSystem { get; private set; }
 
     public VehicleHealthData vehicleHealthData;
     public string hitEffectPoolTag;
@@ -57,9 +63,13 @@ public class Vehicle : MonoBehaviour, IVehicle
             else playerWeaponSystem = weaponSystems[0];
         }
 
-        if (vehicleHealthData == null)
+        if (vehicleHealthData != null)
         {
-            Debug.LogWarning("VehicleHealthData is not assigned to Vehicle. CurrentHealth will not be initialized.");
+            CurrentHealth = vehicleHealthData.maxHealth;
+        }
+        else
+        {
+            Debug.LogWarning("VehicleHealthData is not assigned to Vehicle. Defaulting CurrentHealth to 200.");
             CurrentHealth = 200f;
         }
 
@@ -69,6 +79,64 @@ public class Vehicle : MonoBehaviour, IVehicle
         if (playerWeaponSystem != null) playerWeaponSystem.Init(this);
         if (VehicleVisuals != null) VehicleVisuals.Init(this);
         if (VehicleAI != null) VehicleAI.Init(this);
+
+        VehicleRamSystem = GetComponent<VehicleRamSystem>();
+        if (VehicleRamSystem == null)
+        {
+            VehicleRamSystem = gameObject.AddComponent<VehicleRamSystem>();
+        }
+        VehicleRamSystem.Init(this);
+    }
+
+    private void OnEnable()
+    {
+        if (!ActiveVehicles.Contains(this))
+        {
+            ActiveVehicles.Add(this);
+        }
+    }
+
+    private void OnDisable()
+    {
+        ActiveVehicles.Remove(this);
+    }
+
+    private void OnDestroy()
+    {
+        ActiveVehicles.Remove(this);
+    }
+
+    /// <summary>
+    /// 지정된 위치에서 가장 가깝고 파괴되지 않은 활성 차량을 반환합니다.
+    /// </summary>
+    public static Vehicle GetClosestLivingVehicle(Vector3 fromPosition, float maxDistance = Mathf.Infinity)
+    {
+        Vehicle closest = null;
+        float minDstSqr = maxDistance * maxDistance;
+
+        for (int i = ActiveVehicles.Count - 1; i >= 0; i--)
+        {
+            Vehicle v = ActiveVehicles[i];
+            if (v == null)
+            {
+                ActiveVehicles.RemoveAt(i);
+                continue;
+            }
+
+            if (!v.gameObject.activeInHierarchy || v.IsDead)
+            {
+                continue;
+            }
+
+            float dstSqr = (v.transform.position - fromPosition).sqrMagnitude;
+            if (dstSqr < minDstSqr)
+            {
+                minDstSqr = dstSqr;
+                closest = v;
+            }
+        }
+
+        return closest;
     }
 
     private void Start()

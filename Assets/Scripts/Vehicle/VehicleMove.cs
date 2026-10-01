@@ -17,6 +17,16 @@ public class VehicleMove : MonoBehaviour
 
     // --- Public State ---
     public bool IsAccelerating { get; set; }
+    public float CurrentSpeed => currentSpeed;
+    public bool IsReverseMode => isReverseMode;
+
+    /// <summary>
+    /// 충돌 시 차량 속도를 비율만큼 감속시킵니다 (0~1).
+    /// </summary>
+    public void ApplyImpactSlowdown(float slowdownPercent)
+    {
+        currentSpeed *= Mathf.Clamp01(1f - slowdownPercent);
+    }
 
     // --- Dependencies ---
     private Vehicle _vehicle;

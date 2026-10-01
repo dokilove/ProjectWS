@@ -9,6 +9,10 @@
                 <ui:Label text="Enemies:" name="enemy-title-label" class="hud-text hud-title" />
                 <ui:Label text="0" name="enemy-count-label" class="hud-text" />
             </ui:VisualElement>
+            <ui:VisualElement name="VehicleSpeedUI" class="hud-element" style="flex-direction: row;">
+                <ui:Label text="Speed:" name="speed-title-label" class="hud-text hud-title" />
+                <ui:Label text="0.0" name="speed-label" class="hud-text" />
+            </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="TopRight" class="top-right-container">
             <ui:VisualElement name="FPSUI" class="hud-element" style="flex-direction: row;">
