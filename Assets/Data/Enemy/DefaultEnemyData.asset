@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 158832244fcad7043aa4bb86570bd961, type: 3}
   m_Name: DefaultEnemyData
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
+  size: 0
   maxHealth: 100
   moveSpeed: 1
   canBeStunned: 1

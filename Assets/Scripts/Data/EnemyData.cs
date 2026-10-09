@@ -1,8 +1,18 @@
 using UnityEngine;
 
+public enum EnemySize
+{
+    S, // 소형: 차량에 깔려 즉사 (차량 감속/반동 없음)
+    M, // 중형: 기본 충돌/넉백/데미지 (기본 감속/반동)
+    L  // 대형: 넉백 저항 (차량에 큰 감속 및 큰 반동 피해)
+}
+
 [CreateAssetMenu(fileName = "NewEnemyData", menuName = "Data/Enemy Data")]
 public class EnemyData : ScriptableObject
 {
+    [Header("Classification")]
+    [Tooltip("적 크기 분류 (S: 소형 - 차량에 깔려 즉사, M: 중형 - 일반 박치기, L: 대형 - 넉백 저항 및 큰 반동)")]
+    public EnemySize size = EnemySize.M;
     [Header("Stats")]
     public float maxHealth = 100f;
     public float moveSpeed = 3.5f;

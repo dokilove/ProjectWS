@@ -14,10 +14,14 @@ public class VehicleRamSystem : MonoBehaviour
     [SerializeField] private VehicleRamHitbox rearBumper;
 
     [Header("Ramming Conditions (박치기 발동 조건)")]
-    [Tooltip("박치기가 발동되는 최소 주행 속도 (이 속도 이상으로 달릴 때만 충돌 판정)")]
+    [Tooltip("박치기가 발동되는 최소 주행 속도 (M/L 크기 적 대상)")]
     [SerializeField] private float minRamSpeed = 4f;
 
+    [Tooltip("S(소형) 적을 깔아뭉갤 수 있는 최소 주행 속도 (저속에서도 부드럽게 통과)")]
+    [SerializeField] private float minCrushSpeed = 1.0f;
+
     public float MinRamSpeed => minRamSpeed;
+    public float MinCrushSpeed => minCrushSpeed;
 
     [Header("Damage Settings (공격 피해량)")]
     [Tooltip("적에게 가하는 기본 충돌 피해")]
@@ -57,6 +61,24 @@ public class VehicleRamSystem : MonoBehaviour
     [Header("Visual Effects")]
     [Tooltip("충돌 시 재생할 이펙트 풀 태그")]
     [SerializeField] private string ramHitEffectPoolTag = "hit01";
+
+    [Header("Size Interaction Settings (적 크기별 충돌 반응)")]
+    [Tooltip("S(소형) 적 충돌 시 즉시 깔아뭉개기(즉사) 적용 여부")]
+    [SerializeField] private bool canCrushSmallEnemies = true;
+
+    [Tooltip("L(대형) 적 충돌 시 넉백 거리 배율 (0이면 넉백 없음)")]
+    [Range(0f, 1f)]
+    [SerializeField] private float largeEnemyKnockbackMultiplier = 0.2f;
+
+    [Tooltip("L(대형) 적 충돌 시 추가 감속 비율 (기본 감속에 더해짐)")]
+    [Range(0f, 1f)]
+    [SerializeField] private float largeEnemyExtraSlowdown = 0.25f;
+
+    [Tooltip("L(대형) 적 충돌 시 차량 반동 피해 배율")]
+    [SerializeField] private float largeEnemySelfDamageMultiplier = 2.0f;
+
+    [Tooltip("S(소형) 적 깔아뭉갤 때 사용할 전용 이펙트 태그 (비어있으면 기본 피격 이펙트 사용)")]
+    [SerializeField] private string crushEffectPoolTag = "hit01";
 
     private Vehicle _vehicle;
     private float _lastVehicleDamageTime = -Mathf.Infinity;
@@ -155,24 +177,27 @@ public class VehicleRamSystem : MonoBehaviour
         // 타겟 레이어 검사
         if (((1 << other.gameObject.layer) & targetLayer) == 0) return;
 
-        // 차량 이동 컴포넌트 및 속도 확인
-        float currentSpeed = _vehicle.VehicleMove != null ? _vehicle.VehicleMove.CurrentSpeed : 0f;
-
-        // 전방 범퍼: 전진 속도가 minRamSpeed 이상일 때만 발동
-        if (bumperType == BumperType.Front && currentSpeed < minRamSpeed)
-        {
-            return;
-        }
-
-        // 후방 범퍼: 후진 속도가 -minRamSpeed 이하일 때만 발동
-        if (bumperType == BumperType.Rear && currentSpeed > -minRamSpeed)
-        {
-            return;
-        }
-
         // 적 체력 컴포넌트 탐색
         EnemyHealth enemyHealth = other.GetComponentInParent<EnemyHealth>();
         if (enemyHealth == null) return;
+
+        EnemySize enemySize = enemyHealth.Size;
+        float currentSpeed = _vehicle.VehicleMove != null ? _vehicle.VehicleMove.CurrentSpeed : 0f;
+
+        // 크기별 최소 필요 속도 계산 (S 적은 저속 주행 중에도 깔아뭉개기 발동)
+        float requiredSpeed = (enemySize == EnemySize.S && canCrushSmallEnemies) ? minCrushSpeed : minRamSpeed;
+
+        // 전방 범퍼: 전진 속도가 requiredSpeed 이상일 때만 발동
+        if (bumperType == BumperType.Front && currentSpeed < requiredSpeed)
+        {
+            return;
+        }
+
+        // 후방 범퍼: 후진 속도가 -requiredSpeed 이하일 때만 발동
+        if (bumperType == BumperType.Rear && currentSpeed > -requiredSpeed)
+        {
+            return;
+        }
 
         // 동일 적 쿨다운 검사
         if (_enemyHitCooldowns.TryGetValue(enemyHealth, out float lastHitTime))
@@ -194,7 +219,31 @@ public class VehicleRamSystem : MonoBehaviour
     private void ExecuteRam(EnemyHealth enemyHealth, Collider other, float currentSpeed, BumperType bumperType)
     {
         float absSpeed = Mathf.Abs(currentSpeed);
+        EnemySize enemySize = enemyHealth.Size;
 
+        // 1. S (소형) 적: 깔아뭉개기 (Crush)
+        if (enemySize == EnemySize.S && canCrushSmallEnemies)
+        {
+            enemyHealth.Crush();
+
+            Vector3 crushPoint = other.ClosestPoint(transform.position);
+            string effectTag = !string.IsNullOrEmpty(crushEffectPoolTag) ? crushEffectPoolTag : ramHitEffectPoolTag;
+            if (!string.IsNullOrEmpty(effectTag) && EffectPoolManager.Instance != null)
+            {
+                EffectPoolManager.Instance.GetPooledObject(effectTag, crushPoint, Quaternion.identity);
+            }
+
+            // 차량 덜컹거림(서스펜션 들썩임) 연출 트리거
+            if (_vehicle.VehicleVisuals != null)
+            {
+                _vehicle.VehicleVisuals.TriggerCrushBump(crushPoint, bumperType);
+            }
+
+            Debug.Log($"[VehicleRam] Crushed Small(S) enemy {enemyHealth.name}! Speed: {absSpeed:F1}");
+            return;
+        }
+
+        // 2. M (중형) 및 L (대형) 적 처리
         // 1. 적 피해량 계산 및 적용
         float finalEnemyDamage = baseRamDamage + (absSpeed * speedDamageMultiplier);
         enemyHealth.TakeDamage(finalEnemyDamage, hitStunDuration);
@@ -208,21 +257,42 @@ public class VehicleRamSystem : MonoBehaviour
             pushDir.y = 0f;
             Vector3 moveDirection = transform.forward * Mathf.Sign(currentSpeed);
             Vector3 ramDirection = (moveDirection + pushDir.normalized * 0.5f).normalized;
-            enemyAI.ApplyKnockback(ramDirection, knockbackDistance);
+
+            float knockback = (enemySize == EnemySize.L)
+                ? knockbackDistance * largeEnemyKnockbackMultiplier
+                : knockbackDistance;
+
+            if (knockback > 0.01f)
+            {
+                enemyAI.ApplyKnockback(ramDirection, knockback);
+            }
         }
 
-        // 3. 차량 반동(Self-Damage) 피해 처리 (최소 쿨다운 적용으로 자폭 방지)
+        // 3. 차량 반동(Self-Damage) 피해 처리 (L 사이즈는 추가 반동 배율 적용)
         if (Time.time >= _lastVehicleDamageTime + vehicleDamageCooldown)
         {
             float selfDamage = baseSelfDamage + (finalEnemyDamage * selfDamageRatio);
+            if (enemySize == EnemySize.L)
+            {
+                selfDamage *= largeEnemySelfDamageMultiplier;
+            }
             _vehicle.TakeDamage(selfDamage);
             _lastVehicleDamageTime = Time.time;
         }
 
-        // 4. 충돌 시 차량 감속 피드백
-        if (_vehicle.VehicleMove != null && impactSlowdown > 0f)
+        // 4. 충돌 시 차량 감속 피드백 (L 사이즈는 추가 감속 적용)
+        if (_vehicle.VehicleMove != null)
         {
-            _vehicle.VehicleMove.ApplyImpactSlowdown(impactSlowdown);
+            float slowdown = impactSlowdown;
+            if (enemySize == EnemySize.L)
+            {
+                slowdown = Mathf.Clamp01(slowdown + largeEnemyExtraSlowdown);
+            }
+
+            if (slowdown > 0f)
+            {
+                _vehicle.VehicleMove.ApplyImpactSlowdown(slowdown);
+            }
         }
 
         // 5. 충돌 피격 이펙트 생성
@@ -232,7 +302,47 @@ public class VehicleRamSystem : MonoBehaviour
             EffectPoolManager.Instance.GetPooledObject(ramHitEffectPoolTag, impactPoint, Quaternion.identity);
         }
 
-        Debug.Log($"[VehicleRam] {bumperType} bumper rammed {enemyHealth.name}! Damage: {finalEnemyDamage:F0}, Speed: {currentSpeed:F1}");
+        Debug.Log($"[VehicleRam] {bumperType} bumper rammed [{enemySize}] {enemyHealth.name}! Damage: {finalEnemyDamage:F0}, Speed: {currentSpeed:F1}");
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        HandleDirectCollision(collision);
+    }
+
+    private void OnCollisionStay(Collision collision)
+    {
+        HandleDirectCollision(collision);
+    }
+
+    private void HandleDirectCollision(Collision collision)
+    {
+        if (_vehicle == null || _vehicle.IsDead || !canCrushSmallEnemies) return;
+        if (((1 << collision.gameObject.layer) & targetLayer) == 0) return;
+
+        EnemyHealth enemyHealth = collision.gameObject.GetComponentInParent<EnemyHealth>();
+        if (enemyHealth == null || enemyHealth.Size != EnemySize.S) return;
+
+        float speed = _vehicle.VehicleMove != null ? _vehicle.VehicleMove.CurrentSpeed : 0f;
+        if (Mathf.Abs(speed) >= minCrushSpeed)
+        {
+            enemyHealth.Crush();
+            Vector3 contactPoint = collision.contactCount > 0 ? collision.GetContact(0).point : transform.position;
+            string effectTag = !string.IsNullOrEmpty(crushEffectPoolTag) ? crushEffectPoolTag : ramHitEffectPoolTag;
+            if (!string.IsNullOrEmpty(effectTag) && EffectPoolManager.Instance != null)
+            {
+                EffectPoolManager.Instance.GetPooledObject(effectTag, contactPoint, Quaternion.identity);
+            }
+
+            // 차량 덜컹거림(서스펜션 들썩임) 연출 트리거
+            if (_vehicle.VehicleVisuals != null)
+            {
+                BumperType dir = (_vehicle.VehicleMove != null && _vehicle.VehicleMove.IsReverseMode) ? BumperType.Rear : BumperType.Front;
+                _vehicle.VehicleVisuals.TriggerCrushBump(contactPoint, dir);
+            }
+
+            Debug.Log($"[VehicleRam] Directly crushed Small(S) enemy {enemyHealth.name}! Speed: {Mathf.Abs(speed):F1}");
+        }
     }
 
     private void CleanupCooldownDictionary()

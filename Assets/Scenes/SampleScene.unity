@@ -737,23 +737,23 @@ MonoBehaviour:
   dayNightCycle: {fileID: 488670102}
   phaseSettings:
   - phase: 0
-    enemiesPerWave: 6
+    enemiesPerWave: 12
     waveCooldown: 2
     spawnIntervalInWave: 2
   - phase: 1
-    enemiesPerWave: 1
+    enemiesPerWave: 6
     waveCooldown: 4
     spawnIntervalInWave: 4
   - phase: 2
-    enemiesPerWave: 1
+    enemiesPerWave: 6
     waveCooldown: 10
     spawnIntervalInWave: 10
   - phase: 3
-    enemiesPerWave: 1
+    enemiesPerWave: 6
     waveCooldown: 4
     spawnIntervalInWave: 4
   - phase: 4
-    enemiesPerWave: 2
+    enemiesPerWave: 8
     waveCooldown: 4
     spawnIntervalInWave: 4
   spawnableEnemies:
@@ -9118,6 +9118,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerHUDController
   dayNightCycleManager: {fileID: 488670102}
   fpsUpdateInterval: 0.5
+  speedFormat: '{0:F1}'
+  showOnlyInVehicle: 0
+  showRamThreshold: 1
 --- !u!114 &1787933326
 MonoBehaviour:
   m_ObjectHideFlags: 0

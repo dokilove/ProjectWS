@@ -12,7 +12,11 @@ public class VehicleMove : MonoBehaviour
     [SerializeField] private float deceleration = 8f;
 
     [Header("Acceleration")]
+    [Tooltip("전진 가속 시 최고 속도")]
     [SerializeField] private float acceleratedMaxSpeed = 20f;
+    [Tooltip("후진 가속 시 최고 속도")]
+    [SerializeField] private float acceleratedReverseMaxSpeed = 15f;
+    [Tooltip("가속 중 회전 속도 배율 (직진성 강화)")]
     [SerializeField] private float acceleratedTurnMultiplier = 0.5f;
 
     // --- Public State ---
@@ -146,8 +150,8 @@ public class VehicleMove : MonoBehaviour
 
             if (isReverseMode)
             {
-                // Use the base moveSpeed for reverse, not the accelerated speed
-                finalSpeedTarget = -moveSpeed * inputMagnitude;
+                float currentReverseSpeed = IsAccelerating ? acceleratedReverseMaxSpeed : moveSpeed;
+                finalSpeedTarget = -currentReverseSpeed * inputMagnitude;
                 finalSteerDirection = -targetDirection;
             }
         }

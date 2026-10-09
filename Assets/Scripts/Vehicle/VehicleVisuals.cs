@@ -19,6 +19,22 @@ public class VehicleVisuals : MonoBehaviour
     [SerializeField] private float shakeIntensity = 3.0f;
     [SerializeField] private float shakeSpeed = 45f;
 
+    [Header("Run-Over Bump Settings (적 밟기 덜컹거림 연출)")]
+    [Tooltip("적을 밟았을 때 위로 튀어오르는 높이 (Y축 오프셋)")]
+    [SerializeField] private float bumpHeight = 0.18f;
+
+    [Tooltip("적을 밟았을 때 앞뒤로 흔들리는 피치 각도")]
+    [SerializeField] private float bumpPitchAngle = 6.0f;
+
+    [Tooltip("적을 밟았을 때 좌우로 흔들리는 롤 각도")]
+    [SerializeField] private float bumpRollAngle = 4.5f;
+
+    [Tooltip("서스펜션 복원 스프링 강도 (높을수록 빠르게 덜컹거림)")]
+    [SerializeField] private float suspensionSpring = 160f;
+
+    [Tooltip("서스펜션 감쇠 계수 (높을수록 출렁거림이 빠르게 멈춤)")]
+    [SerializeField] private float suspensionDamping = 14f;
+
     // --- Dependencies ---
     private Vehicle _vehicle;
     private Rigidbody rb;
@@ -31,14 +47,32 @@ public class VehicleVisuals : MonoBehaviour
     private Vector3 lastVelocity;
     private float lastEulerY;
 
+    // --- State for Run-Over Bump ---
+    private Vector3 initialModelLocalPos;
+    private float bumpOffsetY = 0f;
+    private float bumpVelocityY = 0f;
+    private float bumpOffsetPitch = 0f;
+    private float bumpVelocityPitch = 0f;
+    private float bumpOffsetRoll = 0f;
+    private float bumpVelocityRoll = 0f;
+
     public void Init(Vehicle vehicle)
     {
         _vehicle = vehicle;
         rb = GetComponent<Rigidbody>(); // Assumes Rigidbody is on the same root object
+        if (modelRoot != null && initialModelLocalPos == Vector3.zero)
+        {
+            initialModelLocalPos = modelRoot.localPosition;
+        }
     }
 
     private void Awake()
     {
+        if (modelRoot != null && initialModelLocalPos == Vector3.zero)
+        {
+            initialModelLocalPos = modelRoot.localPosition;
+        }
+
         if (targetLineRenderer != null)
         {
             targetLineRenderer.material = new Material(Shader.Find("Legacy Shaders/Particles/Alpha Blended Premultiply"));
@@ -179,10 +213,81 @@ public class VehicleVisuals : MonoBehaviour
         currentPitch = Mathf.SmoothDampAngle(currentPitch, targetPitch, ref pitchVelocity, tiltSmoothTime);
         currentRoll = Mathf.SmoothDampAngle(currentRoll, targetRoll, ref rollVelocity, tiltSmoothTime);
 
-        modelRoot.localRotation = Quaternion.Euler(currentPitch, 0, currentRoll + currentShake);
+        // 덜컹거림(Bump) 물리 스프링 시뮬레이션
+        UpdateBumpSpring(Time.deltaTime);
+
+        modelRoot.localPosition = initialModelLocalPos + new Vector3(0f, bumpOffsetY, 0f);
+        modelRoot.localRotation = Quaternion.Euler(currentPitch + bumpOffsetPitch, 0f, currentRoll + currentShake + bumpOffsetRoll);
 
         lastVelocity = currentMoveVelocity;
         lastEulerY = currentEulerY;
+    }
+
+    /// <summary>
+    /// 작은 적을 밟고 지나갈 때 차량 서스펜션이 덜컹거리는 연출을 발동합니다.
+    /// </summary>
+    /// <param name="hitPoint">충돌 위치 (좌/우 롤링 계산용)</param>
+    /// <param name="bumperType">전방/후방 범퍼 구분 (앞뒤 피칭 계산용)</param>
+    public void TriggerCrushBump(Vector3 hitPoint, BumperType bumperType)
+    {
+        float currentSpeed = (_vehicle != null && _vehicle.VehicleMove != null) ? _vehicle.VehicleMove.CurrentSpeed : 0f;
+        float speedFactor = Mathf.Clamp(Mathf.Abs(currentSpeed) / 10f, 0.8f, 1.4f);
+
+        // 1. 수직 튀어오름 (Vertical Jump)
+        bumpVelocityY += (bumpHeight * 18f) * speedFactor;
+        bumpOffsetY += bumpHeight * 0.4f * speedFactor;
+
+        // 2. 피치 충격 (전방 범퍼는 노즈업, 후방 범퍼는 노즈다운)
+        float pitchDir = (bumperType == BumperType.Front) ? -1f : 1f;
+        bumpVelocityPitch += (pitchDir * bumpPitchAngle * 12f) * speedFactor;
+
+        // 3. 롤 충격 (충돌한 지점이 위로 들리는 방향으로 롤링)
+        Vector3 localHit = transform.InverseTransformPoint(hitPoint);
+        float rollDir = (localHit.x >= 0f) ? -1f : 1f; // 우측 충돌 시 좌측으로 기울어짐
+        bumpVelocityRoll += (rollDir * bumpRollAngle * 12f) * speedFactor;
+    }
+
+    private void UpdateBumpSpring(float dt)
+    {
+        if (dt <= 0f) return;
+
+        // Y축 수직 스프링
+        float forceY = -suspensionSpring * bumpOffsetY - suspensionDamping * bumpVelocityY;
+        bumpVelocityY += forceY * dt;
+        bumpOffsetY += bumpVelocityY * dt;
+
+        // 피치(앞뒤) 스프링
+        float forcePitch = -suspensionSpring * bumpOffsetPitch - suspensionDamping * bumpVelocityPitch;
+        bumpVelocityPitch += forcePitch * dt;
+        bumpOffsetPitch += bumpVelocityPitch * dt;
+
+        // 롤(좌우) 스프링
+        float forceRoll = -suspensionSpring * bumpOffsetRoll - suspensionDamping * bumpVelocityRoll;
+        bumpVelocityRoll += forceRoll * dt;
+        bumpOffsetRoll += bumpVelocityRoll * dt;
+
+        // 한계값 클램핑 (과도한 튕김 방지)
+        bumpOffsetY = Mathf.Clamp(bumpOffsetY, -0.08f, bumpHeight * 1.5f);
+        bumpVelocityY = Mathf.Clamp(bumpVelocityY, -15f, 15f);
+        bumpOffsetPitch = Mathf.Clamp(bumpOffsetPitch, -15f, 15f);
+        bumpOffsetRoll = Mathf.Clamp(bumpOffsetRoll, -15f, 15f);
+
+        // 미세 진동 정지 (Sleep Check)
+        if (Mathf.Abs(bumpOffsetY) < 0.001f && Mathf.Abs(bumpVelocityY) < 0.01f)
+        {
+            bumpOffsetY = 0f;
+            bumpVelocityY = 0f;
+        }
+        if (Mathf.Abs(bumpOffsetPitch) < 0.01f && Mathf.Abs(bumpVelocityPitch) < 0.05f)
+        {
+            bumpOffsetPitch = 0f;
+            bumpVelocityPitch = 0f;
+        }
+        if (Mathf.Abs(bumpOffsetRoll) < 0.01f && Mathf.Abs(bumpVelocityRoll) < 0.05f)
+        {
+            bumpOffsetRoll = 0f;
+            bumpVelocityRoll = 0f;
+        }
     }
 
     public void UpdateRadiusVisualizer(float radius)

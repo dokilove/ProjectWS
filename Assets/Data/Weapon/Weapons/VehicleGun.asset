@@ -19,5 +19,5 @@ MonoBehaviour:
   vehicleMountedAttackAngle: 90
   spreadAngle: 0
   projectilesPerShot: 1
-  magazineSize: 1
+  magazineSize: 2
   reloadTime: 2

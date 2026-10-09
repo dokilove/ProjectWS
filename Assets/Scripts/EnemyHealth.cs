@@ -4,6 +4,12 @@ using UnityEngine;
 public class EnemyHealth : MonoBehaviour
 {
     [SerializeField] private EnemyData enemyData;
+    [Tooltip("EnemyData의 크기 설정을 인스펙터에서 개별적으로 덮어쓸지 여부")]
+    [SerializeField] private bool overrideSize = false;
+    [SerializeField] private EnemySize overriddenSize = EnemySize.M;
+
+    public EnemySize Size => overrideSize ? overriddenSize : (enemyData != null ? enemyData.size : EnemySize.M);
+
     public string hitEffectPoolTag;
     private float currentHealth;
     private EnemyAI _enemyAI;
@@ -62,6 +68,15 @@ public class EnemyHealth : MonoBehaviour
         {
             _enemyAI.ApplyStun(hitStunDuration);
         }
+    }
+
+    /// <summary>
+    /// 차량 등에 의해 깔아뭉개져 즉사 처리될 때 호출됩니다.
+    /// </summary>
+    public void Crush()
+    {
+        float lethalDamage = Mathf.Max(currentHealth, 9999f);
+        TakeDamage(lethalDamage);
     }
 
     private void Die()
