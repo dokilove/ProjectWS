@@ -157,7 +157,19 @@ public class Vehicle : MonoBehaviour, IVehicle
             Transform tTransform = pWeapon.TurretTransform != null ? pWeapon.TurretTransform : pWeapon.transform;
             if (tTransform != null)
             {
-                tTransform.gameObject.SetActive(IsControlledByPlayer);
+                // [기능 제한] 차량 탑승 시 플레이어 발사체 공격 기능 비활성화로 인해 플레이어 포탑 숨김 (복원 시 아래 주석 해제)
+                // tTransform.gameObject.SetActive(IsControlledByPlayer);
+                tTransform.gameObject.SetActive(false);
+            }
+        }
+
+        // [기능 제한] 차량 탑승 시 차량 자체 무기(자동 포탑)도 숨김 처리 (복원 시 아래 블록 주석 처리)
+        if (autoWeaponSystem != null)
+        {
+            Transform autoTurret = autoWeaponSystem.TurretTransform != null ? autoWeaponSystem.TurretTransform : autoWeaponSystem.transform;
+            if (autoTurret != null)
+            {
+                autoTurret.gameObject.SetActive(!IsControlledByPlayer);
             }
         }
     }

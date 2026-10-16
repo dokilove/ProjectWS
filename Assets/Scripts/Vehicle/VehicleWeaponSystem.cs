@@ -97,6 +97,9 @@ public class VehicleWeaponSystem : MonoBehaviour
 
     private void Update()
     {
+        // [기능 제한] 차량 탑승 시 차량 자체 무기(자동 포탑) 발사 및 조준 중단 (복원 시 아래 줄 주석 처리)
+        if (_vehicle != null && _vehicle.IsControlledByPlayer) return;
+
         if (isAutoWeapon)
         {
             HandleAutoWeapon();
@@ -238,6 +241,9 @@ public class VehicleWeaponSystem : MonoBehaviour
 
     public bool CanFire(Transform aiTarget = null)
     {
+        // [기능 제한] 차량 탑승 시 차량 무기 발사 제한 (복원 시 아래 줄 주석 처리)
+        if (_vehicle != null && _vehicle.IsControlledByPlayer) return false;
+
         WeaponData data = WeaponData;
         if (data == null || Time.time < nextFireTime || IsReloading || CurrentAmmo <= 0)
         {

@@ -770,6 +770,15 @@ public class UnitMeleeSystem : MonoBehaviour
             return;
         }
 
+        // 1-2. 스폰 토템(EnemySpawner) 피격 처리
+        EnemySpawner spawner = hit.GetComponentInParent<EnemySpawner>();
+        if (spawner != null)
+        {
+            _hitTargetsThisSwing.Add(hit);
+            spawner.TakeDamage(finalDamage);
+            return;
+        }
+
         // 2. 적 발사체 파괴 처리
         if (canDestroyProjectiles)
         {

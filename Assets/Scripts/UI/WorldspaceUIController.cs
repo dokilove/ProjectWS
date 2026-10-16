@@ -84,6 +84,12 @@ public class WorldspaceUIController : MonoBehaviour
         }
 
         // --- Update Ammo UI ---
+        // [기능 제한] 차량 탑승 시 발사체 공격 기능 비활성화로 인해 탄약/재장전 UI 숨김 처리 (복원 시 아래 3줄 삭제 후 주석 해제)
+        if (ammoLabel != null) ammoLabel.style.display = DisplayStyle.None;
+        if (reloadStatusLabel != null) reloadStatusLabel.style.display = DisplayStyle.None;
+        return;
+
+        /*
         if (!vehicle.IsControlledByPlayer)
         {
             if (ammoLabel != null) ammoLabel.style.display = DisplayStyle.None;
@@ -112,5 +118,6 @@ public class WorldspaceUIController : MonoBehaviour
             if (ammoLabel != null) ammoLabel.style.display = DisplayStyle.None;
             if (reloadStatusLabel != null) reloadStatusLabel.style.display = DisplayStyle.None;
         }
+        */
     }
 }

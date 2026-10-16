@@ -145,6 +145,14 @@ public class Projectile : MonoBehaviour
                     float stunDuration = data != null ? data.hitStunDuration : 0.1f;
                     enemyHealth.TakeDamage(_damage, stunDuration);
                 }
+                else
+                {
+                    EnemySpawner spawner = other.GetComponentInParent<EnemySpawner>();
+                    if (spawner != null)
+                    {
+                        spawner.TakeDamage(_damage);
+                    }
+                }
             }
         }
 

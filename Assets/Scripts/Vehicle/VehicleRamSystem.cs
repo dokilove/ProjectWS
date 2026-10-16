@@ -179,7 +179,16 @@ public class VehicleRamSystem : MonoBehaviour
 
         // 적 체력 컴포넌트 탐색
         EnemyHealth enemyHealth = other.GetComponentInParent<EnemyHealth>();
-        if (enemyHealth == null) return;
+        if (enemyHealth == null)
+        {
+            // 스폰 토템(EnemySpawner) 박치기 판정 지원
+            EnemySpawner spawner = other.GetComponentInParent<EnemySpawner>();
+            if (spawner != null && !spawner.IsDead)
+            {
+                HandleSpawnerRam(spawner, other, bumperType);
+            }
+            return;
+        }
 
         EnemySize enemySize = enemyHealth.Size;
         float currentSpeed = _vehicle.VehicleMove != null ? _vehicle.VehicleMove.CurrentSpeed : 0f;
@@ -214,6 +223,57 @@ public class VehicleRamSystem : MonoBehaviour
 
         // 박치기 공격 실행
         ExecuteRam(enemyHealth, other, currentSpeed, bumperType);
+    }
+
+    private readonly Dictionary<EnemySpawner, float> _spawnerHitCooldowns = new Dictionary<EnemySpawner, float>();
+
+    private void HandleSpawnerRam(EnemySpawner spawner, Collider other, BumperType bumperType)
+    {
+        float currentSpeed = _vehicle.VehicleMove != null ? _vehicle.VehicleMove.CurrentSpeed : 0f;
+        if (bumperType == BumperType.Front && currentSpeed < minRamSpeed) return;
+        if (bumperType == BumperType.Rear && currentSpeed > -minRamSpeed) return;
+
+        if (_spawnerHitCooldowns.TryGetValue(spawner, out float lastHitTime))
+        {
+            if (Time.time < lastHitTime + hitCooldownPerEnemy) return;
+        }
+        _spawnerHitCooldowns[spawner] = Time.time;
+
+        float absSpeed = Mathf.Abs(currentSpeed);
+        EnemySize totemSize = spawner.Size;
+
+        float finalDamage = baseRamDamage + (absSpeed * speedDamageMultiplier);
+        spawner.TakeDamage(finalDamage);
+
+        if (Time.time >= _lastVehicleDamageTime + vehicleDamageCooldown)
+        {
+            float selfDamage = baseSelfDamage + (finalDamage * selfDamageRatio);
+            if (totemSize == EnemySize.L)
+            {
+                selfDamage *= largeEnemySelfDamageMultiplier;
+            }
+            _vehicle.TakeDamage(selfDamage);
+            _lastVehicleDamageTime = Time.time;
+        }
+
+        if (_vehicle.VehicleMove != null)
+        {
+            float slowdown = impactSlowdown;
+            if (totemSize == EnemySize.L)
+            {
+                slowdown = Mathf.Clamp01(slowdown + largeEnemyExtraSlowdown);
+            }
+            if (slowdown > 0f)
+            {
+                _vehicle.VehicleMove.ApplyImpactSlowdown(slowdown);
+            }
+        }
+
+        Vector3 impactPoint = other.ClosestPoint(transform.position);
+        if (!string.IsNullOrEmpty(ramHitEffectPoolTag) && EffectPoolManager.Instance != null)
+        {
+            EffectPoolManager.Instance.GetPooledObject(ramHitEffectPoolTag, impactPoint, Quaternion.identity);
+        }
     }
 
     private void ExecuteRam(EnemyHealth enemyHealth, Collider other, float currentSpeed, BumperType bumperType)
@@ -317,8 +377,19 @@ public class VehicleRamSystem : MonoBehaviour
 
     private void HandleDirectCollision(Collision collision)
     {
-        if (_vehicle == null || _vehicle.IsDead || !canCrushSmallEnemies) return;
+        if (_vehicle == null || _vehicle.IsDead) return;
         if (((1 << collision.gameObject.layer) & targetLayer) == 0) return;
+
+        // 스폰 토템(EnemySpawner)과 직접 물리 충돌 시에도 박치기 데미지 적용
+        EnemySpawner spawner = collision.gameObject.GetComponentInParent<EnemySpawner>();
+        if (spawner != null && !spawner.IsDead)
+        {
+            BumperType bumperDir = (_vehicle.VehicleMove != null && _vehicle.VehicleMove.IsReverseMode) ? BumperType.Rear : BumperType.Front;
+            HandleSpawnerRam(spawner, collision.collider, bumperDir);
+            return;
+        }
+
+        if (!canCrushSmallEnemies) return;
 
         EnemyHealth enemyHealth = collision.gameObject.GetComponentInParent<EnemyHealth>();
         if (enemyHealth == null || enemyHealth.Size != EnemySize.S) return;

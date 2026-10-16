@@ -107,12 +107,15 @@ private System.Action<InputAction.CallbackContext> onAccelCanceled;
         playerActions.Vehicle.Look.canceled += onLookCanceled;
         playerActions.Vehicle.MousePosition.performed += onMousePositionPerformed;
         playerActions.Vehicle.MousePosition.canceled += onMousePositionCanceled;
+        // [기능 제한] 차량 탑승 시 플레이어 발사체 발사 및 재장전 입력 차단 (복원 시 주석 해제)
+        /*
         playerActions.Vehicle.Fire.performed += onFirePerformed;
         playerActions.Vehicle.Fire_Hold.started += onFireHoldStarted;
         playerActions.Vehicle.Fire_Hold.canceled += onFireHoldCanceled;
+        */
         playerActions.Vehicle.NeutralTurn.started += onNeutralTurnStarted;
         playerActions.Vehicle.NeutralTurn.canceled += onNeutralTurnCanceled;
-        playerActions.Vehicle.Reload.performed += onReloadPerformed;
+        // playerActions.Vehicle.Reload.performed += onReloadPerformed;
         playerActions.Vehicle.Accel.started += onAccelStarted;
         playerActions.Vehicle.Accel.canceled += onAccelCanceled;
     }
@@ -127,12 +130,15 @@ private System.Action<InputAction.CallbackContext> onAccelCanceled;
         playerActions.Vehicle.Look.canceled -= onLookCanceled;
         playerActions.Vehicle.MousePosition.performed -= onMousePositionPerformed;
         playerActions.Vehicle.MousePosition.canceled -= onMousePositionCanceled;
+        // [기능 제한] 차량 탑승 시 플레이어 발사체 발사 및 재장전 입력 차단 (복원 시 주석 해제)
+        /*
         playerActions.Vehicle.Fire.performed -= onFirePerformed;
         playerActions.Vehicle.Fire_Hold.started -= onFireHoldStarted;
         playerActions.Vehicle.Fire_Hold.canceled -= onFireHoldCanceled;
+        */
         playerActions.Vehicle.NeutralTurn.started -= onNeutralTurnStarted;
         playerActions.Vehicle.NeutralTurn.canceled -= onNeutralTurnCanceled;
-        playerActions.Vehicle.Reload.performed -= onReloadPerformed;
+        // playerActions.Vehicle.Reload.performed -= onReloadPerformed;
         playerActions.Vehicle.Accel.started -= onAccelStarted;
         playerActions.Vehicle.Accel.canceled -= onAccelCanceled;
 
@@ -152,6 +158,8 @@ private System.Action<InputAction.CallbackContext> onAccelCanceled;
 
         _vehicle.VehicleMove.SetPlayerInput(moveInput, isNeutralTurning);
         
+        // [기능 제한] 차량 탑승 시 플레이어 발사체 공격 및 조준 비활성화 (복원 시 주석 해제)
+        /*
         var mWeapon = GetManualVehicleWeapon();
         if (mWeapon != null)
         {
@@ -164,6 +172,7 @@ private System.Action<InputAction.CallbackContext> onAccelCanceled;
         }
 
         HandlePlayerAiming();
+        */
     }
 
     private void HandlePlayerAiming()

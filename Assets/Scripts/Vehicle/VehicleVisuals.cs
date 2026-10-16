@@ -86,6 +86,20 @@ public class VehicleVisuals : MonoBehaviour
     private void Start()
     {
         if (_vehicle == null) return;
+
+        // [기능 제한] 차량 탑승 시 플레이어 발사체 공격 관련 시각화 UI 숨김 처리
+        if (attackRangeVisualizer != null) attackRangeVisualizer.SetActive(false);
+        if (spreadAngleVisualizer != null) spreadAngleVisualizer.SetActive(false);
+        if (targetLineRenderer != null) targetLineRenderer.enabled = false;
+
+        // 자동 포탑(AutoWeaponSystem) 반경 표시만 유지
+        var autoWeapon = _vehicle.AutoWeaponSystem;
+        if (autoWeapon != null && autoWeapon.WeaponData != null)
+        {
+            UpdateRadiusVisualizer(autoWeapon.WeaponData.lockOnRadius);
+        }
+
+        /* [복원용 주석] 플레이어 차량 탑승 공격 범위 및 탄퍼짐 시각화 초기화
         var weaponSystem = _vehicle.PlayerWeaponSystem != null ? _vehicle.PlayerWeaponSystem : _vehicle.VehicleWeaponSystem;
         if (weaponSystem == null) return;
         var weaponData = weaponSystem.WeaponData;
@@ -117,13 +131,22 @@ public class VehicleVisuals : MonoBehaviour
                 spreadAngleVisualizer.SetActive(false);
             }
         }
+        */
     }
 
     private void Update()
     {
         HandleBodyTilt();
-        HandleTargetLine();
-        HandleAttackRangeVisualizer();
+
+        // [기능 제한] 차량 탑승 시 차량 무기 사거리 원(radiusVisualizer) 숨김 처리 (복원 시 아래 블록 주석 처리)
+        if (radiusVisualizer != null && _vehicle != null)
+        {
+            radiusVisualizer.enabled = !_vehicle.IsControlledByPlayer;
+        }
+
+        // [기능 제한] 차량 탑승 시 플레이어 발사체 조준선 및 공격 가능 범위 표시 비활성화 (복원 시 주석 해제)
+        // HandleTargetLine();
+        // HandleAttackRangeVisualizer();
     }
 
     private void HandleAttackRangeVisualizer()
