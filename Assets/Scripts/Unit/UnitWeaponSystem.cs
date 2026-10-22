@@ -219,7 +219,8 @@ public class UnitWeaponSystem : MonoBehaviour
                 Projectile projectile = projectileGO.GetComponent<Projectile>();
                 if (projectile != null)
                 {
-                    projectile.Init(weaponData.projectileData, finalFireDirection, ownerLayer, finalDamage);
+                    Transform shooterRoot = _unit != null ? _unit.transform : transform.root;
+                    projectile.Init(weaponData.projectileData, finalFireDirection, ownerLayer, finalDamage, null, shooterRoot);
                 }
             }
         }
@@ -258,7 +259,8 @@ public class UnitWeaponSystem : MonoBehaviour
                 Projectile projectile = projectileGO.GetComponent<Projectile>();
                 if (projectile != null)
                 {
-                    projectile.Init(weaponData.projectileData, fireDirection, _unit.gameObject.layer, finalDamage);
+                    Transform shooterRoot = _unit != null ? _unit.transform : transform.root;
+                    projectile.Init(weaponData.projectileData, fireDirection, _unit.gameObject.layer, finalDamage, null, shooterRoot);
                 }
             }
         }

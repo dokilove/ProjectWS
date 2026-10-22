@@ -91,3 +91,111 @@
 
 ## 7. 불변 제약 사항 준수
 - `InputSystem_Actions.inputactions` 및 `InputSystem_Actions.cs` 파일은 전혀 수정하지 않음.
+
+---
+
+## 8. 범위 확산형 곡사 발사체(Arcing Explosive Projectile) 시스템 구현 (2026-10-22)
+- **개요**: 인스펙터 설정만으로 직사/곡사 및 단일 타격/범위 폭발(스플래시)을 자유롭게 조합할 수 있도록 발사체 데이터와 비행/충돌 로직을 확장.
+- **수정 파일**:
+  - `Assets/Scripts/Data/ProjectileData.cs`:
+    - `isArcing` (곡사 적용 여부, 기본값 `false`), `launchAngle` (상향 발사 각도, 기본 30도), `gravityMultiplier` (중력 가속도 배수, 기본 2.5) 추가.
+    - `isExplosive` (범위 폭발 여부, 기본값 `false`), `explosionRadius` (폭발 피해 반경, 기본 3.5m), `explosionKnockback` (폭발 중심 넉백 거리, 기본 2.0m), `explosionEffectPrefab` (폭발 전용 이펙트) 추가.
+  - `Assets/Scripts/Projectile.cs`:
+    - **곡사 물리 궤적**: `isArcing` 활성화 시 수평 방향 속도와 중력 가속도가 적용된 수직 속도(`verticalVelocity`)를 실시간 계산하여 자연스러운 포물선 비행 및 탄두 낙하 방향 자동 회전 정렬(`Quaternion.LookRotation`).
+    - **[충돌박스 최적화] 공중 간섭 방지 및 지면 착탄 감지**:
+      - `isArcing` 활성화 시 발사체의 자체 `Collider`를 비활성화(`_collider.enabled = false`)하여 비행 중 앞쪽 적이나 장애물의 상단 콜라이더에 걸려 조기 공중 폭발하는 현상을 원천 방지 및 PhysX 오버헤드 제거.
+      - 비행 중 공중 충돌 검사는 건너뛰고, 지면(`Ground`) 및 장애물(`Obstacle`) 레이캐스트(진행 방향 및 직하방)로만 정확하게 착탄을 감지하여 바닥에 닿는 순간 `Explode()`가 호출되도록 개선.
+    - **범위 폭발 및 방사형 넉백 (`Explode`)**: `Physics.OverlapSphere`를 통해 반경 내 적/유닛/차량/스포너를 일괄 판정하고, 폭발 중심점 기준 방사형 넉백(`EnemyAI.ApplyKnockback`) 및 피격 경직(`hitStunDuration`) 동시 적용. 복수 콜라이더 단일 대상 중복 타격 방지(`HashSet`).
+    - **다형성/확장성 지원**: 주요 수명 주기 메서드(`Init`, `Update`, `Move`, `OnTriggerEnter`, `HandleImpact`, `Explode`, `ApplyDamageToTarget` 등)를 `protected virtual`로 개방하여 향후 '마탄(Chaining/Ricochet)' 등의 특수 탄환 추가 시 깔끔하게 상속 확장 가능하도록 개선.
+
+---
+
+## 9. 차량 다중 자동 무기(직사/곡사) 및 '정차 중 발사' 시스템 구현 (2026-10-22)
+- **개요**: 차량에 장착된 복수의 무기(직사 기관총, 곡사 박격포 등)가 플레이어 탑승 상태에서도 동작하되, 주행 중에는 사격을 멈추고 **'정차 중일 때만'** 각각 독립적으로 주변 적을 자동 탐색하여 사격하도록 시스템 개편.
+- **수정 파일**:
+  - `Assets/Scripts/Vehicle/VehicleMove.cs`:
+    - `IsMoving` 프로퍼티 추가 (현재 속도 및 이동 입력 크기를 종합 판단하여 정차 여부 제공).
+  - `Assets/Scripts/Vehicle/Vehicle.cs`:
+    - `AllWeaponSystems` (자식에 붙은 모든 `VehicleWeaponSystem`을 리스트로 보관 및 일괄 초기화).
+    - `IsMoving` 편의 프로퍼티 노출.
+    - `UpdatePlayerTurretVisibility()`: 탑승/하차와 무관하게 차량에 장착된 모든 포탑 메쉬가 항상 유지되도록 수정.
+  - `Assets/Scripts/Vehicle/VehicleWeaponSystem.cs`:
+    - 플레이어 탑승 시 발사/조준이 무조건 차단되던 기존 임시 제한 해제.
+    - `CanFire()`: 플레이어가 탑승 중일 때 `_vehicle.IsMoving` 상태이면 사격을 멈추고, 정차 상태일 때만 사격하도록 조건 개선.
+    - `HandleAutoWeapon()`: 자동 무기 탄약 소진 시 자동 재장전(`HandleReloadInput`) 연동.
+
+---
+
+## 10. 목표 좌표 탄도학 역계산 기반 곡사 100% 명중 시스템 구현 (2026-10-22)
+- **개요**: 기존의 고정 발사각 투사 방식에서 발생하는 거리별 명중률 저하 문제를 해결하기 위해, 타겟 좌표(Target Position)를 전달받아 해당 거리에 정확히 착탄하는 물리 탄도학 역계산 시스템 구축.
+- **수정 파일**:
+  - `Assets/Scripts/Projectile.cs`:
+    - `Init()` 메서드에 `Vector3? targetPosition = null` 매개변수 확장 (기존 호출부 100% 호환).
+    - **탄도학 역계산 (Ballistic Equation)**:
+      - 수평 변위 및 높이차 $H$ 계산.
+      - 비행 시간 $T = \text{수평거리} / \text{speed}$.
+      - 등속 수평 속도 $V_{xz} = D_{xz} / T$.
+      - 수직 초기 속도 $V_y = (H - 0.5 \cdot g \cdot T^2) / T$ 역계산 적용으로 $t=T$ 시점에 목표 지점에 정확히 도달.
+      - 타겟이 지정되지 않은 경우(허공 사격) 전방 사거리 지점을 가상 목표로 산출하여 부드러운 포물선 유지.
+  - `Assets/Scripts/Vehicle/VehicleWeaponSystem.cs`:
+    - 자동 락온된 적의 위치(`target.position`)를 발사체 `Init()`의 `targetPosition`으로 전달.
+
+---
+
+## 11. 적 발사체의 차량 피격 불가 버그 원인 분석 및 해결 (2026-10-22)
+- **원인 분석**:
+  - `EnemyProjectile.prefab`의 레이어는 **Layer 15 (`EnemyAttackLayer`)**, 차량 본체 콜라이더의 레이어는 **Layer 11 (`Vehicle`)**.
+  - 유니티 물리 엔진 설정(`ProjectSettings/DynamicsManager.asset`)의 **Layer Collision Matrix(충돌 매트릭스)** 상에서 **`Layer 11`과 `Layer 15` 사이의 충돌 체크박스가 해제(`false`)**되어 있어, 물리 엔진이 두 오브젝트 간의 충돌 자체를 계산하지 않고 완전히 무시(통과)하고 있었음.
+- **수정 파일**:
+  - `ProjectSettings/DynamicsManager.asset`:
+    - `m_LayerCollisionMatrix`에서 Layer 11(Vehicle)과 Layer 15(EnemyAttackLayer) 간의 상호 충돌 비트를 `true`로 활성화.
+  - `Assets/Scripts/Projectile.cs`:
+    - 직선 비행(`Move`) 시 지면/환경뿐만 아니라 `targetLayer` 및 `playerLayers`도 전방 레이캐스트 충돌 마스크(`hitMask`)에 포함하여, 탄속이 빠르거나 프레임 드랍이 생겨도 차량이나 플레이어를 뚫고 지나가는 터널링을 100% 방지하도록 2중 안전장치 구축.
+
+---
+
+## 12. 발사체 벽/장애물 착탄 시 소멸 처리 개선 (2026-10-22)
+- **원인 분석**:
+  - 기존 `HandleImpact`에서 일반 탄환(폭발형/곡사형이 아닌 기본 탄환)이 벽이나 장애물(`isEnvironment`)에 부딪혔을 때 비활성화(`gameObject.SetActive(false)`)를 호출하는 코드가 누락되어 있어, 벽에 닿아도 파괴되지 않고 수명이 다할 때까지 벽에 박힌 채 남아있었음.
+  - 또한 Default(0) 레이어로 설정된 벽이나 환경 오브젝트가 환경 레이어 마스크에서 누락될 가능성이 존재했음.
+- **수정 파일**:
+  - `Assets/Scripts/Projectile.cs`:
+    - `HandleImpact()` 개선:
+      1. 폭발형 탄환(`isExplosive`): 타겟이든 벽/바닥이든 닿는 즉시 `Explode(hitPoint)` 호출.
+      2. 단일 타격 대상(`isTarget`): 피해 및 피격 이펙트 재생 후 소멸.
+      3. 타겟이 아닌 환경(벽, 기둥, 장애물, 바닥 등): 피격/착탄 이펙트 재생 후 **즉시 소멸(`gameObject.SetActive(false)`)**하여 벽에 박혀 남아있는 현상 완전 해결.
+    - 기본 환경 레이어 마스크에 Default(0) 레이어도 포함하여 어떤 벽 오브젝트든 충돌을 감지하도록 보강.
+
+---
+
+## 13. 차량 발사체 본체/부품 자가 충돌(Self-Collision) 소멸 버그 해결 (2026-10-22)
+- **원인 분석**:
+  1. 차량(Vehicle) 프리팹은 메인 루트는 Layer 11(Vehicle)이지만, 범퍼/바퀴/메쉬 등 하위 부품 콜라이더가 Layer 0(Default)으로 설정되어 있는 경우가 많음.
+  2. 이전 수정에서 벽 착탄 감지를 위해 환경 레이어(`environmentLayers`)에 Default(0) 레이어를 포함시켰는데, 발사체 전방 레이캐스트 검사 시 `hit.collider.gameObject.layer != shooterLayer` 조건만 검사하고 있어, 차량의 자식 부품(Layer 0)을 차량 본체(Layer 11)와 다른 "벽/장애물"로 잘못 판정하여 발사 즉시 충돌/폭발/소멸함.
+  3. 또한 곡사(Arcing)의 경우 `environmentLayers` 레이캐스트에서 발사자 제외 조건이 없어 발사 원점 부근의 차체 콜라이더를 감지하여 즉시 폭발하는 문제 발생.
+- **수정 파일**:
+  - `Assets/Scripts/Projectile.cs`:
+    - `shooterTransform` 필드 및 `Init()`에 `Transform shooter = null` 매개변수 추가.
+    - `Init()` 시 발사자(`shooterTransform`)의 모든 자식 콜라이더와 발사체 본체 콜라이더 간 `Physics.IgnoreCollision`을 선제적으로 등록하여 물리적 간섭 차단.
+    - `IsShooter(Collider col)` 헬퍼 메서드 추가: 콜라이더가 발사자 본인(최상위 루트 또는 자식 트랜스폼)이거나 발사자 레이어와 일치하는지 종합 검증.
+    - `Move()` 내 직사 레이캐스트, 곡사 환경 레이캐스트, 하강 레이캐스트, `OnTriggerEnter()`, `HandleImpact()`, `Explode()` 모든 충돌 판정 단계에 `IsShooter` 필터링을 철저히 적용하여 자가 충돌 완전 방지.
+  - `Assets/Scripts/Vehicle/VehicleWeaponSystem.cs`:
+    - 발사 시 `_vehicle.transform`을 `shooter`로 전달.
+    - 발사 시 탄환 스폰 위치에 전방 미세 오프셋(`finalFireDirection * 0.1f`)을 부여하여 차체 파묻힘 방지.
+  - `Assets/Scripts/Unit/UnitWeaponSystem.cs` 및 `Assets/Scripts/EnemyAI.cs`:
+    - 플레이어 및 적 유닛 발사 시에도 각자의 루트 트랜스폼(`shooterRoot`)을 전달하여 플레이어/적 몬스터의 자가 충돌 역시 원천 차단.
+
+---
+
+## 14. 직사 발사체 스폰 즉시 지면(Ground) 충돌 소멸 버그 해결 (2026-10-22)
+- **원인 분석**:
+  1. 본 프로젝트의 발사체 프리팹들(`VehicleProjectile`, `PlayerProjectile` 등)은 탑다운 뱀서라이크 게임 특성상 높낮이 차이가 있는 적을 XZ 평면에서 맞추기 위해 **BoxCollider의 Y축 높이가 100m(`m_Size.y = 100`)**로 설계되어 있음.
+  2. 직사 발사체는 활성화(`_collider.enabled = true`)된 채 생성되는데, 위아래 50m로 뻗은 콜라이더가 생성 즉시 **바닥 지면(`Ground`, Layer 12)**과 트리거 충돌(`OnTriggerEnter`)을 발생시킴.
+  3. 12번 작업에서 비타겟/환경 오브젝트 착탄 시 탄환을 즉시 소멸(`gameObject.SetActive(false)`)하도록 처리했기 때문에, 직사 탄환이 생성되자마자 지면(Ground)에 부딪힌 것으로 판정되어 0프레임만에 소멸되고 차량 위치에서 폭발 이펙트가 발생해 "차체에 부딪혀 사라지는 것"처럼 보였음.
+  4. 반면 곡사(Arcing) 탄환은 공중 비행 중 `_collider.enabled = false`로 꺼져 있어 지면 트리거가 발생하지 않았으므로 정상적으로 날아갔던 것임.
+- **수정 파일**:
+  - `Assets/Scripts/Projectile.cs`:
+    - `_groundLayerMask` (Layer 12) 및 `_obstacleLayerMask` (Layer 13) 캐싱 분리.
+    - `OnTriggerEnter()`: 직사 탄환(`!isArcing`)인 경우 지면(`Ground`)과의 충돌은 완전히 무시하고 관통하도록 예외 처리.
+    - `HandleImpact()`: 직사 탄환이 지면 레이어에 닿더라도 소멸되지 않도록 2중 방어.
+    - `Move()`: 직사 레이캐스트 마스크에서 지면(`_groundLayerMask`)을 제외하고 벽/장애물(`_obstacleLayerMask`) 및 적/플레이어만 검사하여 바닥이나 경사면 지면에 닿아 조기 폭발하는 현상 방지.

@@ -23,6 +23,7 @@ public class VehicleMove : MonoBehaviour
     public bool IsAccelerating { get; set; }
     public float CurrentSpeed => currentSpeed;
     public bool IsReverseMode => isReverseMode;
+    public bool IsMoving => Mathf.Abs(currentSpeed) > 0.2f || playerMoveInput.sqrMagnitude > 0.01f;
 
     /// <summary>
     /// 충돌 시 차량 속도를 비율만큼 감속시킵니다 (0~1).

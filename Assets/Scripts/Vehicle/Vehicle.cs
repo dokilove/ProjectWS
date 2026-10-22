@@ -15,12 +15,14 @@ public class Vehicle : MonoBehaviour, IVehicle
     [Header("Weapon Systems")]
     [SerializeField] private VehicleWeaponSystem autoWeaponSystem;
     [SerializeField] private VehicleWeaponSystem playerWeaponSystem;
+    private List<VehicleWeaponSystem> allWeaponSystems = new List<VehicleWeaponSystem>();
 
     public VehicleInput VehicleInput { get; private set; }
     public VehicleMove VehicleMove { get; private set; }
     public VehicleWeaponSystem AutoWeaponSystem => autoWeaponSystem;
     public VehicleWeaponSystem PlayerWeaponSystem => playerWeaponSystem;
     public VehicleWeaponSystem VehicleWeaponSystem => playerWeaponSystem != null ? playerWeaponSystem : (autoWeaponSystem != null ? autoWeaponSystem : GetComponentInChildren<VehicleWeaponSystem>());
+    public IReadOnlyList<VehicleWeaponSystem> AllWeaponSystems => allWeaponSystems;
     public VehicleVisuals VehicleVisuals { get; private set; }
     public VehicleAI VehicleAI { get; private set; }
     public VehicleRamSystem VehicleRamSystem { get; private set; }
@@ -31,6 +33,7 @@ public class Vehicle : MonoBehaviour, IVehicle
     public bool IsDead => CurrentHealth <= 0;
 
     public bool IsControlledByPlayer { get; private set; } = false;
+    public bool IsMoving => VehicleMove != null && VehicleMove.IsMoving;
 
     // IVehicle properties
     public int CurrentAmmo => VehicleWeaponSystem != null ? VehicleWeaponSystem.CurrentAmmo : 0;
@@ -44,9 +47,13 @@ public class Vehicle : MonoBehaviour, IVehicle
         VehicleVisuals = GetComponent<VehicleVisuals>();
         VehicleAI = GetComponent<VehicleAI>();
 
-        var weaponSystems = GetComponentsInChildren<VehicleWeaponSystem>();
-        foreach (var ws in weaponSystems)
+        var foundWeaponSystems = GetComponentsInChildren<VehicleWeaponSystem>(true);
+        allWeaponSystems.Clear();
+        foreach (var ws in foundWeaponSystems)
         {
+            allWeaponSystems.Add(ws);
+            ws.Init(this);
+
             if (ws.IsAutoWeapon)
             {
                 if (autoWeaponSystem == null) autoWeaponSystem = ws;
@@ -57,10 +64,10 @@ public class Vehicle : MonoBehaviour, IVehicle
             }
         }
 
-        if (autoWeaponSystem == null && playerWeaponSystem == null && weaponSystems.Length > 0)
+        if (autoWeaponSystem == null && playerWeaponSystem == null && allWeaponSystems.Count > 0)
         {
-            if (weaponSystems[0].IsAutoWeapon) autoWeaponSystem = weaponSystems[0];
-            else playerWeaponSystem = weaponSystems[0];
+            if (allWeaponSystems[0].IsAutoWeapon) autoWeaponSystem = allWeaponSystems[0];
+            else playerWeaponSystem = allWeaponSystems[0];
         }
 
         if (vehicleHealthData != null)
@@ -75,8 +82,6 @@ public class Vehicle : MonoBehaviour, IVehicle
 
         if (VehicleInput != null) VehicleInput.Init(this);
         if (VehicleMove != null) VehicleMove.Init(this);
-        if (autoWeaponSystem != null) autoWeaponSystem.Init(this);
-        if (playerWeaponSystem != null) playerWeaponSystem.Init(this);
         if (VehicleVisuals != null) VehicleVisuals.Init(this);
         if (VehicleAI != null) VehicleAI.Init(this);
 
@@ -151,25 +156,16 @@ public class Vehicle : MonoBehaviour, IVehicle
 
     public void UpdatePlayerTurretVisibility()
     {
-        var pWeapon = playerWeaponSystem != null ? playerWeaponSystem : (VehicleWeaponSystem != null && !VehicleWeaponSystem.IsAutoWeapon ? VehicleWeaponSystem : null);
-        if (pWeapon != null)
+        // 차량에 장착된 모든 포탑은 탑승/하차와 무관하게 항상 보이도록 유지
+        foreach (var ws in allWeaponSystems)
         {
-            Transform tTransform = pWeapon.TurretTransform != null ? pWeapon.TurretTransform : pWeapon.transform;
-            if (tTransform != null)
+            if (ws != null)
             {
-                // [기능 제한] 차량 탑승 시 플레이어 발사체 공격 기능 비활성화로 인해 플레이어 포탑 숨김 (복원 시 아래 주석 해제)
-                // tTransform.gameObject.SetActive(IsControlledByPlayer);
-                tTransform.gameObject.SetActive(false);
-            }
-        }
-
-        // [기능 제한] 차량 탑승 시 차량 자체 무기(자동 포탑)도 숨김 처리 (복원 시 아래 블록 주석 처리)
-        if (autoWeaponSystem != null)
-        {
-            Transform autoTurret = autoWeaponSystem.TurretTransform != null ? autoWeaponSystem.TurretTransform : autoWeaponSystem.transform;
-            if (autoTurret != null)
-            {
-                autoTurret.gameObject.SetActive(!IsControlledByPlayer);
+                Transform tTransform = ws.TurretTransform != null ? ws.TurretTransform : ws.transform;
+                if (tTransform != null)
+                {
+                    tTransform.gameObject.SetActive(true);
+                }
             }
         }
     }

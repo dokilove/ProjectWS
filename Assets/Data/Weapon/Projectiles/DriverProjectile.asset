@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7bd6965c06d93ba4ebce190693cdcbb9, type: 3}
+  m_Name: DriverProjectile
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectileData
+  damage: 300
+  speed: 6
+  lifespan: 10
+  projectilePrefab: {fileID: 2819337062272718742, guid: 0445cd53a1869f54791ff45a4073e9f4, type: 3}
+  hitEffectPrefab: {fileID: 0}
+  hitStunDuration: 0.5
+  isArcing: 1
+  launchAngle: 60
+  gravityMultiplier: 2
+  isExplosive: 1
+  explosionRadius: 3.5
+  explosionKnockback: 2
+  explosionEffectPrefab: {fileID: 8460667080445658512, guid: a3e2c3406e02f2c4ba86cfb1604277bd, type: 3}

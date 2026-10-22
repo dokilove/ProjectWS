@@ -185,7 +185,7 @@ public class EnemyAI : MonoBehaviour
 
         if (projectile != null)
         {
-            projectile.Init(weaponData.projectileData, firePoint.forward, gameObject.layer, weaponData.projectileData.damage); // Pass projectileData, forward direction, enemy's layer, and damage
+            projectile.Init(weaponData.projectileData, firePoint.forward, gameObject.layer, weaponData.projectileData.damage, null, transform.root); // Pass projectileData, forward direction, enemy's layer, damage, and shooter root
         }
     }
 

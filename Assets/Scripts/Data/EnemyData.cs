@@ -10,11 +10,15 @@ public enum EnemySize
 [CreateAssetMenu(fileName = "NewEnemyData", menuName = "Data/Enemy Data")]
 public class EnemyData : ScriptableObject
 {
-    [Header("Classification")]
+    [Header("Classification (분류)")]
     [Tooltip("적 크기 분류 (S: 소형 - 차량에 깔려 즉사, M: 중형 - 일반 박치기, L: 대형 - 넉백 저항 및 큰 반동)")]
     public EnemySize size = EnemySize.M;
-    [Header("Stats")]
+
+    [Header("Stats (기본 스펙)")]
+    [Tooltip("적의 최대 체력")]
     public float maxHealth = 100f;
+
+    [Tooltip("적의 이동 속도 (NavMeshAgent 이동 속도)")]
     public float moveSpeed = 3.5f;
 
     [Header("Hit Stun Settings (피격 경직 설정)")]

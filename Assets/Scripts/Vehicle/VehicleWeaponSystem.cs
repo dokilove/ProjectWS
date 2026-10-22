@@ -97,9 +97,6 @@ public class VehicleWeaponSystem : MonoBehaviour
 
     private void Update()
     {
-        // [기능 제한] 차량 탑승 시 차량 자체 무기(자동 포탑) 발사 및 조준 중단 (복원 시 아래 줄 주석 처리)
-        if (_vehicle != null && _vehicle.IsControlledByPlayer) return;
-
         if (isAutoWeapon)
         {
             HandleAutoWeapon();
@@ -109,6 +106,13 @@ public class VehicleWeaponSystem : MonoBehaviour
     private void HandleAutoWeapon()
     {
         UpdateAutoTarget();
+
+        // 탄약 소진 시 자동 재장전
+        if (currentAmmo <= 0 && !isReloading && weaponData != null)
+        {
+            HandleReloadInput();
+            return;
+        }
 
         if (currentAutoTarget != null)
         {
@@ -241,8 +245,11 @@ public class VehicleWeaponSystem : MonoBehaviour
 
     public bool CanFire(Transform aiTarget = null)
     {
-        // [기능 제한] 차량 탑승 시 차량 무기 발사 제한 (복원 시 아래 줄 주석 처리)
-        if (_vehicle != null && _vehicle.IsControlledByPlayer) return false;
+        // 플레이어가 탑승 중일 때는 '차량이 정차 중일 때만' 발사 허용 (이동 중일 때는 발사 불가)
+        if (_vehicle != null && _vehicle.IsControlledByPlayer && _vehicle.IsMoving)
+        {
+            return false;
+        }
 
         WeaponData data = WeaponData;
         if (data == null || Time.time < nextFireTime || IsReloading || CurrentAmmo <= 0)
@@ -293,6 +300,8 @@ public class VehicleWeaponSystem : MonoBehaviour
         Vector3 fireDirection = tTransform.forward;
 
         Transform target = aiTarget != null ? aiTarget : currentAutoTarget;
+        Vector3? targetPosition = target != null ? target.position : (Vector3?)null;
+
         if (target != null)
         {
             Vector3 directionToTarget = target.position - fPointLocal.position;
@@ -317,14 +326,15 @@ public class VehicleWeaponSystem : MonoBehaviour
                     finalFireDirection = Quaternion.AngleAxis(randomAngle, Vector3.up) * finalFireDirection;
                 }
 
-                projectile.transform.position = fPointLocal.position;
+                projectile.transform.position = fPointLocal.position + finalFireDirection * 0.1f;
                 projectile.transform.rotation = Quaternion.LookRotation(finalFireDirection);
 
                 Projectile projScript = projectile.GetComponent<Projectile>();
                 if (projScript != null)
                 {
                     float projDamage = data.projectileData != null ? data.projectileData.damage : 10f;
-                    projScript.Init(data.projectileData, finalFireDirection, sourceLayer, projDamage);
+                    Transform shooterRoot = _vehicle != null ? _vehicle.transform : transform.root;
+                    projScript.Init(data.projectileData, finalFireDirection, sourceLayer, projDamage, targetPosition, shooterRoot);
                 }
 
                 projectile.SetActive(true);
