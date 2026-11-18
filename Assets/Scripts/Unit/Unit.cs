@@ -103,15 +103,19 @@ public class Unit : MonoBehaviour
     private void Start()
     {
         // Set initial attack mode after all components are initialized and started
-        SetAttackMode(CurrentAttackMode);
+        SetAttackMode(CurrentAttackMode, force: true);
     }
 
     /// <summary>
     /// Sets the current attack mode and triggers associated logic in other components.
+    /// 모드가 바뀌지 않았으면 아무것도 하지 않습니다 (게임패드 입력은 매 프레임 호출하므로).
+    /// force가 true이면 같은 모드라도 모드별 초기화 로직을 다시 실행합니다.
     /// </summary>
-    public void SetAttackMode(AttackMode newMode)
+    public void SetAttackMode(AttackMode newMode, bool force = false)
     {
         AttackMode previousMode = CurrentAttackMode;
+        if (!force && previousMode == newMode) return;
+
         CurrentAttackMode = newMode;
 
         if (previousMode != newMode)

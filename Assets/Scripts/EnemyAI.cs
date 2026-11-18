@@ -19,11 +19,22 @@ public class EnemyAI : MonoBehaviour
     private Animator animator;
     private float lastFireTime;
     private float stunTimer = 0f;
+    private Coroutine pushCoroutine;
 
     /// <summary>
     /// 현재 경직 상태인지 여부
     /// </summary>
     public bool IsStunned => stunTimer > 0f;
+
+    /// <summary>
+    /// 현재 밀려나는 중인지 여부
+    /// </summary>
+    public bool IsBeingPushed => pushCoroutine != null;
+
+    /// <summary>
+    /// 발사 간격(초). WeaponData.fireRate는 다른 무기와 동일하게 "초당 발사 수"로 해석합니다.
+    /// </summary>
+    private float FireInterval => (weaponData != null && weaponData.fireRate > 0f) ? 1f / weaponData.fireRate : float.MaxValue;
 
     void Awake()
     {
@@ -35,12 +46,14 @@ public class EnemyAI : MonoBehaviour
         }
         if (weaponData != null)
         {
-            lastFireTime = -weaponData.fireRate; // Allow immediate firing
+            lastFireTime = -FireInterval; // Allow immediate firing
         }
     }
 
     private void OnDisable()
     {
+        // 비활성화 시 코루틴은 자동으로 중단되므로 상태 플래그도 함께 정리 (풀 재사용 대비)
+        pushCoroutine = null;
         if (stunTimer > 0f)
         {
             ResetStun();
@@ -79,9 +92,9 @@ public class EnemyAI : MonoBehaviour
         stunTimer = Mathf.Max(stunTimer, duration);
 
         // 경직 종료 즉시 기습 사격 방지를 위한 쿨타임 미세 지연 (최소 0.2초 여유)
-        if (weaponData != null && Time.time >= lastFireTime + weaponData.fireRate)
+        if (weaponData != null && Time.time >= lastFireTime + FireInterval)
         {
-            lastFireTime = Time.time - weaponData.fireRate + 0.2f;
+            lastFireTime = Time.time - FireInterval + 0.2f;
         }
     }
 
@@ -99,6 +112,54 @@ public class EnemyAI : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 지정한 시간 동안 부드럽게 밀어냅니다. (플레이어 회피 밀치기 등)
+    /// 코루틴을 적 자신에서 실행하므로, 밀친 쪽이 도중에 비활성화되어도 적이 멈춘 채로 남지 않습니다.
+    /// </summary>
+    public void ApplySmoothPush(Vector3 pushVector, float duration)
+    {
+        if (agent == null || !agent.isActiveAndEnabled || !agent.isOnNavMesh) return;
+
+        if (pushCoroutine != null)
+        {
+            StopCoroutine(pushCoroutine);
+        }
+        pushCoroutine = StartCoroutine(SmoothPushRoutine(pushVector, duration));
+    }
+
+    private IEnumerator SmoothPushRoutine(Vector3 pushVector, float duration)
+    {
+        Vector3 startPosition = transform.position;
+        Vector3 targetPosition = startPosition + pushVector;
+        float elapsedTime = 0f;
+        agent.isStopped = true;
+
+        while (elapsedTime < duration)
+        {
+            if (!agent.isActiveAndEnabled || !agent.isOnNavMesh) break;
+            Vector3 currentTargetPosition = Vector3.Lerp(startPosition, targetPosition, elapsedTime / duration);
+            agent.Move(currentTargetPosition - transform.position);
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+
+        pushCoroutine = null;
+        RestoreAgentMovement();
+    }
+
+    /// <summary>
+    /// 경직과 밀려나기가 모두 끝났을 때만 이동을 재개합니다.
+    /// </summary>
+    private void RestoreAgentMovement()
+    {
+        if (stunTimer > 0f || pushCoroutine != null) return;
+
+        if (agent != null && agent.isOnNavMesh && agent.isActiveAndEnabled)
+        {
+            agent.isStopped = false;
+        }
+    }
+
     private void ResetStun()
     {
         stunTimer = 0f;
@@ -108,10 +169,7 @@ public class EnemyAI : MonoBehaviour
             animator.speed = 1f;
         }
 
-        if (agent != null && agent.isOnNavMesh && agent.isActiveAndEnabled)
-        {
-            agent.isStopped = false;
-        }
+        RestoreAgentMovement();
     }
 
     /// <summary>
@@ -151,6 +209,12 @@ public class EnemyAI : MonoBehaviour
         // Add checks here to ensure the agent is active, enabled, and on NavMesh
         if (target != null && agent != null && agent.isOnNavMesh && agent.isActiveAndEnabled)
         {
+            // 풀 재사용 등으로 정지 상태가 남아 있으면 복구 (경직/밀려나기 중이 아닐 때만 여기 도달)
+            if (agent.isStopped && pushCoroutine == null)
+            {
+                agent.isStopped = false;
+            }
+
             agent.SetDestination(target.position);
 
             // Aim at the target (수평 회전 유지)
@@ -163,7 +227,7 @@ public class EnemyAI : MonoBehaviour
             }
 
             // Fire if target is in range and cooldown is ready
-            if (weaponData != null && firePoint != null && Time.time >= lastFireTime + weaponData.fireRate)
+            if (weaponData != null && firePoint != null && Time.time >= lastFireTime + FireInterval)
             {
                 FireProjectile();
                 lastFireTime = Time.time;
@@ -179,14 +243,17 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
-        // Instantiate projectile
-        GameObject projectileGO = Instantiate(weaponData.projectileData.projectilePrefab, firePoint.position, firePoint.rotation);
-        Projectile projectile = projectileGO.GetComponent<Projectile>();
+        // 풀에서 발사체를 가져와 재사용 (매 발사마다 Instantiate 시 비활성 오브젝트가 무한히 누적됨)
+        GameObject projectileGO = ProjectilePool.Get(weaponData.projectileData.projectilePrefab, firePoint.position, firePoint.rotation);
+        if (projectileGO == null) return;
 
+        Projectile projectile = projectileGO.GetComponent<Projectile>();
         if (projectile != null)
         {
             projectile.Init(weaponData.projectileData, firePoint.forward, gameObject.layer, weaponData.projectileData.damage, null, transform.root); // Pass projectileData, forward direction, enemy's layer, damage, and shooter root
         }
+
+        projectileGO.SetActive(true);
     }
 
 #if UNITY_EDITOR

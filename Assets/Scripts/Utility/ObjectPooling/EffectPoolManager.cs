@@ -38,8 +38,7 @@ public class EffectPoolManager : MonoBehaviour
             GameObject poolGO = new GameObject($"Pool_{setup.tag}");
             poolGO.transform.SetParent(this.transform);
             ObjectPool pool = poolGO.AddComponent<ObjectPool>();
-            pool.prefab = setup.prefab;
-            pool.initialPoolSize = setup.initialSize;
+            pool.Initialize(setup.prefab, setup.initialSize);
             pools.Add(setup.tag, pool);
         }
     }
@@ -49,6 +48,7 @@ public class EffectPoolManager : MonoBehaviour
         if (pools.ContainsKey(tag))
         {
             GameObject obj = pools[tag].GetPooledObject();
+            if (obj == null) return null;
             obj.transform.position = position;
             obj.transform.rotation = rotation;
 

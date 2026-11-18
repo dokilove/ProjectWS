@@ -51,8 +51,12 @@ public class UnitMove : MonoBehaviour
         if (evadeData != null)
         {
             currentEvadeCharges = evadeData.maxEvadeCharges;
+            lastEvadeTime = -evadeData.evadeChargeRegenTime; // Start with full charges
         }
-        lastEvadeTime = -evadeData.evadeChargeRegenTime; // Start with full charges
+        else
+        {
+            Debug.LogWarning("EvadeData is not assigned to UnitMove. Evade will be disabled.", this);
+        }
 
         baseMoveSpeed = moveSpeed; // Store the initial Inspector value
         currentEffectiveMoveSpeed = baseMoveSpeed; // Start with base speed
@@ -234,11 +238,14 @@ public class UnitMove : MonoBehaviour
         {
             if (hitCollider.CompareTag("Enemy"))
             {
-                if (hitCollider.TryGetComponent<NavMeshAgent>(out var enemyAgent))
+                // 밀치기 코루틴은 적(EnemyAI) 쪽에서 실행: 플레이어가 도중에 비활성화(차량 탑승)되어도
+                // 적이 isStopped 상태로 영구히 멈추지 않으며, 경직 상태와도 충돌하지 않음
+                EnemyAI enemyAI = hitCollider.GetComponentInParent<EnemyAI>();
+                if (enemyAI != null)
                 {
-                    Vector3 pushDir = (hitCollider.transform.position - transform.position).normalized;
+                    Vector3 pushDir = hitCollider.transform.position - transform.position;
                     pushDir.y = 0;
-                    StartCoroutine(SmoothPushEnemy(enemyAgent, pushDir.normalized * evadeData.pushForce, evadeData.pushSmoothTime));
+                    enemyAI.ApplySmoothPush(pushDir.normalized * evadeData.pushForce, evadeData.pushSmoothTime);
                 }
             }
         }
@@ -274,30 +281,4 @@ public class UnitMove : MonoBehaviour
         _unit.UnitAnimator.ForceIdle();
     }
 
-    private IEnumerator SmoothPushEnemy(NavMeshAgent agentToPush, Vector3 pushVector, float duration)
-    {
-        if (agentToPush == null || !agentToPush.isActiveAndEnabled || !agentToPush.isOnNavMesh)
-        {
-            yield break;
-        }
-
-        Vector3 startPosition = agentToPush.transform.position;
-        Vector3 targetPosition = startPosition + pushVector;
-        float elapsedTime = 0f;
-        agentToPush.isStopped = true;
-
-        while (elapsedTime < duration)
-        {
-            if (!agentToPush.isActiveAndEnabled) yield break;
-            Vector3 currentTargetPosition = Vector3.Lerp(startPosition, targetPosition, elapsedTime / duration);
-            agentToPush.Move(currentTargetPosition - agentToPush.transform.position);
-            elapsedTime += Time.deltaTime;
-            yield return null;
-        }
-
-        if (agentToPush.isActiveAndEnabled)
-        {
-            agentToPush.isStopped = false;
-        }
-    }
 }
