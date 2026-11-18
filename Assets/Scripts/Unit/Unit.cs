@@ -41,7 +41,11 @@ public class Unit : MonoBehaviour
     [SerializeField] private float bulletTimeScale = 0.2f;    // 불릿 타임 속도
     [SerializeField] private float justDodgeAttackBuffMultiplier = 2f; // 다음 공격 데미지 배율
 
-    public bool IsJustDodgeWindowActive { get; private set; }
+    // 저스트 회피 판정 종료 시각 (실제 시간 기준: Time.unscaledTime)
+    // - 불릿 타임(timeScale 감소) 중에도 판정 시간이 늘어나지 않음
+    // - 코루틴이 아니므로 회피 도중 비활성화(차량 탑승)되어도 판정 상태가 true로 남지 않음
+    private float justDodgeWindowEndTime = -1f;
+    public bool IsJustDodgeWindowActive => Time.unscaledTime < justDodgeWindowEndTime;
     public bool IsNextAttackBuffed { get; private set; }
     public float CurrentHealth { get; private set; }
     public bool IsInvincible { get; set; } = false; // New field for invincibility
@@ -177,15 +181,7 @@ public class Unit : MonoBehaviour
     // [NEW] 회피 시작 시 호출될 함수
     public void OnEvadeStart()
     {
-        StartCoroutine(JustDodgeWindowCoroutine());
-    }
-
-    // [NEW] 저스트 회피 판정 시간을 관리하는 코루틴
-    private IEnumerator JustDodgeWindowCoroutine()
-    {
-        IsJustDodgeWindowActive = true;
-        yield return new WaitForSeconds(justDodgeWindow);
-        IsJustDodgeWindowActive = false;
+        justDodgeWindowEndTime = Time.unscaledTime + justDodgeWindow;
     }
 
     // [NEW] 저스트 회피 성공 효과를 발동시키는 함수

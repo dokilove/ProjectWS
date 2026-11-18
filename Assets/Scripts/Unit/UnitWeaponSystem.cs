@@ -111,7 +111,7 @@ public class UnitWeaponSystem : MonoBehaviour
         }
         else if (currentAmmo <= 0 && !isReloading)
         {
-            StartCoroutine(Reload());
+            StartReload();
         }
     }
 
@@ -126,31 +126,43 @@ public class UnitWeaponSystem : MonoBehaviour
         }
         if (isHeld && currentAmmo <= 0 && !isReloading)
         {
-            StartCoroutine(Reload());
+            StartReload();
+        }
+    }
+
+    private float reloadFinishTime = 0f;
+
+    /// <summary>
+    /// 재장전 중인지 여부 (읽기 전용: 상태를 변경하지 않음).
+    /// 재장전 완료 처리는 Update/각 입력 처리 시작 시 UpdateReloadState()에서 수행합니다.
+    /// </summary>
+    public bool IsReloading => isReloading;
+
+    private void Update()
+    {
+        UpdateReloadState();
+    }
+
+    /// <summary>
+    /// 재장전 시간이 지났으면 탄약을 채우고 재장전 상태를 해제합니다.
+    /// Unit이 비활성(차량 탑승) 상태면 Update가 돌지 않으므로, 외부에서 호출되는 사격/재장전 진입점에서도 호출합니다.
+    /// </summary>
+    private void UpdateReloadState()
+    {
+        if (isReloading && Time.time >= reloadFinishTime)
+        {
+            currentAmmo = weaponData != null ? weaponData.magazineSize : 30;
+            isReloading = false;
         }
     }
 
     /// <summary>
     /// Handles the reload input event.
     /// </summary>
-    private float reloadFinishTime = 0f;
-
-    public bool IsReloading
-    {
-        get
-        {
-            if (isReloading && Time.time >= reloadFinishTime)
-            {
-                currentAmmo = weaponData != null ? weaponData.magazineSize : 30;
-                isReloading = false;
-            }
-            return isReloading;
-        }
-    }
-
     public void HandleReloadInput()
     {
-        if (!IsReloading && weaponData != null && currentAmmo < weaponData.magazineSize)
+        UpdateReloadState();
+        if (!isReloading && weaponData != null && currentAmmo < weaponData.magazineSize)
         {
             StartReload();
         }
@@ -170,14 +182,15 @@ public class UnitWeaponSystem : MonoBehaviour
     private bool CanFire()
     {
         if (weaponData == null) return false;
-        return Time.time >= nextFireTime && !IsReloading && currentAmmo > 0;
+        UpdateReloadState();
+        return Time.time >= nextFireTime && !isReloading && currentAmmo > 0;
     }
 
     public void FireFromVehicle(Vector3 position, Vector3 direction)
     {
         if (!CanFire())
         {
-            if (currentAmmo <= 0 && !IsReloading)
+            if (currentAmmo <= 0 && !isReloading)
             {
                 StartReload();
             }
@@ -264,12 +277,6 @@ public class UnitWeaponSystem : MonoBehaviour
                 }
             }
         }
-    }
-
-    private IEnumerator Reload()
-    {
-        StartReload();
-        yield return new WaitForSeconds(weaponData.reloadTime);
     }
 
     private GameObject GetPooledProjectile()
