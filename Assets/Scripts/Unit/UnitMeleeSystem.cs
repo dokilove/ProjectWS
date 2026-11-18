@@ -57,7 +57,12 @@ public class UnitMeleeSystem : MonoBehaviour
     private float _bufferedInputTimestamp = -1f;
     private Coroutine _currentAttackCoroutine = null;
 
-    private readonly HashSet<Collider> _hitTargetsThisSwing = new HashSet<Collider>();
+    // 중복 타격 방지는 콜라이더가 아닌 대상(EnemyHealth/EnemySpawner/Projectile) 단위로 관리
+    // (콜라이더가 여러 개인 적이 한 번의 휘두름에 여러 번 맞던 문제 방지)
+    private readonly HashSet<Component> _hitTargetsThisSwing = new HashSet<Component>();
+
+    // 물리 쿼리 재사용 버퍼
+    private readonly Collider[] _overlapBuffer = new Collider[64];
 
     public Vector3 AutoAimTargetPosition { get; private set; } = Vector3.zero;
     public float MeleeLockOnRadius => _meleeData != null ? _meleeData.meleeLockOnRadius : 6f;
@@ -646,17 +651,18 @@ public class UnitMeleeSystem : MonoBehaviour
             return;
         }
 
-        Collider[] hitColliders = Physics.OverlapSphere(transform.position, radius, enemyLayerMask);
+        int hitCount = Physics.OverlapSphereNonAlloc(transform.position, radius, _overlapBuffer, enemyLayerMask);
         Transform closestEnemy = null;
-        float minDistance = Mathf.Infinity;
+        float minSqrDistance = Mathf.Infinity;
 
-        foreach (Collider hit in hitColliders)
+        for (int i = 0; i < hitCount; i++)
         {
-            float distance = Vector3.Distance(transform.position, hit.transform.position);
-            if (distance < minDistance)
+            Transform hitTransform = _overlapBuffer[i].transform;
+            float sqrDistance = (hitTransform.position - transform.position).sqrMagnitude;
+            if (sqrDistance < minSqrDistance)
             {
-                minDistance = distance;
-                closestEnemy = hit.transform;
+                minSqrDistance = sqrDistance;
+                closestEnemy = hitTransform;
             }
         }
 
@@ -701,16 +707,17 @@ public class UnitMeleeSystem : MonoBehaviour
             targetMask |= projectileLayerMask;
         }
 
-        Collider[] hits = null;
+        int hitCount = 0;
 
         switch (shape)
         {
             case MeleeHitboxShape.Sector:
             {
                 // 부채꼴: 플레이어 중심 OverlapSphere + 전방 각도 검사
-                hits = Physics.OverlapSphere(transform.position, radius, targetMask, QueryTriggerInteraction.Collide);
-                foreach (Collider hit in hits)
+                hitCount = Physics.OverlapSphereNonAlloc(transform.position, radius, _overlapBuffer, targetMask, QueryTriggerInteraction.Collide);
+                for (int i = 0; i < hitCount; i++)
                 {
+                    Collider hit = _overlapBuffer[i];
                     Vector3 directionToTarget = hit.transform.position - transform.position;
                     directionToTarget.y = 0;
                     float angleToTarget = directionToTarget.sqrMagnitude > 0.001f
@@ -732,7 +739,7 @@ public class UnitMeleeSystem : MonoBehaviour
                 Vector3 halfExtents = new Vector3(boxWidth * 0.5f, 1.5f, boxLength * 0.5f);
                 Quaternion orientation = Quaternion.LookRotation(forward, Vector3.up);
 
-                hits = Physics.OverlapBox(center, halfExtents, orientation, targetMask, QueryTriggerInteraction.Collide);
+                hitCount = Physics.OverlapBoxNonAlloc(center, halfExtents, _overlapBuffer, orientation, targetMask, QueryTriggerInteraction.Collide);
                 break;
             }
 
@@ -740,17 +747,14 @@ public class UnitMeleeSystem : MonoBehaviour
             {
                 // 전방 원형/구형: 플레이어 전방 forwardOffset 지점 중심 OverlapSphere
                 Vector3 center = transform.position + forward * forwardOffset + Vector3.up * 0.5f;
-                hits = Physics.OverlapSphere(center, radius, targetMask, QueryTriggerInteraction.Collide);
+                hitCount = Physics.OverlapSphereNonAlloc(center, radius, _overlapBuffer, targetMask, QueryTriggerInteraction.Collide);
                 break;
             }
         }
 
-        if (hits != null)
+        for (int i = 0; i < hitCount; i++)
         {
-            foreach (Collider hit in hits)
-            {
-                ProcessHitCollider(hit, finalDamage, hitStunDuration);
-            }
+            ProcessHitCollider(_overlapBuffer[i], finalDamage, hitStunDuration);
         }
     }
 
@@ -759,14 +763,16 @@ public class UnitMeleeSystem : MonoBehaviour
     /// </summary>
     private void ProcessHitCollider(Collider hit, float finalDamage, float hitStunDuration)
     {
-        if (hit == null || !hit.gameObject.activeInHierarchy || _hitTargetsThisSwing.Contains(hit)) return;
+        if (hit == null || !hit.gameObject.activeInHierarchy) return;
 
-        // 1. 적 유닛 피격 처리
+        // 1. 적 유닛 피격 처리 (HashSet.Add가 false면 이번 휘두름에 이미 맞은 대상)
         EnemyHealth enemyHealth = hit.GetComponentInParent<EnemyHealth>();
         if (enemyHealth != null)
         {
-            _hitTargetsThisSwing.Add(hit);
-            enemyHealth.TakeDamage(finalDamage, hitStunDuration);
+            if (_hitTargetsThisSwing.Add(enemyHealth))
+            {
+                enemyHealth.TakeDamage(finalDamage, hitStunDuration);
+            }
             return;
         }
 
@@ -774,8 +780,10 @@ public class UnitMeleeSystem : MonoBehaviour
         EnemySpawner spawner = hit.GetComponentInParent<EnemySpawner>();
         if (spawner != null)
         {
-            _hitTargetsThisSwing.Add(hit);
-            spawner.TakeDamage(finalDamage);
+            if (_hitTargetsThisSwing.Add(spawner))
+            {
+                spawner.TakeDamage(finalDamage);
+            }
             return;
         }
 
@@ -783,9 +791,8 @@ public class UnitMeleeSystem : MonoBehaviour
         if (canDestroyProjectiles)
         {
             Projectile projectile = hit.GetComponentInParent<Projectile>();
-            if (projectile != null)
+            if (projectile != null && _hitTargetsThisSwing.Add(projectile))
             {
-                _hitTargetsThisSwing.Add(hit);
                 projectile.DestroyByMelee(projectileDestroyEffectTag);
             }
         }

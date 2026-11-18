@@ -15,6 +15,16 @@ public class EnemyAI : MonoBehaviour
     [Tooltip("차량을 우선 공격할 최대 탐지 거리 (0 이하이면 맵 전역의 차량 대상)")]
     [SerializeField] private float vehicleDetectionRange = 0f;
 
+    [Header("Performance / Combat")]
+    [Tooltip("타겟 재선정 및 경로 재계산 간격 (초). 낮을수록 반응이 빠르지만 부하가 큼")]
+    [SerializeField] private float repathInterval = 0.2f;
+
+    [Tooltip("사격 가능 최대 수평 거리 (0 이하이면 거리 제한 없음 = 기존 동작)")]
+    [SerializeField] private float maxFireRange = 0f;
+
+    private Transform cachedTarget;
+    private float nextRepathTime;
+
     private NavMeshAgent agent;
     private Animator animator;
     private float lastFireTime;
@@ -54,6 +64,7 @@ public class EnemyAI : MonoBehaviour
     {
         // 비활성화 시 코루틴은 자동으로 중단되므로 상태 플래그도 함께 정리 (풀 재사용 대비)
         pushCoroutine = null;
+        cachedTarget = null; // 풀에서 재사용될 때 즉시 타겟을 다시 선정하도록
         if (stunTimer > 0f)
         {
             ResetStun();
@@ -204,7 +215,15 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
-        Transform target = DetermineTarget();
+        // 타겟 선정 및 경로 재계산은 repathInterval마다만 수행 (적 수 × 매 프레임 SetDestination 부하 감소)
+        bool shouldRepath = false;
+        if (Time.time >= nextRepathTime || cachedTarget == null || !cachedTarget.gameObject.activeInHierarchy)
+        {
+            cachedTarget = DetermineTarget();
+            nextRepathTime = Time.time + repathInterval;
+            shouldRepath = true;
+        }
+        Transform target = cachedTarget;
 
         // Add checks here to ensure the agent is active, enabled, and on NavMesh
         if (target != null && agent != null && agent.isOnNavMesh && agent.isActiveAndEnabled)
@@ -215,7 +234,10 @@ public class EnemyAI : MonoBehaviour
                 agent.isStopped = false;
             }
 
-            agent.SetDestination(target.position);
+            if (shouldRepath)
+            {
+                agent.SetDestination(target.position);
+            }
 
             // Aim at the target (수평 회전 유지)
             Vector3 targetDirection = target.position - transform.position;
@@ -227,7 +249,8 @@ public class EnemyAI : MonoBehaviour
             }
 
             // Fire if target is in range and cooldown is ready
-            if (weaponData != null && firePoint != null && Time.time >= lastFireTime + FireInterval)
+            bool inFireRange = maxFireRange <= 0f || targetDirection.sqrMagnitude <= maxFireRange * maxFireRange;
+            if (inFireRange && weaponData != null && firePoint != null && Time.time >= lastFireTime + FireInterval)
             {
                 FireProjectile();
                 lastFireTime = Time.time;

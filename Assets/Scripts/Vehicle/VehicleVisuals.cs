@@ -75,7 +75,10 @@ public class VehicleVisuals : MonoBehaviour
 
         if (targetLineRenderer != null)
         {
-            targetLineRenderer.material = new Material(Shader.Find("Legacy Shaders/Particles/Alpha Blended Premultiply"));
+            // 레거시 셰이더는 URP 빌드에서 제외될 수 있으므로, 없으면 항상 포함되는 Sprites/Default로 대체
+            Shader lineShader = Shader.Find("Legacy Shaders/Particles/Alpha Blended Premultiply");
+            if (lineShader == null) lineShader = Shader.Find("Sprites/Default");
+            if (lineShader != null) targetLineRenderer.material = new Material(lineShader);
             targetLineRenderer.startWidth = 0.05f;
             targetLineRenderer.endWidth = 0.05f;
             targetLineRenderer.positionCount = 2;

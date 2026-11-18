@@ -174,27 +174,20 @@ public class Vehicle : MonoBehaviour, IVehicle
     {
         if (IsDead) return;
 
-        Debug.Log($"TakeDamage called on {gameObject.name} for {amount} damage.");
+        CombatLog.Log($"TakeDamage called on {gameObject.name} for {amount} damage.");
 
         CurrentHealth -= amount;
         CurrentHealth = Mathf.Max(CurrentHealth, 0); // Ensure health doesn't go below 0
 
-        if (hitEffectPoolTag != null && EffectPoolManager.Instance != null)
+        // 직렬화된 string은 null이 아니라 ""이므로 IsNullOrEmpty로 검사 (빈 태그면 이펙트 생략)
+        if (!string.IsNullOrEmpty(hitEffectPoolTag) && EffectPoolManager.Instance != null)
         {
             EffectPoolManager.Instance.GetPooledObject(hitEffectPoolTag, transform.position, Quaternion.identity);
-        }
-        else if (hitEffectPoolTag == null)
-        {
-            Debug.LogWarning("hitEffectPoolTag is NOT assigned.");
-        }
-        else if (EffectPoolManager.Instance == null)
-        {
-            Debug.LogError("EffectPoolManager.Instance is NULL. Cannot get pooled object.");
         }
 
         if (IsDead)
         {
-            Debug.Log($"{gameObject.name} has been destroyed!");
+            CombatLog.Log($"{gameObject.name} has been destroyed!");
             // TODO: Add destruction logic (e.g., disable vehicle, play explosion effect)
         }
     }
@@ -204,7 +197,8 @@ public class Vehicle : MonoBehaviour, IVehicle
         if (IsDead) return;
 
         CurrentHealth += amount;
-        CurrentHealth = Mathf.Min(CurrentHealth, vehicleHealthData.maxHealth); // Ensure health doesn't exceed maxHealth
+        float maxHealth = vehicleHealthData != null ? vehicleHealthData.maxHealth : 200f;
+        CurrentHealth = Mathf.Min(CurrentHealth, maxHealth); // Ensure health doesn't exceed maxHealth
     }
 
     public void EnableControl()

@@ -47,14 +47,12 @@ public class PlayerPawnManager : MonoBehaviour
         playerActions = new InputSystem_Actions();
         playerOnFootActions = playerActions.Player;
         playerInVehicleActions = playerActions.Vehicle;
+    }
 
-        // Subscribe to Interact action (always active for the PlayerPawnManager)
-        playerOnFootActions.Interact.performed += OnInteract;
-        
-        // Hold Actions
-        playerOnFootActions.Interact_Hold.started += OnInteractHold_Started;
-        playerOnFootActions.Interact_Hold.performed += OnInteractHold_Performed;
-        playerOnFootActions.Interact_Hold.canceled += OnInteractHold_Canceled;
+    private void OnDestroy()
+    {
+        // new로 생성한 InputActionAsset 해제
+        playerActions?.Dispose();
     }
 
     private void Update()
@@ -138,6 +136,12 @@ public class PlayerPawnManager : MonoBehaviour
 
     private void OnEnable()
     {
+        // 구독은 OnEnable에서 하고 OnDisable에서 해제 (비활성화 후 다시 켜져도 상호작용이 동작하도록)
+        playerOnFootActions.Interact.performed += OnInteract;
+        playerOnFootActions.Interact_Hold.started += OnInteractHold_Started;
+        playerOnFootActions.Interact_Hold.performed += OnInteractHold_Performed;
+        playerOnFootActions.Interact_Hold.canceled += OnInteractHold_Canceled;
+
         // Only enable the relevant action map based on current possession
         if (currentUnit != null && currentUnit.IsControlledByPlayer)
         {
@@ -146,6 +150,7 @@ public class PlayerPawnManager : MonoBehaviour
         else if (currentVehicle != null && currentVehicle.IsControlledByPlayer)
         {
             playerInVehicleActions.Enable();
+            playerInVehicleActions.Interact.performed += OnInteract;
         }
     }
 
@@ -175,48 +180,52 @@ public class PlayerPawnManager : MonoBehaviour
             return;
         }
 
-        // Find the closest vehicle
-        Collider[] hitColliders = Physics.OverlapSphere(currentUnit.transform.position, vehicleDetectionRadius, vehicleLayer);
+        // Find the closest vehicle (NonAlloc: 매 프레임 배열 할당 방지)
+        Vector3 unitPosition = currentUnit.transform.position;
+        int hitCount = Physics.OverlapSphereNonAlloc(unitPosition, vehicleDetectionRadius, _vehicleDetectBuffer, vehicleLayer);
         IVehicle closestVehicle = null;
-        float minDistance = Mathf.Infinity;
+        float minSqrDistance = Mathf.Infinity;
 
-        foreach (Collider hitCollider in hitColliders)
+        for (int i = 0; i < hitCount; i++)
         {
-            if (hitCollider.TryGetComponent<IVehicle>(out IVehicle vehicle) && vehicle as Object != currentVehicle as Object)
+            if (_vehicleDetectBuffer[i].TryGetComponent<IVehicle>(out IVehicle vehicle) && vehicle as Object != currentVehicle as Object)
             {
-                float distance = Vector3.Distance(currentUnit.transform.position, vehicle.transform.position);
-                if (distance < minDistance)
+                float sqrDistance = (vehicle.transform.position - unitPosition).sqrMagnitude;
+                if (sqrDistance < minSqrDistance)
                 {
-                    minDistance = distance;
+                    minSqrDistance = sqrDistance;
                     closestVehicle = vehicle;
                 }
             }
         }
 
-        // Update potential target
-        _potentialVehicleTarget = closestVehicle;
-        var newTargetHandler = _potentialVehicleTarget?.transform.GetComponentInChildren<VehicleInteractionHandler>();
-
-        // If target changed, hide old one
-        if (_currentTargetHandler != null && _currentTargetHandler != newTargetHandler)
+        // 대상이 바뀐 경우에만 핸들러 탐색 및 Show/Hide 처리 (매 프레임 GetComponentInChildren/재그리기 방지)
+        if (closestVehicle as Object != _potentialVehicleTarget as Object)
         {
-            _currentTargetHandler.Hide();
-        }
-        
-        _currentTargetHandler = newTargetHandler;
+            _potentialVehicleTarget = closestVehicle;
+            var newTargetHandler = _potentialVehicleTarget?.transform.GetComponentInChildren<VehicleInteractionHandler>();
 
-        if (_currentTargetHandler != null)
-        {
-            _currentTargetHandler.Show();
-
-            // Only show progress if the target requires a hold
-            if (_isHoldingInteract && !_currentTargetHandler.useTapToEnter)
+            if (_currentTargetHandler != null && _currentTargetHandler != newTargetHandler)
             {
-                float progress = (Time.time - _interactHoldStartTime) / vehicleEnterHoldTime;
-                _currentTargetHandler.UpdateProgress(progress);
+                _currentTargetHandler.Hide();
+            }
+
+            _currentTargetHandler = newTargetHandler;
+            if (_currentTargetHandler != null)
+            {
+                _currentTargetHandler.Show();
             }
         }
+
+        // Only show progress if the target requires a hold
+        if (_currentTargetHandler != null && _isHoldingInteract && !_currentTargetHandler.useTapToEnter)
+        {
+            float progress = (Time.time - _interactHoldStartTime) / vehicleEnterHoldTime;
+            _currentTargetHandler.UpdateProgress(progress);
+        }
     }
+
+    private readonly Collider[] _vehicleDetectBuffer = new Collider[16];
 
 
     private void OnInteract(InputAction.CallbackContext context)

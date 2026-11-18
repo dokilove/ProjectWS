@@ -118,7 +118,7 @@ public class EnemySpawner : MonoBehaviour
 
         currentHealth -= damage;
         currentHealth = Mathf.Max(currentHealth, 0f);
-        Debug.Log($"[SpawnTotem] {gameObject.name} took {damage} damage. Current HP: {currentHealth}/{MaxHealth}");
+        CombatLog.Log($"[SpawnTotem] {gameObject.name} took {damage} damage. Current HP: {currentHealth}/{MaxHealth}");
 
         string hitTag = totemData != null ? totemData.hitEffectPoolTag : "hit01";
         if (!string.IsNullOrEmpty(hitTag) && EffectPoolManager.Instance != null)
@@ -139,7 +139,7 @@ public class EnemySpawner : MonoBehaviour
 
     private void DestroyTotem()
     {
-        Debug.Log($"[SpawnTotem] {gameObject.name} has been destroyed!");
+        CombatLog.Log($"[SpawnTotem] {gameObject.name} has been destroyed!");
 
         string destroyTag = totemData != null && !string.IsNullOrEmpty(totemData.destroyEffectPoolTag)
             ? totemData.destroyEffectPoolTag
@@ -184,13 +184,22 @@ public class EnemySpawner : MonoBehaviour
 
     private GameObject GetEnemyFromPool(GameObject prefab)
     {
-        if (!enemyPool.ContainsKey(prefab)) return null;
-        GameObject enemy = enemyPool[prefab].FirstOrDefault(e => e != null && !e.activeInHierarchy);
-        if (enemy == null)
+        if (!enemyPool.TryGetValue(prefab, out List<GameObject> pool)) return null;
+
+        // LINQ(FirstOrDefault + 람다) 대신 단순 순회로 할당 제거
+        for (int i = 0; i < pool.Count; i++)
         {
-            enemy = Instantiate(prefab);
-            enemyPool[prefab].Add(enemy);
+            GameObject pooled = pool[i];
+            if (pooled != null && !pooled.activeInHierarchy)
+            {
+                return pooled;
+            }
         }
+
+        // 풀 소진 시 스폰 위치에 비활성 상태로 생성 (호출부에서 위치 지정 후 활성화)
+        GameObject enemy = Instantiate(prefab, transform.position, Quaternion.identity);
+        enemy.SetActive(false);
+        pool.Add(enemy);
         return enemy;
     }
 

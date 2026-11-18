@@ -149,34 +149,27 @@ public class Unit : MonoBehaviour
         // [MODIFIED] 저스트 회피 판정 로직 추가
         if (IsJustDodgeWindowActive)
         {
-            Debug.Log("Just Dodge Successful!");
+            CombatLog.Log("Just Dodge Successful!");
             ActivateJustDodgeEffects();
             return; // 데미지를 받지 않고 함수 종료
         }
 
         if (IsInvincible) return; // If invincible, do not take damage
 
-        Debug.Log($"TakeDamage called on {gameObject.name} for {amount} damage.");
+        CombatLog.Log($"TakeDamage called on {gameObject.name} for {amount} damage.");
 
         CurrentHealth -= amount;
         CurrentHealth = Mathf.Max(CurrentHealth, 0); // Ensure health doesn't go below 0
 
-        if (hitEffectPoolTag != null && EffectPoolManager.Instance != null)
+        // 직렬화된 string은 null이 아니라 ""이므로 IsNullOrEmpty로 검사 (빈 태그면 이펙트 생략)
+        if (!string.IsNullOrEmpty(hitEffectPoolTag) && EffectPoolManager.Instance != null)
         {
             EffectPoolManager.Instance.GetPooledObject(hitEffectPoolTag, transform.position, Quaternion.identity);
-        }
-        else if (hitEffectPoolTag == null)
-        {
-            Debug.LogWarning("hitEffectPoolTag is NOT assigned.");
-        }
-        else if (EffectPoolManager.Instance == null)
-        {
-            Debug.LogError("EffectPoolManager.Instance is NULL. Cannot get pooled object.");
         }
 
         if (IsDead)
         {
-            Debug.Log($"{gameObject.name} has been defeated!");
+            CombatLog.Log($"{gameObject.name} has been defeated!");
             // TODO: Add death logic (e.g., disable unit, play death animation)
         }
     }
@@ -220,7 +213,7 @@ public class Unit : MonoBehaviour
     {
         if (IsNextAttackBuffed)
         {
-            Debug.Log("Just Dodge attack buff consumed or expired.");
+            CombatLog.Log("Just Dodge attack buff consumed or expired.");
             IsNextAttackBuffed = false;
         }
     }
@@ -241,7 +234,8 @@ public class Unit : MonoBehaviour
         if (IsDead) return;
 
         CurrentHealth += amount;
-        CurrentHealth = Mathf.Min(CurrentHealth, playerHealthData.maxHealth); // Ensure health doesn't exceed maxHealth
+        float maxHealth = playerHealthData != null ? playerHealthData.maxHealth : 100f;
+        CurrentHealth = Mathf.Min(CurrentHealth, maxHealth); // Ensure health doesn't exceed maxHealth
     }
 
     public void EnableControl()

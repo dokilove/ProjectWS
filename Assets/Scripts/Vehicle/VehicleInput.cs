@@ -37,6 +37,12 @@ private System.Action<InputAction.CallbackContext> onAccelCanceled;
 
     private Vector3 lastPlayerAimDirection;
 
+    private void OnDestroy()
+    {
+        // new로 생성한 InputActionAsset 해제
+        playerActions?.Dispose();
+    }
+
     private VehicleWeaponSystem GetManualVehicleWeapon()
     {
         if (_vehicle == null) return null;

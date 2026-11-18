@@ -25,9 +25,37 @@ public class Projectile : MonoBehaviour
     private static int _groundLayerMask = -1;
     private static int _obstacleLayerMask = -1;
 
+    // 진영 판별용 레이어 인덱스 (이름으로 조회, 없으면 기존 번호로 대체)
+    private static int _playerLayer = -1;
+    private static int _dodgingPlayerLayer = -1;
+    private static int _vehicleLayer = -1;
+    private static int _enemyLayer = -1;
+    private static bool _sideLayersCached = false;
+
+    // 폭발 판정용 재사용 버퍼 (메인 스레드 전용)
+    private static readonly Collider[] s_explosionHits = new Collider[64];
+    private static readonly HashSet<int> s_processedRoots = new HashSet<int>();
+
+    private static int LayerOrDefault(string layerName, int fallback)
+    {
+        int layer = LayerMask.NameToLayer(layerName);
+        return layer >= 0 ? layer : fallback;
+    }
+
+    private static void CacheSideLayers()
+    {
+        if (_sideLayersCached) return;
+        _playerLayer = LayerOrDefault("Player", 8);
+        _dodgingPlayerLayer = LayerOrDefault("DodgingPlayer", 9);
+        _enemyLayer = LayerOrDefault("Enemy", 10);
+        _vehicleLayer = LayerOrDefault("Vehicle", 11);
+        _sideLayersCached = true;
+    }
+
     protected virtual void Awake()
     {
         _collider = GetComponent<Collider>();
+        CacheSideLayers();
 
         if (_groundLayerMask == -1)
         {
@@ -78,18 +106,9 @@ public class Projectile : MonoBehaviour
         _damage = overrideDamage;
         currentLifespan = data != null ? data.lifespan : 5f;
 
-        // 발사체 본체 콜라이더와 발사자(차량/플레이어 등)의 모든 자식 콜라이더 간의 물리 충돌 무시 등록
-        if (_collider != null && shooterTransform != null)
-        {
-            Collider[] shooterColliders = shooterTransform.GetComponentsInChildren<Collider>();
-            for (int i = 0; i < shooterColliders.Length; i++)
-            {
-                if (shooterColliders[i] != null && shooterColliders[i] != _collider)
-                {
-                    Physics.IgnoreCollision(_collider, shooterColliders[i], true);
-                }
-            }
-        }
+        // 발사자 콜라이더 무시는 IsShooter()가 트리거/레이캐스트 단계에서 처리합니다.
+        // (이전의 매 발사 GetComponentsInChildren + Physics.IgnoreCollision은 할당이 발생하고,
+        //  풀링된 발사체에 무시 상태가 해제되지 않은 채 누적되어 제거)
 
         if (environmentLayers == 0)
         {
@@ -412,12 +431,14 @@ public class Projectile : MonoBehaviour
         // 2. 반경 내 피해 대상 판정
         float radius = data != null ? data.explosionRadius : 3.5f;
         int damageMask = targetLayer | playerLayers;
-        Collider[] hitColliders = Physics.OverlapSphere(explosionCenter, radius, damageMask, QueryTriggerInteraction.Collide);
+        int hitCount = Physics.OverlapSphereNonAlloc(explosionCenter, radius, s_explosionHits, damageMask, QueryTriggerInteraction.Collide);
 
-        HashSet<int> processedRoots = new HashSet<int>();
+        HashSet<int> processedRoots = s_processedRoots;
+        processedRoots.Clear();
 
-        foreach (Collider col in hitColliders)
+        for (int i = 0; i < hitCount; i++)
         {
+            Collider col = s_explosionHits[i];
             if (col == null || !col.gameObject.activeInHierarchy) continue;
             if (IsShooter(col)) continue;
 
@@ -500,7 +521,7 @@ public class Projectile : MonoBehaviour
     // [NEW] 저스트 회피 트리거에 스쳤을 때 호출될 함수
     public virtual void OnGraze()
     {
-        Debug.Log("Projectile grazed! Deactivating.");
+        CombatLog.Log("Projectile grazed! Deactivating.");
         gameObject.SetActive(false); // 오브젝트 풀링 사용 시 비활성화
     }
 
@@ -528,9 +549,10 @@ public class Projectile : MonoBehaviour
     /// </summary>
     public bool IsPlayerSide()
     {
-        // shooterLayer가 Player(8), DodgingPlayer(9), Vehicle(11)이거나 targetLayer에 Enemy(10)가 포함된 경우
-        return shooterLayer == 8 || shooterLayer == 9 || shooterLayer == 11 || 
-               ((1 << 10) & targetLayer) != 0;
+        // shooterLayer가 Player, DodgingPlayer, Vehicle이거나 targetLayer에 Enemy가 포함된 경우
+        CacheSideLayers();
+        return shooterLayer == _playerLayer || shooterLayer == _dodgingPlayerLayer || shooterLayer == _vehicleLayer ||
+               ((1 << _enemyLayer) & targetLayer) != 0;
     }
 
     /// <summary>

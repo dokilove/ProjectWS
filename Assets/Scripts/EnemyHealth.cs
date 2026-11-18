@@ -40,19 +40,12 @@ public class EnemyHealth : MonoBehaviour
     public void TakeDamage(float damage, float hitStunDuration = 0f)
     {
         currentHealth -= damage;
-        Debug.Log($"{gameObject.name} took {damage} damage. Current health: {currentHealth}");
+        CombatLog.Log($"{gameObject.name} took {damage} damage. Current health: {currentHealth}");
 
-        if (hitEffectPoolTag != null && EffectPoolManager.Instance != null)
+        // 직렬화된 string은 null이 아니라 ""이므로 IsNullOrEmpty로 검사 (빈 태그면 이펙트 생략)
+        if (!string.IsNullOrEmpty(hitEffectPoolTag) && EffectPoolManager.Instance != null)
         {
             EffectPoolManager.Instance.GetPooledObject(hitEffectPoolTag, transform.position, Quaternion.identity);
-        }
-        else if (hitEffectPoolTag == null)
-        {
-            Debug.LogWarning("hitEffectPoolTag is NOT assigned.");
-        }
-        else if (EffectPoolManager.Instance == null)
-        {
-            Debug.LogError("EffectPoolManager.Instance is NULL. Cannot get pooled object.");
         }
 
         if (DamageIndicatorManager.Instance != null)
@@ -81,7 +74,7 @@ public class EnemyHealth : MonoBehaviour
 
     private void Die()
     {
-        Debug.Log($"{gameObject.name} has died.");
+        CombatLog.Log($"{gameObject.name} has died.");
         // 여기에 죽음 애니메이션, 아이템 드랍 등의 로직 추가
         gameObject.SetActive(false); // 이 코드가 OnDisable을 호출하여 EnemyManager에서 등록 해제합니다.
     }

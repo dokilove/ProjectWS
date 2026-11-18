@@ -20,7 +20,7 @@ public class JustDodgeTrigger : MonoBehaviour
         // 플레이어가 저스트 회피 판정 시간 내에 있는지 확인합니다.
         if (_playerUnit != null && _playerUnit.IsJustDodgeWindowActive)
         {
-            Debug.Log("Just Dodge (Graze) Successful!");
+            CombatLog.Log("Just Dodge (Graze) Successful!");
             _playerUnit.ActivateJustDodgeEffects(); // 불릿 타임 및 버프 발동
 
             // 발사체 처리 (파괴 또는 튕겨나가기)

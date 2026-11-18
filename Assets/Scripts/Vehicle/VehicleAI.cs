@@ -1,7 +1,5 @@
 using UnityEngine;
 using UnityEngine.AI;
-using System.Collections.Generic;
-using System.Linq;
 
 public class VehicleAI : MonoBehaviour
 {
@@ -15,7 +13,6 @@ public class VehicleAI : MonoBehaviour
 
     // --- State ---
     private Transform currentTarget;
-    private List<Transform> potentialTargets = new List<Transform>();
     private Collider[] aiTargetColliders = new Collider[20];
     private float lastFollowStopTime = -Mathf.Infinity; // Added for cooldown
 
@@ -136,25 +133,26 @@ public class VehicleAI : MonoBehaviour
 
         int hitCount = Physics.OverlapSphereNonAlloc(transform.position, weaponData.lockOnRadius, aiTargetColliders, enemyLayer);
 
-        potentialTargets.Clear();
+        // 사격 각도 내에서 가장 가까운 대상 선택 (매 프레임 LINQ OrderBy 할당 제거)
+        Transform closest = null;
+        float closestSqrDistance = float.MaxValue;
         for (int i = 0; i < hitCount; i++)
         {
             Transform target = aiTargetColliders[i].transform;
-            Vector3 directionToTarget = (target.position - transform.position).normalized;
-            float angleToTarget = Vector3.Angle(transform.forward, directionToTarget);
+            Vector3 offset = target.position - transform.position;
+            float angleToTarget = Vector3.Angle(transform.forward, offset.normalized);
 
             if (angleToTarget <= weaponData.attackAngle / 2)
             {
-                potentialTargets.Add(target);
+                float sqrDistance = offset.sqrMagnitude;
+                if (sqrDistance < closestSqrDistance)
+                {
+                    closestSqrDistance = sqrDistance;
+                    closest = target;
+                }
             }
         }
 
-        if (potentialTargets.Count == 0)
-        {
-            currentTarget = null;
-            return;
-        }
-
-        currentTarget = potentialTargets.OrderBy(t => Vector3.Distance(transform.position, t.position)).FirstOrDefault();
+        currentTarget = closest;
     }
 }

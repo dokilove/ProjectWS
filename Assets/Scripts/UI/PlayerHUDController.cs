@@ -44,6 +44,7 @@ public class PlayerHUDController : MonoBehaviour
 
         // Initialize FPS counter
         timeSinceLastUpdate = fpsUpdateInterval;
+        lastEnemyCount = -1;
 
         // Basic validation
         if (dayNightCycleManager == null)
@@ -81,8 +82,15 @@ public class PlayerHUDController : MonoBehaviour
         if (enemyCountLabel == null || EnemyManager.Instance == null) return;
         
         int enemyCount = EnemyManager.Instance.GetActiveEnemyCount();
-        enemyCountLabel.text = enemyCount.ToString();
+        // 값이 바뀔 때만 문자열 생성 및 UI 갱신
+        if (enemyCount != lastEnemyCount)
+        {
+            lastEnemyCount = enemyCount;
+            enemyCountLabel.text = enemyCount.ToString();
+        }
     }
+
+    private int lastEnemyCount = -1;
 
     private void UpdateFPS()
     {

@@ -82,6 +82,40 @@ public class VehicleRamSystem : MonoBehaviour
 
     private Vehicle _vehicle;
     private float _lastVehicleDamageTime = -Mathf.Infinity;
+
+    private struct RamTargetInfo
+    {
+        public EnemyHealth health;
+        public EnemySpawner spawner;
+    }
+
+    // 콜라이더 → 대상 컴포넌트 캐시 (Stay 이벤트마다 GetComponentInParent를 반복하지 않도록)
+    private readonly Dictionary<Collider, RamTargetInfo> _ramTargetCache = new Dictionary<Collider, RamTargetInfo>();
+    private const int RamTargetCacheLimit = 256;
+
+    /// <summary>
+    /// 어떤 대상이든 박치기/깔아뭉개기가 발동할 수 있는 가장 낮은 속도
+    /// </summary>
+    private float LowestRequiredSpeed => canCrushSmallEnemies ? Mathf.Min(minRamSpeed, minCrushSpeed) : minRamSpeed;
+
+    private RamTargetInfo GetRamTarget(Collider col)
+    {
+        if (_ramTargetCache.TryGetValue(col, out RamTargetInfo info))
+        {
+            return info;
+        }
+
+        info.health = col.GetComponentInParent<EnemyHealth>();
+        info.spawner = info.health == null ? col.GetComponentInParent<EnemySpawner>() : null;
+
+        // 파괴된 콜라이더 키가 쌓이지 않도록 한도를 넘으면 초기화 (풀링된 적은 콜라이더가 재사용되므로 대부분 적중)
+        if (_ramTargetCache.Count >= RamTargetCacheLimit)
+        {
+            _ramTargetCache.Clear();
+        }
+        _ramTargetCache[col] = info;
+        return info;
+    }
     private readonly Dictionary<EnemyHealth, float> _enemyHitCooldowns = new Dictionary<EnemyHealth, float>();
 
     public void Init(Vehicle vehicle)
@@ -177,12 +211,19 @@ public class VehicleRamSystem : MonoBehaviour
         // 타겟 레이어 검사
         if (((1 << other.gameObject.layer) & targetLayer) == 0) return;
 
-        // 적 체력 컴포넌트 탐색
-        EnemyHealth enemyHealth = other.GetComponentInParent<EnemyHealth>();
+        // OnTriggerStay로 매 물리 스텝 호출되므로, 어떤 대상도 발동할 수 없는 속도면 컴포넌트 탐색 전에 종료
+        float speedNow = _vehicle.VehicleMove != null ? _vehicle.VehicleMove.CurrentSpeed : 0f;
+        float lowestRequired = LowestRequiredSpeed;
+        if (bumperType == BumperType.Front && speedNow < lowestRequired) return;
+        if (bumperType == BumperType.Rear && speedNow > -lowestRequired) return;
+
+        // 적 체력 컴포넌트 탐색 (콜라이더별 캐시)
+        RamTargetInfo targetInfo = GetRamTarget(other);
+        EnemyHealth enemyHealth = targetInfo.health;
         if (enemyHealth == null)
         {
             // 스폰 토템(EnemySpawner) 박치기 판정 지원
-            EnemySpawner spawner = other.GetComponentInParent<EnemySpawner>();
+            EnemySpawner spawner = targetInfo.spawner;
             if (spawner != null && !spawner.IsDead)
             {
                 HandleSpawnerRam(spawner, other, bumperType);
@@ -299,7 +340,7 @@ public class VehicleRamSystem : MonoBehaviour
                 _vehicle.VehicleVisuals.TriggerCrushBump(crushPoint, bumperType);
             }
 
-            Debug.Log($"[VehicleRam] Crushed Small(S) enemy {enemyHealth.name}! Speed: {absSpeed:F1}");
+            CombatLog.Log($"[VehicleRam] Crushed Small(S) enemy {enemyHealth.name}! Speed: {absSpeed:F1}");
             return;
         }
 
@@ -362,7 +403,7 @@ public class VehicleRamSystem : MonoBehaviour
             EffectPoolManager.Instance.GetPooledObject(ramHitEffectPoolTag, impactPoint, Quaternion.identity);
         }
 
-        Debug.Log($"[VehicleRam] {bumperType} bumper rammed [{enemySize}] {enemyHealth.name}! Damage: {finalEnemyDamage:F0}, Speed: {currentSpeed:F1}");
+        CombatLog.Log($"[VehicleRam] {bumperType} bumper rammed [{enemySize}] {enemyHealth.name}! Damage: {finalEnemyDamage:F0}, Speed: {currentSpeed:F1}");
     }
 
     private void OnCollisionEnter(Collision collision)
@@ -380,8 +421,14 @@ public class VehicleRamSystem : MonoBehaviour
         if (_vehicle == null || _vehicle.IsDead) return;
         if (((1 << collision.gameObject.layer) & targetLayer) == 0) return;
 
+        // OnCollisionStay로 매 물리 스텝 호출되므로, 발동 불가능한 속도면 컴포넌트 탐색 전에 종료
+        float speed = _vehicle.VehicleMove != null ? _vehicle.VehicleMove.CurrentSpeed : 0f;
+        if (Mathf.Abs(speed) < LowestRequiredSpeed) return;
+
+        RamTargetInfo targetInfo = GetRamTarget(collision.collider);
+
         // 스폰 토템(EnemySpawner)과 직접 물리 충돌 시에도 박치기 데미지 적용
-        EnemySpawner spawner = collision.gameObject.GetComponentInParent<EnemySpawner>();
+        EnemySpawner spawner = targetInfo.spawner;
         if (spawner != null && !spawner.IsDead)
         {
             BumperType bumperDir = (_vehicle.VehicleMove != null && _vehicle.VehicleMove.IsReverseMode) ? BumperType.Rear : BumperType.Front;
@@ -391,10 +438,9 @@ public class VehicleRamSystem : MonoBehaviour
 
         if (!canCrushSmallEnemies) return;
 
-        EnemyHealth enemyHealth = collision.gameObject.GetComponentInParent<EnemyHealth>();
+        EnemyHealth enemyHealth = targetInfo.health;
         if (enemyHealth == null || enemyHealth.Size != EnemySize.S) return;
 
-        float speed = _vehicle.VehicleMove != null ? _vehicle.VehicleMove.CurrentSpeed : 0f;
         if (Mathf.Abs(speed) >= minCrushSpeed)
         {
             enemyHealth.Crush();
@@ -412,7 +458,7 @@ public class VehicleRamSystem : MonoBehaviour
                 _vehicle.VehicleVisuals.TriggerCrushBump(contactPoint, dir);
             }
 
-            Debug.Log($"[VehicleRam] Directly crushed Small(S) enemy {enemyHealth.name}! Speed: {Mathf.Abs(speed):F1}");
+            CombatLog.Log($"[VehicleRam] Directly crushed Small(S) enemy {enemyHealth.name}! Speed: {Mathf.Abs(speed):F1}");
         }
     }
 

@@ -17,9 +17,18 @@ public class UnitInput : MonoBehaviour
     private enum InputDeviceType { None, Gamepad, MouseKeyboard }
     private InputDeviceType lastUsedInputDevice = InputDeviceType.None;
 
+    private int groundLayerMask;
+
     private void Awake()
     {
         lookInput = Vector2.zero; // Ensure lookInput is zero at start
+        groundLayerMask = LayerMask.GetMask("Ground"); // 매 프레임 문자열 조회 대신 캐시
+    }
+
+    private void OnDestroy()
+    {
+        // new로 생성한 InputActionAsset 해제
+        playerActions?.Dispose();
     }
 
     // --- Input Action Delegates ---
@@ -95,7 +104,7 @@ public class UnitInput : MonoBehaviour
             }
             else
             {
-                Debug.Log("MeleeAttack ignored because Ranged mode input is actively held.");
+                CombatLog.Log("MeleeAttack ignored because Ranged mode input is actively held.");
             }
         };
     }
@@ -280,7 +289,7 @@ public class UnitInput : MonoBehaviour
             else if (lastUsedInputDevice == InputDeviceType.MouseKeyboard)
             {
                 Ray ray = Camera.main.ScreenPointToRay(mousePositionInput);
-                if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, LayerMask.GetMask("Ground")))
+                if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, groundLayerMask))
                 {
                     Vector3 directionToMouse = hit.point - transform.position;
                     directionToMouse.y = 0;
@@ -298,7 +307,7 @@ public class UnitInput : MonoBehaviour
     private void OnInteract(InputAction.CallbackContext context)
     {
         // This can be expanded to find the closest interactable object
-        Debug.Log("Unit Interact button pressed!");
+        CombatLog.Log("Unit Interact button pressed!");
     }
 
     /// <summary>

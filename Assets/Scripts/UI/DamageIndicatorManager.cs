@@ -16,17 +16,16 @@ public class DamageIndicatorManager : MonoBehaviour
     private Camera mainCamera;
     private VisualElement root;
     private Queue<Label> damageNumberPool = new Queue<Label>();
+    private bool hasWarnedPoolEmpty = false;
 
     private void Awake()
     {
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
+            return; // 중복 인스턴스는 풀을 만들지 않음
         }
-        else
-        {
-            Instance = this;
-        }
+        Instance = this;
 
         mainCamera = Camera.main;
         if (worldSpaceUIDocument == null)
@@ -53,7 +52,12 @@ public class DamageIndicatorManager : MonoBehaviour
     {
         if (damageNumberPool.Count == 0)
         {
-            Debug.LogWarning("DamageIndicator pool is empty. Consider increasing pool size.");
+            // 다수 피격 시 매번 경고가 쌓이지 않도록 한 번만 출력
+            if (!hasWarnedPoolEmpty)
+            {
+                Debug.LogWarning("DamageIndicator pool is empty. Consider increasing pool size.");
+                hasWarnedPoolEmpty = true;
+            }
             return;
         }
 

@@ -34,8 +34,8 @@ public class EnemyManager : MonoBehaviour
 
     public int GetActiveEnemyCount()
     {
-        // Prune any destroyed enemies just in case
-        activeEnemies.RemoveWhere(e => e == null);
+        // 적은 비활성화/파괴 시 항상 OnDisable에서 등록 해제되므로 매번 정리할 필요 없음
+        // (HUD 등에서 매 프레임 호출되므로 람다/순회 비용 제거)
         return activeEnemies.Count;
     }
 }
