@@ -20,6 +20,7 @@ public class Projectile : MonoBehaviour
     protected float _damage;              // 실제 데미지 값을 저장할 필드
 
     protected Collider _collider;         // 발사체 본체 콜라이더 (곡사 시 비활성화)
+    private TrailRenderer _trail;         // 비행 꼬리 (ProjectileData.showTrail일 때 런타임에 추가)
     private static int _enemyAttackLayerMask = -1;
     private static int _defaultEnvLayerMask = -1;
     private static int _groundLayerMask = -1;
@@ -124,44 +125,12 @@ public class Projectile : MonoBehaviour
                 _collider.enabled = false;
             }
 
-            Vector3 destination;
-            if (targetPosition.HasValue && (targetPosition.Value - transform.position).sqrMagnitude > 0.25f)
-            {
-                destination = targetPosition.Value;
-            }
-            else
-            {
-                // 지정된 타겟 좌표가 없을 경우(허공 사격): 사거리 지점을 가상 목표로 설정
-                Vector3 defaultDir = new Vector3(direction.x, 0f, direction.z).normalized;
-                if (defaultDir.sqrMagnitude < 0.001f)
-                {
-                    defaultDir = transform.forward;
-                    defaultDir.y = 0f;
-                    defaultDir.Normalize();
-                }
-                float defaultDist = Mathf.Max(6f, data.speed * 0.7f);
-                destination = transform.position + defaultDir * defaultDist;
-            }
-
-            Vector3 displacement = destination - transform.position;
-            Vector3 horizontalDisplacement = new Vector3(displacement.x, 0f, displacement.z);
-            float horizontalDistance = horizontalDisplacement.magnitude;
-            float heightDifference = displacement.y;
-
-            // 비행 시간 T = 수평 거리 / 속도 (최소 0.25초)
-            float speed = Mathf.Max(1f, data.speed);
-            float flightTime = Mathf.Max(0.25f, horizontalDistance / speed);
-
-            // 중력 가속도
-            float gravity = Physics.gravity.y * (data.gravityMultiplier > 0 ? data.gravityMultiplier : 1f);
-
-            // 탄도학 역계산:
-            // 1. 수평 속도: V_xz = D_xz / T
-            horizontalVelocity = horizontalDistance > 0.001f ? (horizontalDisplacement / flightTime) : (transform.forward * speed);
-            moveDirection = horizontalDistance > 0.001f ? horizontalDisplacement.normalized : transform.forward;
-
-            // 2. 수직 초기 속도: V_y = (H - 0.5 * g * T^2) / T
-            verticalVelocity = (heightDifference - 0.5f * gravity * (flightTime * flightTime)) / flightTime;
+            // 탄도학 역계산 (예상 궤적 미리보기와 동일한 계산을 쓰도록 BallisticUtility로 분리)
+            Vector3 destination = BallisticUtility.GetDestination(transform.position, direction, data, targetPosition, transform.forward);
+            BallisticUtility.Solution solution = BallisticUtility.Solve(transform.position, destination, data, transform.forward);
+            horizontalVelocity = solution.horizontalVelocity;
+            moveDirection = solution.moveDirection;
+            verticalVelocity = solution.verticalVelocity;
 
             currentVelocity = horizontalVelocity + Vector3.up * verticalVelocity;
 
@@ -182,6 +151,59 @@ public class Projectile : MonoBehaviour
             horizontalVelocity = moveDirection * (data != null ? data.speed : 10f);
             currentVelocity = horizontalVelocity;
         }
+
+        SetupTrail();
+    }
+
+    /// <summary>
+    /// ProjectileData.showTrail 설정에 따라 비행 꼬리(TrailRenderer)를 준비합니다.
+    /// 풀에서 재사용될 때 이전 비행의 꼬리가 새 발사 위치까지 이어져 그려지지 않도록 매번 Clear합니다.
+    /// (Init 전에 발사 위치가 지정되어 있어야 함 — 모든 발사 경로가 위치 지정 후 Init을 호출)
+    /// </summary>
+    private void SetupTrail()
+    {
+        bool wantTrail = data != null && data.showTrail;
+
+        if (!wantTrail)
+        {
+            if (_trail != null)
+            {
+                _trail.emitting = false;
+                _trail.Clear();
+                _trail.enabled = false;
+            }
+            return;
+        }
+
+        if (_trail == null)
+        {
+            _trail = GetComponent<TrailRenderer>();
+            if (_trail == null)
+            {
+                _trail = gameObject.AddComponent<TrailRenderer>();
+            }
+            _trail.minVertexDistance = 0.1f;
+            _trail.numCapVertices = 2;
+            _trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            _trail.receiveShadows = false;
+            _trail.alignment = LineAlignment.View;
+        }
+
+        _trail.time = data.trailTime;
+        _trail.startWidth = data.trailStartWidth;
+        _trail.endWidth = data.trailEndWidth;
+        _trail.startColor = data.trailStartColor;
+        _trail.endColor = data.trailEndColor;
+
+        Material material = data.trailMaterial != null ? data.trailMaterial : RuntimeMaterials.VertexColorUnlit;
+        if (material != null && _trail.sharedMaterial != material)
+        {
+            _trail.sharedMaterial = material;
+        }
+
+        _trail.enabled = true;
+        _trail.Clear();
+        _trail.emitting = true;
     }
 
     protected virtual void Update()
@@ -214,14 +236,19 @@ public class Projectile : MonoBehaviour
         if (data != null && data.isArcing)
         {
             // 중력 가속도 적용 (Physics.gravity.y * gravityMultiplier)
-            float gravity = Physics.gravity.y * (data.gravityMultiplier > 0 ? data.gravityMultiplier : 1f);
+            float gravity = BallisticUtility.GetGravity(data);
+
+            // 등가속도 해석해로 이번 프레임 이동량 계산 (Δy = v0·dt + ½·g·dt²)
+            // → 프레임레이트와 무관하게 예상 궤적(BallisticUtility.Solution.Evaluate)과 정확히 같은 경로를 비행
+            float startVerticalVelocity = verticalVelocity;
+            Vector3 step = horizontalVelocity * deltaTime + Vector3.up * (startVerticalVelocity * deltaTime + 0.5f * gravity * deltaTime * deltaTime);
             verticalVelocity += gravity * deltaTime;
 
             // 역계산된 수평 속도와 중력 가속도가 적용된 수직 속도로 실시간 이동 벡터 갱신
             currentVelocity = horizontalVelocity + Vector3.up * verticalVelocity;
 
-            float moveDistance = currentVelocity.magnitude * deltaTime;
-            Vector3 flightDir = currentVelocity.sqrMagnitude > 0.001f ? currentVelocity.normalized : moveDirection;
+            float moveDistance = step.magnitude;
+            Vector3 flightDir = step.sqrMagnitude > 0.000001f ? step.normalized : moveDirection;
 
             // [곡사 특화] 공중의 적/발사체 충돌은 건너뛰고, 지면(Ground) 및 장애물(Obstacle) 착탄만 감지
             float checkDist = moveDistance + 0.15f;
@@ -248,7 +275,7 @@ public class Projectile : MonoBehaviour
                 }
             }
 
-            transform.position += currentVelocity * deltaTime;
+            transform.position += step;
 
             // 낙하 진행 방향으로 탄두 회전 정렬
             if (currentVelocity.sqrMagnitude > 0.01f)

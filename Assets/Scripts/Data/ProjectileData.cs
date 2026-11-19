@@ -33,6 +33,26 @@ public class ProjectileData : ScriptableObject
     [Tooltip("중력 가속도 배수 (1.0 = 9.81m/s^2)")]
     public float gravityMultiplier = 2.5f;
 
+    [Header("Flight Trail (비행 꼬리)")]
+    [Tooltip("비행 중 발사체 뒤에 꼬리(TrailRenderer)를 표시할지 여부")]
+    public bool showTrail = false;
+    [Tooltip("꼬리가 남아 있는 시간 (초)")]
+    public float trailTime = 0.35f;
+    [Tooltip("꼬리 시작(발사체 쪽) 두께")]
+    public float trailStartWidth = 0.25f;
+    [Tooltip("꼬리 끝 두께")]
+    public float trailEndWidth = 0f;
+    [Tooltip("꼬리 시작(발사체 쪽) 색상")]
+    public Color trailStartColor = new Color(1f, 0.85f, 0.4f, 0.9f);
+    [Tooltip("꼬리 끝 색상 (알파 0이면 자연스럽게 사라짐)")]
+    public Color trailEndColor = new Color(1f, 0.4f, 0.1f, 0f);
+    [Tooltip("꼬리 머티리얼 (미할당 시 정점 색상을 쓰는 기본 언릿 머티리얼 사용)")]
+    public Material trailMaterial;
+
+    [Header("Trajectory Preview (예상 궤적)")]
+    [Tooltip("이 발사체를 쏘는 차량 무기에 예상 궤적(포물선 + 착탄 지점)을 표시할지 여부 (곡사 발사체만 해당)")]
+    public bool showTrajectoryPreview = false;
+
     [Header("Explosion / AoE (범위 폭발)")]
     [Tooltip("착탄 시 범위 폭발(스플래시) 적용 여부")]
     public bool isExplosive = false;

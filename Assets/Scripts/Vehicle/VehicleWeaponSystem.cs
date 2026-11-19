@@ -92,6 +92,18 @@ public class VehicleWeaponSystem : MonoBehaviour
                     projectilePool.Add(proj);
                 }
             }
+
+            // 곡사 발사체가 예상 궤적 표시를 원하면 미리보기 컴포넌트를 자동으로 추가
+            ProjectileData projectileData = weaponData.projectileData;
+            if (projectileData != null && projectileData.isArcing && projectileData.showTrajectoryPreview)
+            {
+                ArcTrajectoryPreview preview = GetComponent<ArcTrajectoryPreview>();
+                if (preview == null)
+                {
+                    preview = gameObject.AddComponent<ArcTrajectoryPreview>();
+                }
+                preview.Init(this, _vehicle != null ? _vehicle.transform : transform.root);
+            }
         }
     }
 

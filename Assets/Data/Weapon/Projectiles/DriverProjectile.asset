@@ -21,6 +21,8 @@ MonoBehaviour:
   isArcing: 1
   launchAngle: 60
   gravityMultiplier: 2
+  showTrail: 1
+  showTrajectoryPreview: 1
   isExplosive: 1
   explosionRadius: 3.5
   explosionKnockback: 2
