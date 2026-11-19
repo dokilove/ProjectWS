@@ -32,3 +32,30 @@
 .hud-element {
     margin-bottom: 5px;
 }
+
+/* --- Off-screen vehicle indicator (OffscreenVehicleIndicator.cs) --- */
+.vehicle-indicator-layer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.vehicle-indicator {
+    position: absolute;
+}
+
+.vehicle-indicator__label {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    margin: 0;
+    padding: 0;
+    -unity-text-align: middle-center;
+    -unity-font-style: bold;
+    font-size: 11px;
+    color: white;
+}

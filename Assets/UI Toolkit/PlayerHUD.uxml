@@ -21,4 +21,5 @@
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>
+    <ui:VisualElement name="vehicle-indicator-layer" picking-mode="Ignore" class="vehicle-indicator-layer" />
 </ui:UXML>
