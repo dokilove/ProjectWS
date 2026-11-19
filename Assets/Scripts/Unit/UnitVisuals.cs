@@ -155,7 +155,8 @@ public class UnitVisuals : MonoBehaviour
                 var weaponSystem = _unit.UnitWeaponSystem;
                 if (weaponSystem != null && weaponSystem.WeaponData != null)
                 {
-                    UpdateAimLine(weaponSystem.FirePoint.position, weaponSystem.TurretTransform.forward, weaponSystem.WeaponData.lockOnRadius);
+                    // 발사와 같은 방향(GetFireDirection)으로 조준선을 그려 조준선 = 실제 탄도
+                    UpdateAimLine(weaponSystem.FirePoint.position, weaponSystem.GetFireDirection(), weaponSystem.WeaponData.lockOnRadius);
                 }
             }
             else // Melee Mode

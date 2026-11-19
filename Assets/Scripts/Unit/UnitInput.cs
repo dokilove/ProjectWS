@@ -18,6 +18,7 @@ public class UnitInput : MonoBehaviour
     private InputDeviceType lastUsedInputDevice = InputDeviceType.None;
 
     private int groundLayerMask;
+    private Vector3? rangedAimPoint; // 이번 프레임 마우스 조준 지점 (발사 높이 평면 위)
 
     private void Awake()
     {
@@ -289,9 +290,32 @@ public class UnitInput : MonoBehaviour
             else if (lastUsedInputDevice == InputDeviceType.MouseKeyboard)
             {
                 Ray ray = Camera.main.ScreenPointToRay(mousePositionInput);
-                if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, groundLayerMask))
+
+                // 커서를 지면(y=0)이 아니라 "발사 높이" 평면에 투영
+                // → 비스듬한 카메라에서도 발사체가 화면상 정확히 커서 아래를 지나감
+                //   (지면에 투영하면 발사체가 지면 위 ~1.3m를 날아가므로 화면에서 커서와 어긋나 보였음)
+                Transform firePoint = _unit.UnitWeaponSystem.FirePoint;
+                float fireHeight = firePoint != null ? firePoint.position.y : transform.position.y;
+                Plane firePlane = new Plane(Vector3.up, new Vector3(0f, fireHeight, 0f));
+
+                bool hasPoint = false;
+                Vector3 point = Vector3.zero;
+                if (firePlane.Raycast(ray, out float enter))
                 {
-                    Vector3 directionToMouse = hit.point - transform.position;
+                    point = ray.GetPoint(enter);
+                    hasPoint = true;
+                }
+                else if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, groundLayerMask))
+                {
+                    point = hit.point;
+                    point.y = fireHeight;
+                    hasPoint = true;
+                }
+
+                if (hasPoint)
+                {
+                    rangedAimPoint = point;
+                    Vector3 directionToMouse = point - transform.position;
                     directionToMouse.y = 0;
                     if (directionToMouse.sqrMagnitude > 0.01f) aimDirection = directionToMouse.normalized;
                 }
@@ -299,7 +323,9 @@ public class UnitInput : MonoBehaviour
         }
 
         // Pass aim direction to other components that need it
-        _unit.UnitWeaponSystem.SetAim(aimDirection);
+        // 마우스 조준 시에는 조준 지점도 전달해, 무기가 실제 발사 위치(FirePoint)에서 그 지점을 향해 쏘도록 함
+        _unit.UnitWeaponSystem.SetAim(aimDirection, rangedAimPoint);
+        rangedAimPoint = null;
         // Melee system might also need it if attacks are directional
         _unit.UnitMeleeSystem.SetAim(aimDirection);
     }

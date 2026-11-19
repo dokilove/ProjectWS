@@ -87,9 +87,15 @@ public class UnitWeaponSystem : MonoBehaviour
     /// <summary>
     /// Sets the aiming direction for the turret. Called by UnitInput.
     /// </summary>
-    public void SetAim(Vector3 newAimDirection)
+    public void SetAim(Vector3 newAimDirection, Vector3? newAimPoint = null)
     {
         aimDirection = newAimDirection;
+        hasAimPoint = newAimPoint.HasValue;
+        if (hasAimPoint)
+        {
+            aimPoint = newAimPoint.Value;
+        }
+
         if (turretTransform != null && aimDirection.sqrMagnitude > 0.01f)
         {
             // Turret only rotates on Y axis, so we project the aim direction onto the horizontal plane.
@@ -98,6 +104,46 @@ public class UnitWeaponSystem : MonoBehaviour
             Quaternion targetRotation = Quaternion.LookRotation(horizontalAim.normalized);
             turretTransform.rotation = Quaternion.Slerp(turretTransform.rotation, targetRotation, 20f * Time.deltaTime);
         }
+    }
+
+    private bool hasAimPoint;
+    private Vector3 aimPoint;
+
+    /// <summary>
+    /// 실제 발사 방향 (수평). 조준선 표시와 발사가 같은 값을 사용합니다.
+    /// - 마우스 조준: 발사 위치(FirePoint)에서 조준 지점을 향하는 방향
+    ///   (조준 방향은 캐릭터 중심 기준인데 총구는 옆으로 떨어져 있어 평행하게 어긋나던 문제 보정)
+    /// - 게임패드 등 조준 지점이 없을 때: 조준 방향 그대로
+    /// 포탑 회전(Slerp) 지연과 무관하게 항상 현재 조준을 따릅니다.
+    /// </summary>
+    public Vector3 GetFireDirection()
+    {
+        Vector3 origin = firePoint != null ? firePoint.position : transform.position;
+
+        if (hasAimPoint)
+        {
+            Vector3 fromMuzzle = aimPoint - origin;
+            fromMuzzle.y = 0f;
+            Vector3 fromBody = aimPoint - transform.position;
+            fromBody.y = 0f;
+
+            // 커서가 캐릭터에 너무 가까우면(총구 오프셋 안쪽) 방향이 뒤집힐 수 있으므로 조준 방향을 사용
+            if (fromBody.sqrMagnitude > 1f && fromMuzzle.sqrMagnitude > 0.01f && Vector3.Dot(fromMuzzle, fromBody) > 0f)
+            {
+                return fromMuzzle.normalized;
+            }
+        }
+
+        Vector3 direction = aimDirection;
+        direction.y = 0f;
+        if (direction.sqrMagnitude > 0.001f)
+        {
+            return direction.normalized;
+        }
+
+        Vector3 forward = turretTransform != null ? turretTransform.forward : transform.forward;
+        forward.y = 0f;
+        return forward.sqrMagnitude > 0.001f ? forward.normalized : Vector3.forward;
     }
 
     /// <summary>
@@ -252,6 +298,9 @@ public class UnitWeaponSystem : MonoBehaviour
         float damage = weaponData.projectileData.damage;
         float finalDamage = isBuffed ? _unit.GetBuffedDamage(damage) : damage;
 
+        // 포탑의 현재 forward(회전 지연 포함) 대신, 조준선과 동일한 실제 조준 방향으로 발사
+        Vector3 baseFireDirection = GetFireDirection();
+
         for (int i = 0; i < weaponData.projectilesPerShot; i++)
         {
             GameObject projectileGO = GetPooledProjectile();
@@ -259,11 +308,11 @@ public class UnitWeaponSystem : MonoBehaviour
             {
                 projectileGO.transform.position = firePoint.position;
 
-                Vector3 fireDirection = turretTransform.forward;
+                Vector3 fireDirection = baseFireDirection;
                 if (weaponData.spreadAngle > 0)
                 {
                     float randomAngle = Random.Range(-weaponData.spreadAngle / 2, weaponData.spreadAngle / 2);
-                    fireDirection = Quaternion.AngleAxis(randomAngle, turretTransform.up) * fireDirection;
+                    fireDirection = Quaternion.AngleAxis(randomAngle, Vector3.up) * fireDirection;
                 }
                 
                 projectileGO.transform.rotation = Quaternion.LookRotation(fireDirection);
